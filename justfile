@@ -36,3 +36,15 @@ logs *args:
 # manage: Executes `manage.py` command.
 manage +args:
     @docker compose run --rm django python ./manage.py {{args}}
+
+# frontend-install: Install frontend dependencies.
+frontend-install:
+    @docker compose run --rm frontend npm install
+
+# frontend-dev: Start frontend dev server.
+frontend-dev:
+    @docker compose up frontend
+
+# frontend-build: Build frontend for production.
+frontend-build:
+    @docker compose run --rm frontend npm run build

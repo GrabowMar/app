@@ -1,0 +1,101 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { getAuth } from '$lib/stores/auth.svelte';
+	import * as Card from '$lib/components/ui/card';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
+	import { Button } from '$lib/components/ui/button';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
+
+	const auth = getAuth();
+
+	let email = $state('');
+	let password = $state('');
+	let error = $state('');
+	let submitting = $state(false);
+
+	async function handleSubmit(e: Event) {
+		e.preventDefault();
+		error = '';
+		submitting = true;
+
+		try {
+			const res = await auth.login(email, password);
+			// Check for pending flows (e.g. 2FA)
+			if (res.status === 401 && res.data?.flows) {
+				const mfaFlow = res.data.flows.find(
+					(f: { id: string }) => f.id === 'mfa_authenticate'
+				);
+				if (mfaFlow) {
+					goto('/auth/2fa');
+					return;
+				}
+			}
+			goto('/');
+		} catch (err: unknown) {
+			const e = err as { errors?: Array<{ message: string }> };
+			if (e.errors?.length) {
+				error = e.errors.map((e) => e.message).join('. ');
+			} else {
+				error = 'Login failed. Please check your credentials.';
+			}
+		} finally {
+			submitting = false;
+		}
+	}
+</script>
+
+<svelte:head>
+	<title>Log In - LLM Lab</title>
+</svelte:head>
+
+<div class="flex min-h-[60vh] items-center justify-center">
+	<Card.Root class="w-full max-w-md">
+		<Card.Header>
+			<Card.Title class="text-2xl">Log In</Card.Title>
+			<Card.Description>Enter your email and password to sign in.</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			{#if error}
+				<Alert variant="destructive" class="mb-4">
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+			{/if}
+			<form onsubmit={handleSubmit} class="space-y-4">
+				<div class="space-y-2">
+					<Label for="email">Email</Label>
+					<Input
+						id="email"
+						type="email"
+						placeholder="you@example.com"
+						bind:value={email}
+						required
+						autocomplete="email"
+					/>
+				</div>
+				<div class="space-y-2">
+					<Label for="password">Password</Label>
+					<Input
+						id="password"
+						type="password"
+						bind:value={password}
+						required
+						autocomplete="current-password"
+					/>
+				</div>
+				<Button type="submit" class="w-full" disabled={submitting}>
+					{submitting ? 'Signing in...' : 'Sign In'}
+				</Button>
+			</form>
+		</Card.Content>
+		<Card.Footer class="flex flex-col space-y-2 text-sm text-center">
+			<a href="/auth/password/reset" class="text-muted-foreground hover:text-foreground underline">
+				Forgot your password?
+			</a>
+			<p class="text-muted-foreground">
+				Don't have an account?
+				<a href="/auth/signup" class="underline hover:text-foreground">Sign up</a>
+			</p>
+		</Card.Footer>
+	</Card.Root>
+</div>

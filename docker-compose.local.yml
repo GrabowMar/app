@@ -70,3 +70,18 @@ services:
     ports:
       - '5555:5555'
     command: /start-flower
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./compose/local/frontend/Dockerfile
+    image: llm_lab_local_frontend
+    depends_on:
+      - django
+    volumes:
+      - ./frontend:/app/frontend:z
+      - /app/frontend/node_modules
+    environment:
+      - API_TARGET=http://django:8000
+    ports:
+      - '8080:8080'

@@ -13,7 +13,7 @@ SECRET_KEY = env(
     default="xumKTWyS1I2Sq0FUU4ioD3eRNQZuiSbtmx4uGb5SMSbRiQWZSOrqN5TFPSfs3hVB",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "django"]  # noqa: S104
 
 # CACHES
 # ------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ if env("USE_DOCKER") == "yes":
     # ------------------------------------------------------------------------------
     # This is a custom setting for RunServerPlus to fix reloader issue in Windows docker environment
     # Werkzeug reloader type [auto, watchdog, or stat]
-    RUNSERVERPLUS_POLLER_RELOADER_TYPE = 'stat'
+    RUNSERVERPLUS_POLLER_RELOADER_TYPE = "stat"
     # If you have CPU and IO load issues, you can increase this poller interval e.g) 5
     RUNSERVERPLUS_POLLER_RELOADER_INTERVAL = 1
 
@@ -78,5 +78,17 @@ INSTALLED_APPS += ["django_extensions"]
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-eager-propagates
 CELERY_TASK_EAGER_PROPAGATES = True
+
+# CORS
+# ------------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = ["http://localhost:8080"]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
+
+# Cookie settings for cross-origin SvelteKit frontend
+# ------------------------------------------------------------------------------
+CSRF_COOKIE_HTTPONLY = False  # SvelteKit needs to read the CSRF token from the cookie
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 # Your stuff...
 # ------------------------------------------------------------------------------

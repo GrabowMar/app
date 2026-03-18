@@ -174,5 +174,16 @@ sentry_sdk.init(
 )
 
 
+# CORS
+# ------------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
+
+# Cookie settings for cross-origin SvelteKit frontend
+# ------------------------------------------------------------------------------
+CSRF_COOKIE_HTTPONLY = False  # SvelteKit needs to read the CSRF token from the cookie
+
+
 # Your stuff...
 # ------------------------------------------------------------------------------

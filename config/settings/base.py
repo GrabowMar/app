@@ -72,10 +72,9 @@ DJANGO_APPS = [
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
-    "crispy_forms",
-    "crispy_bootstrap5",
     "allauth",
     "allauth.account",
+    "allauth.headless",
     "allauth.mfa",
     "allauth.socialaccount",
     "django_celery_beat",
@@ -196,10 +195,6 @@ TEMPLATES = [
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#form-renderer
 FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
-
-# http://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
-CRISPY_TEMPLATE_PACK = "bootstrap5"
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
 # FIXTURES
 # ------------------------------------------------------------------------------
@@ -322,6 +317,15 @@ ACCOUNT_FORMS = {"signup": "llm_lab.users.forms.UserSignupForm"}
 SOCIALACCOUNT_ADAPTER = "llm_lab.users.adapters.SocialAccountAdapter"
 # https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_FORMS = {"signup": "llm_lab.users.forms.UserSocialSignupForm"}
+
+# django-allauth headless
+# ------------------------------------------------------------------------------
+HEADLESS_ONLY = True
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/auth/verify-email/{key}",
+    "account_reset_password_from_key": "/auth/password/reset/{key}",
+    "account_signup": "/auth/signup",
+}
 
 
 # Your stuff...
