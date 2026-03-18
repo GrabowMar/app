@@ -45,8 +45,7 @@
 	<title>Sign Up - LLM Lab</title>
 </svelte:head>
 
-<div class="flex min-h-[60vh] items-center justify-center">
-	<Card.Root class="w-full max-w-md">
+<Card.Root class="w-full">
 		<Card.Header>
 			<Card.Title class="text-2xl">Create Account</Card.Title>
 			<Card.Description>Enter your email and choose a password.</Card.Description>
@@ -101,4 +100,3 @@
 			</p>
 		</Card.Footer>
 	</Card.Root>
-</div>
