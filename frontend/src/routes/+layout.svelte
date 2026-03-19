@@ -20,7 +20,7 @@
 
 <ModeWatcher />
 
-<div class="min-h-screen bg-background text-foreground">
+<div class="min-h-screen">
 	{@render children()}
 </div>
 

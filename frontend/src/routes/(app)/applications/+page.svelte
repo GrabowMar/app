@@ -3,7 +3,9 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import Plus from '@lucide/svelte/icons/plus';
+	import Search from '@lucide/svelte/icons/search';
 </script>
 
 <svelte:head>
@@ -12,9 +14,9 @@
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight">Applications</h1>
-			<p class="text-muted-foreground">View and manage generated web applications.</p>
+		<div class="page-header">
+			<h1>Applications</h1>
+			<p>View and manage generated web applications.</p>
 		</div>
 		<Button disabled>
 			<Plus class="mr-2 h-4 w-4" />
@@ -22,31 +24,39 @@
 		</Button>
 	</div>
 
+	<div class="flex items-center gap-3">
+		<div class="relative flex-1 max-w-sm">
+			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+			<Input placeholder="Search applications..." class="pl-9" disabled />
+		</div>
+		<Badge variant="outline" class="text-xs">0 apps</Badge>
+	</div>
+
 	<Card.Root>
-		<Card.Header>
-			<div class="flex items-center justify-between">
-				<Card.Title>All Applications</Card.Title>
-				<Badge variant="secondary">Coming Soon</Badge>
-			</div>
-		</Card.Header>
-		<Card.Content>
-			<div class="rounded-md border">
-				<div class="grid grid-cols-5 gap-4 border-b p-4 text-sm font-medium text-muted-foreground">
-					<span>Name</span>
-					<span>Model</span>
-					<span>Status</span>
-					<span>Created</span>
-					<span>Actions</span>
-				</div>
-				{#each Array(5) as _}
-					<div class="grid grid-cols-5 gap-4 border-b p-4 last:border-0">
-						<Skeleton class="h-4 w-28" />
-						<Skeleton class="h-4 w-24" />
-						<Skeleton class="h-5 w-16 rounded-full" />
-						<Skeleton class="h-4 w-20" />
-						<Skeleton class="h-8 w-20" />
-					</div>
-				{/each}
+		<Card.Content class="p-0">
+			<div class="overflow-x-auto">
+				<table class="w-full">
+					<thead>
+						<tr class="border-b bg-muted/30">
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y">
+						{#each Array(5) as _}
+							<tr class="transition-colors hover:bg-muted/30">
+								<td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
+								<td class="px-4 py-3"><Skeleton class="h-4 w-24" /></td>
+								<td class="px-4 py-3"><Skeleton class="h-5 w-16 rounded-full" /></td>
+								<td class="px-4 py-3"><Skeleton class="h-4 w-20" /></td>
+								<td class="px-4 py-3"><Skeleton class="h-7 w-16 rounded-md" /></td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
 		</Card.Content>
 	</Card.Root>

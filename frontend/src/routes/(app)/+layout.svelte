@@ -11,9 +11,9 @@
 
 <Sidebar.Provider>
 	<AppSidebar />
-	<Sidebar.Inset>
+	<Sidebar.Inset class="bg-muted/40">
 		<AppHeader {auth} />
-		<div class="flex-1 p-4 md:p-6">
+		<div class="flex min-h-[calc(100vh-5.5rem)] flex-1 flex-col p-4 md:p-6">
 			{@render children()}
 		</div>
 		<AppFooter />
