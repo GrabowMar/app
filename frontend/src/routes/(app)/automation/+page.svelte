@@ -467,8 +467,8 @@
 
 					<!-- Pipeline Name -->
 					<div class="flex items-center gap-3">
-						<label class="text-sm font-medium whitespace-nowrap">Pipeline Name</label>
-						<Input bind:value={pipelineName} placeholder="e.g. Full Benchmark Run" class="max-w-sm" />
+						<label for="pipeline-name" class="text-sm font-medium whitespace-nowrap">Pipeline Name</label>
+						<Input id="pipeline-name" bind:value={pipelineName} placeholder="e.g. Full Benchmark Run" class="max-w-sm" />
 					</div>
 
 					{#if genMode === 'new' && totalJobs > 0}

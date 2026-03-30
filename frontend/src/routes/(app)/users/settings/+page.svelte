@@ -28,7 +28,7 @@
 	let loading = $state(true);
 
 	onMount(async () => {
-		if (!auth.isAuthenticated && auth.initialized) {
+		if (!auth.isAuthenticated && !auth.isLoading) {
 			goto('/auth/login');
 			return;
 		}
@@ -71,7 +71,7 @@
 		passwordSubmitting = true;
 
 		try {
-			await changePassword(currentPassword, newPassword);
+			await changePassword({ current_password: currentPassword, new_password: newPassword });
 			passwordSuccess = 'Password changed successfully.';
 			currentPassword = '';
 			newPassword = '';

@@ -18,7 +18,7 @@
 	import X from '@lucide/svelte/icons/x';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 
-	const slug = $derived($page.params.slug);
+	const slug = $derived($page.params.slug ?? '');
 
 	interface ModelData {
 		name: string;

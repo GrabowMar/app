@@ -26,7 +26,11 @@
 
 		submitting = true;
 		try {
-			await auth.signup(email, password);
+			const res = await auth.signup(email, password, password2);
+			if (!res.ok) {
+				error = res.error || 'Sign up failed. Please try again.';
+				return;
+			}
 			goto('/auth/verify-email');
 		} catch (err: unknown) {
 			const e = err as { errors?: Array<{ message: string }> };

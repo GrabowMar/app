@@ -22,14 +22,15 @@
 		try {
 			const res = await auth.login(email, password);
 			// Check for pending flows (e.g. 2FA)
-			if (res.status === 401 && res.data?.flows) {
-				const mfaFlow = res.data.flows.find(
-					(f: { id: string }) => f.id === 'mfa_authenticate'
-				);
-				if (mfaFlow) {
+			if (!res.ok && res.pendingFlow) {
+				if (res.pendingFlow === 'mfa_authenticate') {
 					goto('/auth/2fa');
 					return;
 				}
+			}
+			if (!res.ok) {
+				error = res.error || 'Login failed. Please check your credentials.';
+				return;
 			}
 			goto('/');
 		} catch (err: unknown) {

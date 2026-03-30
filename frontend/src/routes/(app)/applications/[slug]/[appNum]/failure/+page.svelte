@@ -13,7 +13,7 @@
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import FileText from '@lucide/svelte/icons/file-text';
 
-	const slug = $derived($page.params.slug);
+	const slug = $derived($page.params.slug ?? '');
 	const appNum = $derived(Number($page.params.appNum));
 
 	const modelName = $derived(

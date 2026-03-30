@@ -30,7 +30,7 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Skull from '@lucide/svelte/icons/skull';
 
-	const slug = $derived($page.params.slug);
+	const slug = $derived($page.params.slug ?? '');
 	const appNum = $derived(Number($page.params.appNum));
 
 	const statusColors: Record<string, string> = {
