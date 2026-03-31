@@ -12,6 +12,7 @@
 		type PaginatedModels,
 		type ModelsStats,
 	} from '$lib/api/client';
+	import { onMount } from 'svelte';
 	import Cpu from '@lucide/svelte/icons/cpu';
 	import Search from '@lucide/svelte/icons/search';
 	import GitCompareArrows from '@lucide/svelte/icons/git-compare-arrows';
@@ -98,8 +99,7 @@
 		return `$${price.toFixed(2)}`;
 	}
 
-	// Initial load
-	$effect(() => {
+	onMount(() => {
 		load();
 		loadMeta();
 	});
