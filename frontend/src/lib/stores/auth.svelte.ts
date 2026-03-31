@@ -1,5 +1,10 @@
 const ALLAUTH_BASE = '/_allauth/browser/v1';
 
+function getCsrfToken(): string {
+	const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+	return match ? decodeURIComponent(match[1]) : '';
+}
+
 interface AuthUser {
 	id: number;
 	email: string;
@@ -48,7 +53,10 @@ function createAuth() {
 	async function login(email: string, password: string): Promise<LoginResult> {
 		const res = await fetch(`${ALLAUTH_BASE}/auth/login`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRFToken': getCsrfToken(),
+			},
 			credentials: 'include',
 			body: JSON.stringify({ email, password }),
 		});
@@ -82,7 +90,10 @@ function createAuth() {
 	): Promise<SignupResult> {
 		const res = await fetch(`${ALLAUTH_BASE}/auth/signup`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRFToken': getCsrfToken(),
+			},
 			credentials: 'include',
 			body: JSON.stringify({ email, password }),
 		});

@@ -8,13 +8,18 @@ export interface ApiUser {
 }
 
 async function allauthFetch(path: string, options: RequestInit = {}): Promise<Response> {
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json',
+		...(options.headers as Record<string, string>),
+	};
+	const method = (options.method || 'GET').toUpperCase();
+	if (method !== 'GET' && method !== 'HEAD') {
+		headers['X-CSRFToken'] = getCsrfToken();
+	}
 	const res = await fetch(`${ALLAUTH_BASE}${path}`, {
-		headers: {
-			'Content-Type': 'application/json',
-			...options.headers,
-		},
-		credentials: 'include',
 		...options,
+		headers,
+		credentials: 'include',
 	});
 	return res;
 }
