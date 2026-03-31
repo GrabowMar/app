@@ -83,7 +83,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "llm_lab.users",
-    # Your stuff: custom apps go here
+    "llm_lab.llm_models",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -330,3 +330,5 @@ HEADLESS_FRONTEND_URLS = {
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default="")
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/models"
