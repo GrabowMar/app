@@ -13,7 +13,10 @@ SECRET_KEY = env(
     default="xumKTWyS1I2Sq0FUU4ioD3eRNQZuiSbtmx4uGb5SMSbRiQWZSOrqN5TFPSfs3hVB",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "django"]  # noqa: S104
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=["localhost", "0.0.0.0", "127.0.0.1", "django"],  # noqa: S104
+)
 
 # CACHES
 # ------------------------------------------------------------------------------
@@ -81,9 +84,15 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 # CORS
 # ------------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = ["http://localhost:8080"]
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=["http://localhost:8080"],
+)
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=["http://localhost:8080"],
+)
 
 # Cookie settings for cross-origin SvelteKit frontend
 # ------------------------------------------------------------------------------
