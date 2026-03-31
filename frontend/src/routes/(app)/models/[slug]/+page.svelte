@@ -68,6 +68,30 @@
 		];
 	}
 
+	interface CachePricing {
+		label: string;
+		perMillionTokens: number;
+	}
+
+	function getCachePricing(m: LLMModelDetail): CachePricing[] {
+		const meta = m.metadata || {};
+		const pricing = (meta.openrouter_pricing as Record<string, string>) || {};
+		const tiers: CachePricing[] = [];
+		if (pricing.input_cache_read) {
+			const val = parseFloat(pricing.input_cache_read);
+			if (val > 0) tiers.push({ label: 'Cache Read', perMillionTokens: val * 1_000_000 });
+		}
+		if (pricing.input_cache_write) {
+			const val = parseFloat(pricing.input_cache_write);
+			if (val > 0) tiers.push({ label: 'Cache Write', perMillionTokens: val * 1_000_000 });
+		}
+		if (pricing.web_search) {
+			const val = parseFloat(pricing.web_search);
+			if (val > 0) tiers.push({ label: 'Web Search', perMillionTokens: val * 1_000_000 });
+		}
+		return tiers;
+	}
+
 	function buildMetadata(m: LLMModelDetail): Record<string, string> {
 		const meta = m.metadata || {};
 		const entries: Record<string, string> = {
@@ -79,10 +103,18 @@
 		if (meta.architecture_modality) entries['Modality'] = String(meta.architecture_modality);
 		if (meta.architecture_tokenizer) entries['Tokenizer'] = String(meta.architecture_tokenizer);
 		if (meta.architecture_instruct_type) entries['Instruct Type'] = String(meta.architecture_instruct_type);
+
+		const inputMods = meta.architecture_input_modalities as string[] | undefined;
+		if (inputMods?.length) entries['Input Modalities'] = inputMods.join(', ');
+		const outputMods = meta.architecture_output_modalities as string[] | undefined;
+		if (outputMods?.length) entries['Output Modalities'] = outputMods.join(', ');
+
 		if (meta.openrouter_created) {
 			const ts = Number(meta.openrouter_created);
 			if (ts > 0) entries['Created'] = new Date(ts * 1000).toLocaleDateString();
 		}
+		if (m.created_at) entries['Added to Lab'] = new Date(m.created_at).toLocaleDateString();
+		if (m.updated_at) entries['Last Updated'] = new Date(m.updated_at).toLocaleDateString();
 		return entries;
 	}
 
@@ -293,14 +325,22 @@
 								<td class="px-4 py-2.5 text-sm font-medium">Input</td>
 								<td class="px-4 py-2.5 text-sm font-mono">{formatPrice(model.input_price_per_million)}</td>
 								<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">{formatPrice(model.input_price_per_million / 1000)}</td>
-								<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">${model.input_price_per_token.toExponential(2)}</td>
+								<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">{model.input_price_per_token === 0 ? 'Free' : `$${model.input_price_per_token.toExponential(2)}`}</td>
 							</tr>
 							<tr class="hover:bg-muted/30">
 								<td class="px-4 py-2.5 text-sm font-medium">Output</td>
 								<td class="px-4 py-2.5 text-sm font-mono">{formatPrice(model.output_price_per_million)}</td>
 								<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">{formatPrice(model.output_price_per_million / 1000)}</td>
-								<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">${model.output_price_per_token.toExponential(2)}</td>
+								<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">{model.output_price_per_token === 0 ? 'Free' : `$${model.output_price_per_token.toExponential(2)}`}</td>
 							</tr>
+							{#each getCachePricing(model) as tier}
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">{tier.label}</td>
+									<td class="px-4 py-2.5 text-sm font-mono">{formatPrice(tier.perMillionTokens)}</td>
+									<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">{formatPrice(tier.perMillionTokens / 1000)}</td>
+									<td class="px-4 py-2.5 text-sm font-mono text-muted-foreground">${(tier.perMillionTokens / 1_000_000).toExponential(2)}</td>
+								</tr>
+							{/each}
 						</tbody>
 					</table>
 				</Card.Content>
