@@ -159,6 +159,7 @@ export interface LLMModelDetail extends LLMModelSummary {
 	input_price_per_token: number;
 	output_price_per_token: number;
 	metadata: Record<string, unknown>;
+	capabilities_json: Record<string, unknown>;
 	created_at: string;
 	updated_at: string;
 }

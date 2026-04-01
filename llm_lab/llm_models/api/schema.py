@@ -37,6 +37,7 @@ class LLMModelSchema(ModelSchema):
             "supports_json_mode",
             "cost_efficiency",
             "metadata",
+            "capabilities_json",
             "created_at",
             "updated_at",
         ]
