@@ -44,6 +44,10 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<Respon
 		credentials: 'include',
 	});
 	if (!res.ok) {
+		if (res.status === 401) {
+			window.location.href = '/auth/login';
+			return new Promise<Response>(() => {});
+		}
 		const body = await res.json().catch(() => ({}));
 		throw body;
 	}

@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { getAuth } from '$lib/stores/auth.svelte';
 	import { getMe, updateMe, changePassword, type ApiUser } from '$lib/api/client';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -9,8 +7,6 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import { onMount } from 'svelte';
-
-	const auth = getAuth();
 
 	let profile = $state<ApiUser | null>(null);
 	let name = $state('');
@@ -28,15 +24,11 @@
 	let loading = $state(true);
 
 	onMount(async () => {
-		if (!auth.isAuthenticated && !auth.isLoading) {
-			goto('/auth/login');
-			return;
-		}
 		try {
 			profile = await getMe();
 			name = profile.name;
 		} catch {
-			goto('/auth/login');
+			// API client handles 401 redirect globally
 		} finally {
 			loading = false;
 		}
