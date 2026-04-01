@@ -72,6 +72,7 @@ class LLMModelListSchema(Schema):
     canonical_slug: str
     provider: str
     model_name: str
+    description: str
     is_free: bool
     context_window: int
     max_output_tokens: int
@@ -95,12 +96,19 @@ class LLMModelListSchema(Schema):
         else:
             cw_display = str(cw)
 
+        # Truncate description for list view
+        max_desc_len = 120
+        desc = obj.description or ""
+        if len(desc) > max_desc_len:
+            desc = desc[:117] + "..."
+
         return LLMModelListSchema(
             id=obj.id,
             model_id=obj.model_id,
             canonical_slug=obj.canonical_slug,
             provider=obj.provider,
             model_name=obj.model_name,
+            description=desc,
             is_free=obj.is_free,
             context_window=obj.context_window,
             max_output_tokens=obj.max_output_tokens,

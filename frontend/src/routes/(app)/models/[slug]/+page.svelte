@@ -38,6 +38,7 @@
 	import Box from '@lucide/svelte/icons/box';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Gauge from '@lucide/svelte/icons/gauge';
+	import Calculator from '@lucide/svelte/icons/calculator';
 	import Shield from '@lucide/svelte/icons/shield';
 	import Code from '@lucide/svelte/icons/code';
 	import ArrowDownToLine from '@lucide/svelte/icons/arrow-down-to-line';
@@ -51,6 +52,8 @@
 	let loading = $state(true);
 	let error = $state('');
 	let rawJsonOpen = $state(false);
+	let calcInputTokens = $state(1000);
+	let calcOutputTokens = $state(1000);
 	let relatedModels = $state<LLMModelSummary[]>([]);
 	let relatedScrollEl = $state<HTMLDivElement | null>(null);
 
@@ -67,6 +70,9 @@
 	const instructType = $derived((arch.instruct_type || meta.architecture_instruct_type || '') as string);
 	const defaultParams = $derived(model ? getDefaultParameters(model) : {} as Record<string, unknown>);
 	const hfId = $derived(model ? getHuggingFaceId(model) : '');
+	const calcInputCost = $derived(model ? (calcInputTokens / 1000) * model.input_price_per_million : 0);
+	const calcOutputCost = $derived(model ? (calcOutputTokens / 1000) * model.output_price_per_million : 0);
+	const calcTotalCost = $derived(calcInputCost + calcOutputCost);
 
 	const sections = [
 		{ id: 'overview', label: 'Overview', icon: Info },
@@ -265,6 +271,15 @@
 		URL.revokeObjectURL(url);
 	}
 
+	function stripMarkdown(text: string): string {
+		// Remove markdown links: [text](url) -> text
+		return text
+			.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+			.replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, '$1')
+			.replace(/#{1,6}\s/g, '')
+			.replace(/`([^`]+)`/g, '$1');
+	}
+
 	async function load() {
 		loading = true;
 		error = '';
@@ -295,7 +310,7 @@
 	<title>{model?.model_name ?? slug} - Models - LLM Lab</title>
 </svelte:head>
 
-<div class="space-y-4">
+<div class="space-y-4 min-w-0">
 	<!-- Breadcrumb -->
 	<div class="flex items-center gap-2 text-sm text-muted-foreground">
 		<Button variant="ghost" size="sm" href="/models" class="gap-1.5 px-2">
@@ -334,7 +349,7 @@
 							{/if}
 						</div>
 						{#if model.description}
-							<p class="text-sm text-muted-foreground mt-1 line-clamp-2">{model.description}</p>
+							<p class="text-sm text-muted-foreground mt-1 line-clamp-2">{stripMarkdown(model.description)}</p>
 						{/if}
 					</div>
 					<div class="flex items-center gap-4 text-sm">
@@ -804,6 +819,42 @@
 					</table>
 				</Card.Content>
 			</Card.Root>
+
+			<!-- Cost Calculator -->
+			<Card.Root class="border-l-4 border-l-blue-500">
+				<Card.Header class="pb-3">
+					<div class="flex items-center gap-2">
+						<Calculator class="h-4 w-4 text-blue-500" />
+						<Card.Title>Cost Calculator</Card.Title>
+					</div>
+				</Card.Header>
+				<Card.Content>
+					<div class="grid gap-4 grid-cols-1 sm:grid-cols-[1fr_1fr_auto]">
+						<div>
+							<label class="text-xs font-medium text-muted-foreground block mb-1.5">Input tokens (K)</label>
+							<input type="number" min="0" step="100" bind:value={calcInputTokens} class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm tabular-nums" />
+							<div class="text-xs text-muted-foreground mt-1">${calcInputCost.toFixed(4)}</div>
+						</div>
+						<div>
+							<label class="text-xs font-medium text-muted-foreground block mb-1.5">Output tokens (K)</label>
+							<input type="number" min="0" step="100" bind:value={calcOutputTokens} class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm tabular-nums" />
+							<div class="text-xs text-muted-foreground mt-1">${calcOutputCost.toFixed(4)}</div>
+						</div>
+						<div class="flex flex-col justify-center items-center rounded-lg bg-muted/30 px-6 py-3 min-w-[140px]">
+							<div class="text-xs text-muted-foreground mb-1">Estimated Cost</div>
+							<div class="text-2xl font-bold tabular-nums {calcTotalCost === 0 ? 'text-emerald-500' : 'text-foreground'}">{calcTotalCost === 0 ? 'Free' : `$${calcTotalCost.toFixed(4)}`}</div>
+							<div class="text-[10px] text-muted-foreground mt-0.5">{calcInputTokens}K in + {calcOutputTokens}K out</div>
+						</div>
+					</div>
+					<div class="flex flex-wrap gap-2 mt-3">
+						{#each [{ label: '1K', v: 1000 }, { label: '10K', v: 10000 }, { label: '100K', v: 100000 }, { label: '1M', v: 1000000 }] as preset}
+							<button class="rounded border border-input px-2 py-0.5 text-xs hover:bg-muted transition-colors" onclick={() => { calcInputTokens = preset.v; calcOutputTokens = Math.round(preset.v * 0.5); }}>
+								{preset.label} tokens
+							</button>
+						{/each}
+					</div>
+				</Card.Content>
+			</Card.Root>
 		</div>
 
 		<!-- ==================== METADATA SECTION ==================== -->
@@ -1002,23 +1053,6 @@
 			</Card.Root>
 		</div>
 
-		<!-- ==================== USAGE ANALYTICS PLACEHOLDER ==================== -->
-		<Card.Root>
-			<Card.Header>
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<BarChart3 class="h-4 w-4 text-muted-foreground" />
-						<Card.Title>Usage Analytics</Card.Title>
-					</div>
-					<Badge variant="outline">Coming Soon</Badge>
-				</div>
-			</Card.Header>
-			<Card.Content>
-				<div class="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20">
-					<BarChart3 class="h-8 w-8 text-muted-foreground/40" />
-					<p class="text-sm text-muted-foreground">Usage analytics will appear here</p>
-				</div>
-			</Card.Content>
-		</Card.Root>
+
 	{/if}
 </div>

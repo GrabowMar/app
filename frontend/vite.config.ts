@@ -105,6 +105,7 @@ export default defineConfig({
 		],
 	},
 	server: {
+		allowedHosts: ['.grabowmar.ovh'],
 		proxy: {
 			'/api': {
 				target: apiTarget,

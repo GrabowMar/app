@@ -149,7 +149,9 @@ def list_models(  # noqa: PLR0913
 def get_stats(request):
     """Get aggregate statistics about loaded models."""
     qs = LLMModel.objects.all()
-    agg = qs.aggregate(
+    # Exclude models with negative sentinel prices (e.g. -1) from averages
+    paid_qs = qs.filter(input_price_per_token__gte=0)
+    agg = paid_qs.aggregate(
         avg_in=Avg("input_price_per_token"),
         avg_out=Avg("output_price_per_token"),
     )

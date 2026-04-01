@@ -140,6 +140,7 @@ export interface LLMModelSummary {
 	canonical_slug: string;
 	provider: string;
 	model_name: string;
+	description: string;
 	is_free: boolean;
 	context_window: number;
 	max_output_tokens: number;
