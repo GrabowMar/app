@@ -26,7 +26,7 @@
 		<AppSidebar />
 		<Sidebar.Inset class="bg-muted/40 min-w-0">
 			<AppHeader {auth} />
-			<div class="flex min-h-[calc(100vh-5.5rem)] flex-1 flex-col p-4 md:p-6 min-w-0 overflow-x-hidden">
+			<div class="flex min-h-[calc(100vh-5.5rem)] flex-1 flex-col p-4 md:p-6 min-w-0 overflow-x-clip">
 				{@render children()}
 			</div>
 			<AppFooter />

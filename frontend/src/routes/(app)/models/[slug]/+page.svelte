@@ -75,17 +75,22 @@
 	const calcTotalCost = $derived(calcInputCost + calcOutputCost);
 
 	const sections = [
-		{ id: 'overview', label: 'Overview', icon: Info },
-		{ id: 'capabilities', label: 'Capabilities', icon: Zap },
-		{ id: 'pricing', label: 'Pricing', icon: DollarSign },
-		{ id: 'metadata', label: 'Metadata', icon: Layers },
-		{ id: 'related', label: 'Related', icon: Users },
+		{ id: 'overview', label: 'Overview', icon: Info, color: 'text-primary', border: 'bg-primary', bg: 'bg-primary/10' },
+		{ id: 'capabilities', label: 'Capabilities', icon: Zap, color: 'text-amber-500', border: 'bg-amber-500', bg: 'bg-amber-500/10' },
+		{ id: 'pricing', label: 'Pricing', icon: DollarSign, color: 'text-emerald-500', border: 'bg-emerald-500', bg: 'bg-emerald-500/10' },
+		{ id: 'metadata', label: 'Metadata', icon: Layers, color: 'text-purple-500', border: 'bg-purple-500', bg: 'bg-purple-500/10' },
+		{ id: 'related', label: 'Related', icon: Users, color: 'text-blue-500', border: 'bg-blue-500', bg: 'bg-blue-500/10' },
 	] as const;
 	let activeSection = $state<string>('overview');
 
 	function scrollToSection(id: string) {
 		activeSection = id;
-		document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		const el = document.getElementById(id);
+		if (el) {
+			const offset = 56 + 44; // header h-14 (56px) + nav bar (~44px)
+			const top = el.getBoundingClientRect().top + window.scrollY - offset;
+			window.scrollTo({ top, behavior: 'smooth' });
+		}
 	}
 
 	// Scroll-spy
@@ -432,21 +437,26 @@
 		</div>
 
 		<!-- Section Navigation -->
-		<div class="sticky top-0 z-10 -mx-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-			<div class="flex gap-1 px-1 py-1 overflow-x-auto">
+		<nav class="sticky top-14 z-20 -mx-4 md:-mx-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+			<div class="flex px-4 md:px-6 overflow-x-auto scrollbar-none">
 				{#each sections as section}
-					<Button
-						variant={activeSection === section.id ? 'secondary' : 'ghost'}
-						size="sm"
-						class="text-xs whitespace-nowrap gap-1.5"
+					<button
+						class="relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors
+							{activeSection === section.id
+								? `${section.color}`
+								: 'text-muted-foreground hover:text-foreground'}"
 						onclick={() => scrollToSection(section.id)}
 					>
-						<section.icon class="h-3 w-3" />
+						<section.icon class="h-3.5 w-3.5" />
 						{section.label}
-					</Button>
+						{#if activeSection === section.id}
+							<span class="absolute bottom-0 inset-x-2 h-0.5 rounded-full {section.border} transition-all"></span>
+						{/if}
+					</button>
 				{/each}
 			</div>
-		</div>
+			<div class="h-px bg-border"></div>
+		</nav>
 
 		<!-- ==================== OVERVIEW SECTION ==================== -->
 		<div id="overview" class="space-y-3">
@@ -482,6 +492,10 @@
 							<div>
 								<div class="text-xs text-muted-foreground">Last Updated</div>
 								<div class="text-sm font-medium">{new Date(model.updated_at).toLocaleDateString()}</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground">Added to DB</div>
+								<div class="text-sm font-medium">{new Date(model.created_at).toLocaleDateString()}</div>
 							</div>
 						</div>
 					</Card.Content>
@@ -542,7 +556,7 @@
 					</div>
 					{#if model.description}
 						<p class="text-sm text-muted-foreground leading-relaxed mt-2">
-							{model.description}
+							{stripMarkdown(model.description)}
 						</p>
 					{:else}
 						<p class="text-sm text-muted-foreground leading-relaxed mt-2">
