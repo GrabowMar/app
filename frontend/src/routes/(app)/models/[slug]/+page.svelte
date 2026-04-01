@@ -4,11 +4,15 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
-	import { getModel, type LLMModelDetail } from '$lib/api/client';
+	import { getModel, getRelatedModels, type LLMModelDetail, type LLMModelSummary } from '$lib/api/client';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Cpu from '@lucide/svelte/icons/cpu';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import Globe from '@lucide/svelte/icons/globe';
+	import Users from '@lucide/svelte/icons/users';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import GitCompareArrows from '@lucide/svelte/icons/git-compare-arrows';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
@@ -47,6 +51,8 @@
 	let loading = $state(true);
 	let error = $state('');
 	let rawJsonOpen = $state(false);
+	let relatedModels = $state<LLMModelSummary[]>([]);
+	let relatedScrollEl = $state<HTMLDivElement | null>(null);
 
 	// Derived data from model (safe to use in templates without @const)
 	const meta = $derived(model ? (model.metadata || {}) as Record<string, unknown> : {} as Record<string, unknown>);
@@ -67,6 +73,7 @@
 		{ id: 'capabilities', label: 'Capabilities', icon: Zap },
 		{ id: 'pricing', label: 'Pricing', icon: DollarSign },
 		{ id: 'metadata', label: 'Metadata', icon: Layers },
+		{ id: 'related', label: 'Related', icon: Users },
 	] as const;
 	let activeSection = $state<string>('overview');
 
@@ -261,13 +268,22 @@
 	async function load() {
 		loading = true;
 		error = '';
+		relatedModels = [];
 		try {
 			model = await getModel(slug);
+			// Fire related models fetch in background
+			getRelatedModels(slug, 12).then(r => { relatedModels = r; }).catch(() => {});
 		} catch {
 			error = 'Model not found.';
 		} finally {
 			loading = false;
 		}
+	}
+
+	function scrollRelated(dir: 'left' | 'right') {
+		if (!relatedScrollEl) return;
+		const amount = 300;
+		relatedScrollEl.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
 	}
 
 	$effect(() => {
@@ -301,7 +317,7 @@
 	{:else if model}
 
 		<!-- Header Bar -->
-		<Card.Root>
+		<Card.Root class="border-l-4 border-l-primary">
 			<Card.Content class="py-4">
 				<div class="flex flex-wrap items-center gap-4">
 					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -333,11 +349,19 @@
 						</div>
 						<Separator orientation="vertical" class="h-8" />
 						<div class="text-center">
-							<div class="font-semibold {efficiency.color}">{efficiency.grade}</div>
-							<div class="text-xs text-muted-foreground">Efficiency</div>
+							<div class="flex items-center justify-center">
+								<div class="flex h-9 w-9 items-center justify-center rounded-full border-2 {efficiency.color === 'text-emerald-500' ? 'border-emerald-500' : efficiency.color === 'text-emerald-400' ? 'border-emerald-400' : efficiency.color === 'text-blue-500' ? 'border-blue-500' : efficiency.color === 'text-blue-400' ? 'border-blue-400' : efficiency.color === 'text-amber-500' ? 'border-amber-500' : 'border-red-500'}">
+									<span class="text-sm font-bold {efficiency.color}">{efficiency.grade}</span>
+								</div>
+							</div>
+							<div class="text-xs text-muted-foreground mt-0.5">Efficiency</div>
 						</div>
 					</div>
 					<div class="flex items-center gap-2">
+						<Button variant="outline" size="sm" href="https://openrouter.ai/models/{model.model_id}" target="_blank" rel="noopener noreferrer" class="gap-1.5">
+							<Globe class="h-3.5 w-3.5" />
+							OpenRouter
+						</Button>
 						<Button variant="outline" size="sm" disabled>
 							<Sparkles class="mr-2 h-3.5 w-3.5" />
 							Generate App
@@ -356,31 +380,35 @@
 
 		<!-- Metric Grid -->
 		<div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-			<Card.Root>
+			<Card.Root class="border-l-2 border-l-blue-500">
 				<Card.Content class="p-3 text-center">
 					<div class="text-lg font-bold">{model.context_window_display}</div>
 					<div class="text-xs font-medium text-muted-foreground">Context Window</div>
 				</Card.Content>
 			</Card.Root>
-			<Card.Root>
+			<Card.Root class="border-l-2 border-l-emerald-500">
 				<Card.Content class="p-3 text-center">
 					<div class="text-lg font-bold">{formatPrice(model.input_price_per_million)}</div>
 					<div class="text-xs font-medium text-muted-foreground">Input $/1M</div>
 				</Card.Content>
 			</Card.Root>
-			<Card.Root>
+			<Card.Root class="border-l-2 border-l-blue-400">
 				<Card.Content class="p-3 text-center">
 					<div class="text-lg font-bold">{formatPrice(model.output_price_per_million)}</div>
 					<div class="text-xs font-medium text-muted-foreground">Output $/1M</div>
 				</Card.Content>
 			</Card.Root>
-			<Card.Root>
+			<Card.Root class="border-l-2 border-l-amber-500">
 				<Card.Content class="p-3 text-center">
-					<div class="text-lg font-bold {efficiency.color}" title="Score: {model.cost_efficiency.toFixed(2)} — Based on context window size and pricing">{efficiency.grade}</div>
-					<div class="text-xs font-medium text-muted-foreground">Efficiency ({model.cost_efficiency.toFixed(2)})</div>
+					<div class="flex items-center justify-center">
+						<div class="flex h-10 w-10 items-center justify-center rounded-full border-2 {efficiency.color === 'text-emerald-500' ? 'border-emerald-500 bg-emerald-500/10' : efficiency.color === 'text-emerald-400' ? 'border-emerald-400 bg-emerald-400/10' : efficiency.color === 'text-blue-500' ? 'border-blue-500 bg-blue-500/10' : efficiency.color === 'text-blue-400' ? 'border-blue-400 bg-blue-400/10' : efficiency.color === 'text-amber-500' ? 'border-amber-500 bg-amber-500/10' : 'border-red-500 bg-red-500/10'}">
+							<span class="text-sm font-bold {efficiency.color}">{efficiency.grade}</span>
+						</div>
+					</div>
+					<div class="text-xs font-medium text-muted-foreground mt-1">Efficiency ({model.cost_efficiency.toFixed(2)})</div>
 				</Card.Content>
 			</Card.Root>
-			<Card.Root>
+			<Card.Root class="border-l-2 border-l-purple-500">
 				<Card.Content class="p-3 text-center">
 					<div class="text-lg font-bold">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : 'N/A'}</div>
 					<div class="text-xs font-medium text-muted-foreground">Max Output</div>
@@ -480,35 +508,39 @@
 			</div>
 
 			<!-- External Links -->
-			{#if hfId || model.description}
-				<Card.Root>
-					<Card.Content class="p-4">
+			<Card.Root>
+				<Card.Content class="p-4">
+					<div class="flex flex-wrap items-center gap-3">
+						<a href="https://openrouter.ai/models/{model.model_id}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
+							<Globe class="h-3.5 w-3.5" />
+							View on OpenRouter
+							<ExternalLink class="h-3 w-3" />
+						</a>
 						{#if hfId}
-							<div class="flex items-center gap-2 mb-2">
-								<span class="text-xs text-muted-foreground">🤗 HuggingFace:</span>
-								<a href="https://huggingface.co/{hfId}" target="_blank" rel="noopener noreferrer" class="text-sm text-primary hover:underline inline-flex items-center gap-1">
-									<code class="text-xs">{hfId}</code>
-									<ExternalLink class="h-3 w-3" />
-								</a>
-							</div>
+							<Separator orientation="vertical" class="h-4" />
+							<a href="https://huggingface.co/{hfId}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
+								<span>🤗</span>
+								<code class="text-xs">{hfId}</code>
+								<ExternalLink class="h-3 w-3" />
+							</a>
 						{/if}
-						{#if model.description}
-							<p class="text-sm text-muted-foreground leading-relaxed">
-								{model.description}
-							</p>
-						{:else}
-							<p class="text-sm text-muted-foreground leading-relaxed">
-								{model.model_name} by {model.provider}. A large language model available via OpenRouter.
-							</p>
-						{/if}
-					</Card.Content>
-				</Card.Root>
-			{/if}
+					</div>
+					{#if model.description}
+						<p class="text-sm text-muted-foreground leading-relaxed mt-2">
+							{model.description}
+						</p>
+					{:else}
+						<p class="text-sm text-muted-foreground leading-relaxed mt-2">
+							{model.model_name} by {model.provider}. A large language model available via OpenRouter.
+						</p>
+					{/if}
+				</Card.Content>
+			</Card.Root>
 		</div>
 
 		<!-- ==================== CAPABILITIES SECTION ==================== -->
 		<div id="capabilities" class="space-y-3">
-			<Card.Root>
+			<Card.Root class="border-l-4 border-l-amber-500">
 				<Card.Header class="pb-3">
 					<div class="flex items-center gap-2">
 						<Zap class="h-4 w-4 text-amber-500" />
@@ -730,7 +762,7 @@
 			</div>
 
 			<!-- Pricing Table -->
-			<Card.Root>
+			<Card.Root class="border-l-4 border-l-emerald-500">
 				<Card.Header class="pb-3">
 					<div class="flex items-center gap-2">
 						<DollarSign class="h-4 w-4 text-muted-foreground" />
@@ -777,7 +809,7 @@
 		<!-- ==================== METADATA SECTION ==================== -->
 		<div id="metadata" class="space-y-3">
 			<!-- Quick Reference Bar -->
-			<Card.Root>
+			<Card.Root class="border-l-4 border-l-purple-500">
 				<Card.Content class="p-3">
 					<div class="flex flex-wrap items-center gap-3 text-sm">
 						<div class="flex items-center gap-1">
@@ -895,6 +927,75 @@
 								Copy
 							</Button>
 							<pre class="rounded-lg bg-zinc-950 dark:bg-zinc-900 text-zinc-300 p-4 text-xs overflow-auto max-h-[400px]">{JSON.stringify(caps, null, 2)}</pre>
+						</div>
+					{/if}
+				</Card.Content>
+			</Card.Root>
+		</div>
+
+		<!-- ==================== RELATED MODELS SECTION ==================== -->
+		<div id="related" class="space-y-3">
+			<Card.Root class="border-l-4 border-l-indigo-500">
+				<Card.Header class="pb-3">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<Users class="h-4 w-4 text-indigo-500" />
+							<Card.Title>Related Models</Card.Title>
+							<Badge variant="outline" class="text-xs">{model.provider}</Badge>
+						</div>
+						{#if relatedModels.length > 4}
+							<div class="flex items-center gap-1">
+								<Button variant="ghost" size="icon" class="h-7 w-7" onclick={() => scrollRelated('left')}>
+									<ChevronLeft class="h-4 w-4" />
+								</Button>
+								<Button variant="ghost" size="icon" class="h-7 w-7" onclick={() => scrollRelated('right')}>
+									<ChevronRight class="h-4 w-4" />
+								</Button>
+							</div>
+						{/if}
+					</div>
+				</Card.Header>
+				<Card.Content>
+					{#if relatedModels.length === 0}
+						<div class="flex h-24 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20">
+							<Users class="h-6 w-6 text-muted-foreground/40" />
+							<p class="text-sm text-muted-foreground">No related models from {model.provider} found</p>
+						</div>
+					{:else}
+						<div bind:this={relatedScrollEl} class="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+							{#each relatedModels as related}
+								<a
+									href="/models/{related.canonical_slug}"
+									class="group flex-shrink-0 w-56 rounded-lg border bg-card p-3 transition-all hover:shadow-md hover:border-primary/30"
+								>
+									<div class="flex items-start gap-2 mb-2">
+										<div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+											<Cpu class="h-3.5 w-3.5 text-primary" />
+										</div>
+										<div class="min-w-0 flex-1">
+											<div class="text-sm font-medium truncate group-hover:text-primary transition-colors">{related.model_name}</div>
+											<div class="text-xs text-muted-foreground">{related.provider}</div>
+										</div>
+									</div>
+									<div class="grid grid-cols-2 gap-1.5 text-xs">
+										<div>
+											<span class="text-muted-foreground">Context:</span>
+											<span class="font-medium ml-0.5">{related.context_window >= 1000 ? `${Math.round(related.context_window / 1000)}K` : related.context_window}</span>
+										</div>
+										<div>
+											<span class="text-muted-foreground">Input:</span>
+											<span class="font-medium ml-0.5">{related.input_price_per_million === 0 ? 'Free' : `$${related.input_price_per_million.toFixed(2)}`}</span>
+										</div>
+									</div>
+									{#if related.capabilities && related.capabilities.length > 0}
+										<div class="flex flex-wrap gap-1 mt-1.5">
+											{#each related.capabilities.slice(0, 3) as cap}
+												<Badge variant="outline" class="text-[10px] px-1 py-0">{cap}</Badge>
+											{/each}
+										</div>
+									{/if}
+								</a>
+							{/each}
 						</div>
 					{/if}
 				</Card.Content>

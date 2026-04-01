@@ -142,6 +142,7 @@ export interface LLMModelSummary {
 	model_name: string;
 	is_free: boolean;
 	context_window: number;
+	max_output_tokens: number;
 	context_window_display: string;
 	input_price_per_million: number;
 	output_price_per_million: number;
@@ -192,6 +193,10 @@ export async function getModels(params: {
 	provider?: string;
 	capability?: string;
 	free_only?: boolean;
+	sort_by?: string;
+	sort_dir?: 'asc' | 'desc';
+	price_range?: string;
+	context_range?: string;
 } = {}): Promise<PaginatedModels> {
 	const q = new URLSearchParams();
 	if (params.page) q.set('page', String(params.page));
@@ -200,6 +205,10 @@ export async function getModels(params: {
 	if (params.provider) q.set('provider', params.provider);
 	if (params.capability) q.set('capability', params.capability);
 	if (params.free_only) q.set('free_only', 'true');
+	if (params.sort_by) q.set('sort_by', params.sort_by);
+	if (params.sort_dir) q.set('sort_dir', params.sort_dir);
+	if (params.price_range) q.set('price_range', params.price_range);
+	if (params.context_range) q.set('context_range', params.context_range);
 	const qs = q.toString();
 	const res = await apiFetch(`/models/${qs ? '?' + qs : ''}`);
 	return res.json();
@@ -227,4 +236,9 @@ export async function syncModelsFromOpenRouter(): Promise<SyncResult> {
 
 export async function deleteModel(slug: string): Promise<void> {
 	await apiFetch(`/models/detail/${slug}/`, { method: 'DELETE' });
+}
+
+export async function getRelatedModels(slug: string, limit = 10): Promise<LLMModelSummary[]> {
+	const res = await apiFetch(`/models/detail/${slug}/related/?limit=${limit}`);
+	return res.json();
 }

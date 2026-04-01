@@ -74,6 +74,7 @@ class LLMModelListSchema(Schema):
     model_name: str
     is_free: bool
     context_window: int
+    max_output_tokens: int
     context_window_display: str
     input_price_per_million: float
     output_price_per_million: float
@@ -102,6 +103,7 @@ class LLMModelListSchema(Schema):
             model_name=obj.model_name,
             is_free=obj.is_free,
             context_window=obj.context_window,
+            max_output_tokens=obj.max_output_tokens,
             context_window_display=cw_display,
             input_price_per_million=round(
                 obj.input_price_per_token * CONTEXT_MILLION,
