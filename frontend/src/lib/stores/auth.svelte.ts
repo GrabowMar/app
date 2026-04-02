@@ -109,6 +109,21 @@ function createAuth() {
 		return { ok: false, error: errorMsg };
 	}
 
+	async function logout(): Promise<void> {
+		try {
+			await fetch(`${ALLAUTH_BASE}/auth/session`, {
+				method: 'DELETE',
+				headers: {
+					'X-CSRFToken': getCsrfToken(),
+				},
+				credentials: 'include',
+			});
+		} finally {
+			isAuthenticated = false;
+			user = null;
+		}
+	}
+
 	return {
 		get isAuthenticated() {
 			return isAuthenticated;
@@ -122,6 +137,7 @@ function createAuth() {
 		checkSession,
 		login,
 		signup,
+		logout,
 	};
 }
 

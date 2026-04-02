@@ -1,6 +1,8 @@
+import secrets
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 from django.db.models import CharField
 from django.db.models import EmailField
 from django.urls import reverse
@@ -36,3 +38,24 @@ class User(AbstractUser):
 
         """
         return reverse("users:detail", kwargs={"pk": self.id})
+
+
+class ApiToken(models.Model):
+    user = models.OneToOneField(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="api_token",
+    )
+    key = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("API Token")
+        verbose_name_plural = _("API Tokens")
+
+    def __str__(self) -> str:
+        return f"Token for {self.user.email}"
+
+    @staticmethod
+    def generate_key() -> str:
+        return secrets.token_urlsafe(48)

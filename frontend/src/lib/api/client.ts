@@ -130,6 +130,63 @@ export async function changePassword(data: {
 	}
 }
 
+export async function logout(): Promise<void> {
+	const res = await allauthFetch('/auth/session', {
+		method: 'DELETE',
+	});
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({}));
+		throw body;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// API Token Management
+// ---------------------------------------------------------------------------
+
+export interface ApiTokenInfo {
+	key_preview: string;
+	created_at: string;
+}
+
+export interface ApiTokenCreated {
+	key: string;
+	created_at: string;
+}
+
+export async function getApiToken(): Promise<ApiTokenInfo | null> {
+	const res = await apiFetch('/users/me/token/');
+	return res.json();
+}
+
+export async function getApiTokenSafe(): Promise<ApiTokenInfo | null> {
+	try {
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		const res = await fetch(`${API_BASE}/users/me/token/`, {
+			headers,
+			credentials: 'include',
+		});
+		if (res.status === 404) return null;
+		if (res.status === 401) {
+			window.location.href = '/auth/login';
+			return new Promise<null>(() => {});
+		}
+		if (!res.ok) throw new Error('Failed to check token');
+		return res.json();
+	} catch {
+		return null;
+	}
+}
+
+export async function generateApiToken(): Promise<ApiTokenCreated> {
+	const res = await apiFetch('/users/me/token/', { method: 'POST' });
+	return res.json();
+}
+
+export async function revokeApiToken(): Promise<void> {
+	await apiFetch('/users/me/token/', { method: 'DELETE' });
+}
+
 // ---------------------------------------------------------------------------
 // LLM Models
 // ---------------------------------------------------------------------------
