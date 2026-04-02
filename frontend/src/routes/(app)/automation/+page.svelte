@@ -296,7 +296,7 @@
 									</label>
 									<label class="flex items-center gap-1.5">
 										Max:
-										<Input type="number" bind:value={maxConcurrent} min={1} max={10} class="h-6 w-14 text-xs" />
+										<input type="number" bind:value={maxConcurrent} min={1} max={10} class="h-6 w-14 rounded border border-input bg-background px-2 text-xs" />
 									</label>
 								</div>
 							</div>
@@ -406,7 +406,7 @@
 							</label>
 							<label class="flex items-center gap-1.5">
 								Max concurrent:
-								<Input type="number" bind:value={analysisMaxConcurrent} min={1} max={10} class="h-6 w-14 text-xs" />
+								<input type="number" bind:value={analysisMaxConcurrent} min={1} max={10} class="h-6 w-14 rounded border border-input bg-background px-2 text-xs" />
 							</label>
 							<label class="flex items-center gap-1.5">
 								<input type="checkbox" bind:checked={autoStart} class="rounded" />

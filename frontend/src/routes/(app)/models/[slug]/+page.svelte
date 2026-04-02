@@ -65,7 +65,7 @@
 	const inputMods = $derived((arch.input_modalities || meta.architecture_input_modalities || []) as string[]);
 	const outputMods = $derived((arch.output_modalities || meta.architecture_output_modalities || []) as string[]);
 	const supportedParams = $derived(model ? getSupportedParameters(model) : [] as string[]);
-	const perRequestLimits = $derived(model ? getPerRequestLimits(model) : {} as Record<string, unknown>);
+	const perRequestLimits = $derived(model ? getPerRequestLimits(model) : {} as Record<string, number>);
 	const capMatrix = $derived(model ? getCapabilityMatrix(model) : {} as Record<string, boolean>);
 	const instructType = $derived((arch.instruct_type || meta.architecture_instruct_type || '') as string);
 	const defaultParams = $derived(model ? getDefaultParameters(model) : {} as Record<string, unknown>);
