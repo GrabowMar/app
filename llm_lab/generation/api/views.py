@@ -31,6 +31,29 @@ from llm_lab.llm_models.models import LLMModel
 router = Router(tags=["generation"])
 
 
+def _dispatch_job(job: GenerationJob) -> None:
+    """Run a generation job — sync in-process (Celery worker not required)."""
+    import threading  # noqa: PLC0415
+
+    from llm_lab.generation.services.generation_service import GenerationService  # noqa: PLC0415
+
+    def _run() -> None:
+        service = GenerationService()
+        service.execute(
+            GenerationJob.objects.select_related(
+                "model",
+                "app_requirement",
+                "scaffolding_template",
+                "backend_prompt_template",
+                "frontend_prompt_template",
+                "batch",
+            ).get(id=job.id),
+        )
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+
 # -- Scaffolding Templates ---------------------------------------------
 
 
@@ -154,6 +177,95 @@ def delete_prompt_template(request, slug: str):
 
 # -- Generation Jobs ----------------------------------------------------
 
+# NOTE: Job creation endpoints MUST be defined before {job_id} routes
+# otherwise Django Ninja matches "custom", "scaffolding", "copilot" as job_id.
+
+
+@router.post("/jobs/custom/", response=GenerationJobSchema)
+def create_custom_job(request, payload: CustomJobCreateSchema):
+    """Create a custom mode generation job."""
+    model = get_object_or_404(LLMModel, id=payload.model_id)
+    job = GenerationJob.objects.create(
+        mode=GenerationJob.Mode.CUSTOM,
+        created_by=request.auth,
+        model=model,
+        custom_system_prompt=payload.system_prompt,
+        custom_user_prompt=payload.user_prompt,
+        temperature=payload.temperature,
+        max_tokens=payload.max_tokens,
+    )
+    _dispatch_job(job)
+    return GenerationJob.objects.get(id=job.id)
+
+
+@router.post("/jobs/scaffolding/", response=BatchCreateResponseSchema)
+def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
+    """Create scaffolding mode jobs (templates x models)."""
+    scaffolding = get_object_or_404(
+        ScaffoldingTemplate, id=payload.scaffolding_template_id,
+    )
+    app_reqs = AppRequirementTemplate.objects.filter(
+        id__in=payload.app_requirement_ids,
+    )
+    models_qs = LLMModel.objects.filter(id__in=payload.model_ids)
+
+    batch = GenerationBatch.objects.create(
+        name=f"Scaffolding batch - {scaffolding.name}",
+        mode="scaffolding",
+        total_jobs=app_reqs.count() * models_qs.count(),
+        created_by=request.auth,
+    )
+
+    job_count = 0
+    for app_req in app_reqs:
+        for model in models_qs:
+            job = GenerationJob.objects.create(
+                mode=GenerationJob.Mode.SCAFFOLDING,
+                created_by=request.auth,
+                batch=batch,
+                model=model,
+                scaffolding_template=scaffolding,
+                app_requirement=app_req,
+                temperature=payload.temperature,
+                max_tokens=payload.max_tokens,
+            )
+            run_generation_job.delay(str(job.id))
+            job_count += 1
+
+    # Also dispatch the first batch of jobs in background threads
+    for pending_job in batch.jobs.all():
+        _dispatch_job(pending_job)
+
+    return BatchCreateResponseSchema(
+        batch_id=batch.id, job_count=job_count, status="pending",
+    )
+
+
+@router.post("/jobs/copilot/", response=GenerationJobSchema)
+def create_copilot_job(request, payload: CopilotJobCreateSchema):
+    """Create a copilot mode generation job."""
+    model = None
+    if payload.model_id:
+        model = get_object_or_404(LLMModel, id=payload.model_id)
+    scaffolding = None
+    if payload.scaffolding_template_id:
+        scaffolding = get_object_or_404(
+            ScaffoldingTemplate, id=payload.scaffolding_template_id,
+        )
+
+    job = GenerationJob.objects.create(
+        mode=GenerationJob.Mode.COPILOT,
+        created_by=request.auth,
+        model=model,
+        scaffolding_template=scaffolding,
+        copilot_description=payload.description,
+        copilot_max_iterations=payload.max_iterations,
+        copilot_use_open_source=payload.use_open_source,
+    )
+    run_generation_job.delay(str(job.id))
+    _dispatch_job(job)
+    return GenerationJob.objects.get(id=job.id)
+
 
 @router.get("/jobs/", response=PaginatedJobsSchema)
 def list_jobs(
@@ -240,94 +352,6 @@ def get_job_artifacts(request, job_id: str):
 def get_copilot_iterations(request, job_id: str):
     job = get_object_or_404(GenerationJob, id=job_id, created_by=request.auth)
     return job.copilot_iterations.all()
-
-
-# -- Job Creation -------------------------------------------------------
-
-
-@router.post("/jobs/custom/", response=GenerationJobSchema)
-def create_custom_job(request, payload: CustomJobCreateSchema):
-    """Create a custom mode generation job."""
-    model = get_object_or_404(LLMModel, id=payload.model_id)
-    job = GenerationJob.objects.create(
-        mode=GenerationJob.Mode.CUSTOM,
-        created_by=request.auth,
-        model=model,
-        custom_system_prompt=payload.system_prompt,
-        custom_user_prompt=payload.user_prompt,
-        temperature=payload.temperature,
-        max_tokens=payload.max_tokens,
-    )
-    run_generation_job.delay(str(job.id))
-    return job
-
-
-@router.post("/jobs/scaffolding/", response=BatchCreateResponseSchema)
-def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
-    """Create scaffolding mode jobs (templates x models)."""
-    scaffolding = get_object_or_404(
-        ScaffoldingTemplate,
-        id=payload.scaffolding_template_id,
-    )
-    app_reqs = AppRequirementTemplate.objects.filter(
-        id__in=payload.app_requirement_ids,
-    )
-    models_qs = LLMModel.objects.filter(id__in=payload.model_ids)
-
-    batch = GenerationBatch.objects.create(
-        name=f"Scaffolding batch - {scaffolding.name}",
-        mode="scaffolding",
-        total_jobs=app_reqs.count() * models_qs.count(),
-        created_by=request.auth,
-    )
-
-    job_count = 0
-    for app_req in app_reqs:
-        for model in models_qs:
-            job = GenerationJob.objects.create(
-                mode=GenerationJob.Mode.SCAFFOLDING,
-                created_by=request.auth,
-                batch=batch,
-                model=model,
-                scaffolding_template=scaffolding,
-                app_requirement=app_req,
-                temperature=payload.temperature,
-                max_tokens=payload.max_tokens,
-            )
-            run_generation_job.delay(str(job.id))
-            job_count += 1
-
-    return BatchCreateResponseSchema(
-        batch_id=batch.id,
-        job_count=job_count,
-        status="pending",
-    )
-
-
-@router.post("/jobs/copilot/", response=GenerationJobSchema)
-def create_copilot_job(request, payload: CopilotJobCreateSchema):
-    """Create a copilot mode generation job."""
-    model = None
-    if payload.model_id:
-        model = get_object_or_404(LLMModel, id=payload.model_id)
-    scaffolding = None
-    if payload.scaffolding_template_id:
-        scaffolding = get_object_or_404(
-            ScaffoldingTemplate,
-            id=payload.scaffolding_template_id,
-        )
-
-    job = GenerationJob.objects.create(
-        mode=GenerationJob.Mode.COPILOT,
-        created_by=request.auth,
-        model=model,
-        scaffolding_template=scaffolding,
-        copilot_description=payload.description,
-        copilot_max_iterations=payload.max_iterations,
-        copilot_use_open_source=payload.use_open_source,
-    )
-    run_generation_job.delay(str(job.id))
-    return job
 
 
 # -- Batches ------------------------------------------------------------
