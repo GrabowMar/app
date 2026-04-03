@@ -1,13 +1,17 @@
 """Generation orchestrator — executes generation jobs per mode."""
 
-import json
 import logging
 import time
 
 from django.utils import timezone
 
+from llm_lab.generation.models import CopilotIteration
 from llm_lab.generation.models import GenerationArtifact
 from llm_lab.generation.models import GenerationJob
+from llm_lab.generation.services.backend_scanner import BackendScanner
+from llm_lab.generation.services.code_parser import extract_python_code
+from llm_lab.generation.services.code_parser import infer_python_dependencies
+from llm_lab.generation.services.code_parser import parse_result_to_structured
 from llm_lab.generation.services.openrouter_client import OpenRouterClient
 from llm_lab.generation.services.openrouter_client import OpenRouterError
 from llm_lab.generation.services.prompt_renderer import PromptRenderer
@@ -21,6 +25,7 @@ class GenerationService:
     def __init__(self) -> None:
         self.client = OpenRouterClient()
         self.renderer = PromptRenderer()
+        self.scanner = BackendScanner()
 
     def execute(self, job: GenerationJob) -> None:
         """Execute a generation job based on its mode."""
@@ -58,6 +63,7 @@ class GenerationService:
                     "error_message",
                     "result_data",
                     "metrics",
+                    "copilot_current_iteration",
                     "updated_at",
                 ],
             )
@@ -95,7 +101,7 @@ class GenerationService:
     # ── Scaffolding Mode ──────────────────────────────────────────────
 
     def _run_scaffolding(self, job: GenerationJob) -> None:
-        """Scaffolding mode: two-stage generation (backend → frontend)."""
+        """Scaffolding mode: two-stage generation (backend → scan → frontend)."""
         model_id = job.model.model_id if job.model else "openai/gpt-4o-mini"
         app_req = job.app_requirement
         if not app_req:
@@ -120,12 +126,22 @@ class GenerationService:
         for k in total_usage:
             total_usage[k] += backend_usage.get(k, 0)
 
-        # Stage 2: Frontend generation (with backend context)
+        # Stage 1.5: Scan backend for API context (structured extraction)
+        scan_result = self.scanner.scan_raw_response(backend_content)
+        api_context = scan_result.to_frontend_context()
+        logger.info(
+            "Backend scan: %d endpoints, %d models",
+            len(scan_result.endpoints),
+            len(scan_result.models),
+        )
+
+        # Stage 2: Frontend generation (with scanned backend context)
         frontend_messages = self.renderer.render_frontend_messages(
             app_requirement=app_req,
             backend_code=backend_content,
             prompt_template_system=job.backend_prompt_template,
             prompt_template_user=job.frontend_prompt_template,
+            api_context_override=api_context if scan_result.endpoints else None,
         )
         start2 = time.time()
         frontend_resp = self._call_llm(
@@ -137,11 +153,18 @@ class GenerationService:
         for k in total_usage:
             total_usage[k] += frontend_usage.get(k, 0)
 
+        # Parse code blocks and infer deps
+        structured = parse_result_to_structured(backend_content, frontend_content)
+
         job.result_data = {
             "backend_code": backend_content,
             "frontend_code": frontend_content,
             "backend_truncated": OpenRouterClient.is_truncated(backend_resp),
             "frontend_truncated": OpenRouterClient.is_truncated(frontend_resp),
+            "backend_scan": scan_result.to_dict(),
+            "backend_dependencies": structured.get("backend_dependencies", []),
+            "backend_files": structured.get("backend_files", 0),
+            "frontend_files": structured.get("frontend_files", 0),
         }
         job.metrics = {
             **total_usage,
@@ -149,50 +172,211 @@ class GenerationService:
             "frontend_duration": round(frontend_elapsed, 2),
             "total_duration": round(backend_elapsed + frontend_elapsed, 2),
             "model": model_id,
+            "endpoints_found": len(scan_result.endpoints),
+            "models_found": len(scan_result.models),
         }
 
     # ── Copilot Mode ──────────────────────────────────────────────────
 
     def _run_copilot(self, job: GenerationJob) -> None:
-        """Copilot mode: agentic generate→check loop (simplified)."""
-        model_id = self._pick_copilot_model(job)
+        """Copilot mode: iterative generate → validate → fix loop.
 
+        Each iteration:
+        1. Generate (or fix) code via LLM
+        2. Extract and parse code blocks
+        3. Validate: check for syntax errors, missing imports, etc.
+        4. If errors found and iterations remaining, build fix prompt and loop
+        5. Otherwise, complete
+        """
+        model_id = self._pick_copilot_model(job)
+        max_iters = min(job.copilot_max_iterations or 5, 10)
+        total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        total_start = time.time()
+
+        # Build initial conversation
+        messages = self._build_copilot_initial_messages(job)
+        current_code = ""
+        last_errors: list[str] = []
+
+        for iteration in range(1, max_iters + 1):
+            # Check cancellation
+            job.refresh_from_db(fields=["status"])
+            if job.status == GenerationJob.Status.CANCELLED:
+                logger.info("Job %s cancelled at iteration %d", job.id, iteration)
+                return
+
+            job.copilot_current_iteration = iteration
+            job.save(update_fields=["copilot_current_iteration", "updated_at"])
+
+            stage = f"copilot_iter_{iteration}"
+            iter_start = time.time()
+
+            # Call LLM
+            response = self._call_llm(job, model_id, messages, stage=stage)
+            iter_elapsed = time.time() - iter_start
+
+            content = OpenRouterClient.extract_content(response)
+            usage = OpenRouterClient.extract_usage(response)
+            for k in total_usage:
+                total_usage[k] += usage.get(k, 0)
+
+            # Extract and validate code
+            current_code = extract_python_code(content) or content
+            errors = self._validate_python_code(current_code)
+
+            # Record iteration
+            CopilotIteration.objects.create(
+                job=job,
+                iteration_number=iteration,
+                action=(
+                    CopilotIteration.Action.GENERATE
+                    if iteration == 1
+                    else CopilotIteration.Action.FIX
+                ),
+                llm_request={"messages": messages, "model": model_id},
+                llm_response=content[:50000],
+                build_success=len(errors) == 0,
+                errors_detected=errors,
+                fix_applied=(
+                    f"Fix attempt for: {'; '.join(last_errors[:3])}"
+                    if iteration > 1
+                    else ""
+                ),
+            )
+
+            logger.info(
+                "Copilot iter %d/%d: %d errors, %.1fs",
+                iteration, max_iters, len(errors), iter_elapsed,
+            )
+
+            # Success or last iteration — save and exit
+            if not errors or iteration == max_iters:
+                deps = infer_python_dependencies(current_code)
+                job.result_data = {
+                    "content": current_code,
+                    "raw_response": content,
+                    "iterations_completed": iteration,
+                    "final_errors": errors,
+                    "dependencies": deps,
+                    "truncated": OpenRouterClient.is_truncated(response),
+                }
+                job.metrics = {
+                    **total_usage,
+                    "duration_seconds": round(time.time() - total_start, 2),
+                    "model": model_id,
+                    "iterations_used": iteration,
+                    "final_error_count": len(errors),
+                }
+                break
+
+            # Build fix prompt for next iteration
+            last_errors = errors
+            messages = self._build_copilot_fix_messages(
+                job, current_code, errors, iteration,
+            )
+
+    # ── Copilot helpers ───────────────────────────────────────────────
+
+    @staticmethod
+    def _build_copilot_initial_messages(job: GenerationJob) -> list[dict]:
+        """Build initial generation messages for copilot mode."""
         system_prompt = (
             "You are an expert full-stack developer. Generate complete, "
-            "working application code based on the user's description. "
-            "Return well-structured code with clear file markers."
+            "working application code. Return well-structured code using "
+            "annotated markdown code blocks like ```python:app.py\n"
+            "Include ALL imports, complete function bodies, seed data, and "
+            "error handling. The code must be syntactically valid Python."
         )
         user_prompt = (
             f"Build the following application:\n\n{job.copilot_description}\n\n"
-            "Generate a complete Flask backend (app.py) and React frontend (App.jsx). "
-            "Make the code production-quality with proper error handling, "
-            "rich data models, and a polished UI."
+            "Requirements:\n"
+            "1. Complete Flask backend in app.py with Flask-SQLAlchemy, "
+            "Flask-CORS, JWT auth\n"
+            "2. React frontend in App.jsx with Tailwind CSS, dark theme\n"
+            "3. Rich data models with 6+ fields, seed data with 15+ records\n"
+            "4. CRUD endpoints with search, filter, sort, pagination\n"
+            "5. 6+ distinct pages in the frontend\n"
+            "6. Production-quality error handling\n\n"
+            "Return the code in annotated code blocks:\n"
+            "```python:app.py\n... complete backend ...\n```\n"
+            "```jsx:App.jsx\n... complete frontend ...\n```"
         )
-
-        messages = [
+        return [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
-        start = time.time()
-        response = self._call_llm(job, model_id, messages, stage="copilot_iter_1")
-        elapsed = time.time() - start
+    @staticmethod
+    def _build_copilot_fix_messages(
+        job: GenerationJob,
+        code: str,
+        errors: list[str],
+        iteration: int,
+    ) -> list[dict]:
+        """Build fix prompt for copilot iteration."""
+        error_text = "\n".join(f"- {e}" for e in errors[:10])
+        # Include truncated code to stay within context window
+        code_preview = code[:15000] if len(code) > 15000 else code
 
-        content = OpenRouterClient.extract_content(response)
-        usage = OpenRouterClient.extract_usage(response)
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert Python developer fixing code errors. "
+                    "Return the COMPLETE corrected code in a ```python:app.py "
+                    "code block. Do not return partial fixes — return the "
+                    "entire corrected file."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"The following code has errors (iteration {iteration}):\n\n"
+                    f"```python\n{code_preview}\n```\n\n"
+                    f"## Errors Found\n{error_text}\n\n"
+                    "Fix ALL errors and return the complete corrected code in "
+                    "a ```python:app.py code block."
+                ),
+            },
+        ]
 
-        job.copilot_current_iteration = 1
-        job.result_data = {
-            "content": content,
-            "iterations_completed": 1,
-            "truncated": OpenRouterClient.is_truncated(response),
-        }
-        job.metrics = {
-            **usage,
-            "duration_seconds": round(elapsed, 2),
-            "model": model_id,
-        }
-        job.save(update_fields=["copilot_current_iteration", "updated_at"])
+    @staticmethod
+    def _validate_python_code(code: str) -> list[str]:
+        """Validate Python code and return list of error descriptions."""
+        import ast as ast_module
+
+        errors: list[str] = []
+        if not code or not code.strip():
+            errors.append("Empty code output")
+            return errors
+
+        # Check syntax
+        try:
+            ast_module.parse(code)
+        except SyntaxError as e:
+            errors.append(f"SyntaxError at line {e.lineno}: {e.msg}")
+            return errors  # Can't do further checks on invalid syntax
+
+        # Check for common issues
+        if "pass" in code:
+            # Count stub functions (def with only pass/...)
+            import re
+
+            stubs = re.findall(
+                r"def\s+\w+\s*\([^)]*\)\s*:\s*\n\s+(?:pass|\.\.\.)\s*$",
+                code,
+                re.MULTILINE,
+            )
+            if len(stubs) > 2:
+                errors.append(f"{len(stubs)} stub functions with only pass/...")
+
+        if len(code.strip().split("\n")) < 30:
+            errors.append(
+                f"Code too short ({len(code.strip().split(chr(10)))} lines); "
+                "expected 100+ lines for a complete app",
+            )
+
+        return errors
 
     # ── Helpers ────────────────────────────────────────────────────────
 
@@ -220,7 +404,6 @@ class GenerationService:
                 max_tokens=job.max_tokens,
             )
         except OpenRouterError:
-            # Save failed artifact too
             GenerationArtifact.objects.create(
                 job=job,
                 stage=stage,
@@ -245,9 +428,8 @@ class GenerationService:
         """Choose model for copilot mode."""
         if job.model:
             return job.model.model_id
-        # Default open-source models
         if job.copilot_use_open_source:
-            return "deepseek/deepseek-chat-v3-0324:free"
+            return "deepseek/deepseek-chat"
         return "openai/gpt-4o-mini"
 
     @staticmethod

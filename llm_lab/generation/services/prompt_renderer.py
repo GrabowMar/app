@@ -207,10 +207,14 @@ class PromptRenderer:
         backend_code: str,
         prompt_template_system: PromptTemplate | None = None,
         prompt_template_user: PromptTemplate | None = None,
+        api_context_override: str | None = None,
     ) -> list[dict]:
         """Render system + user messages for frontend generation."""
         context = self._build_context(app_requirement)
-        context["backend_api_context"] = self._extract_api_context(backend_code)
+        # Use scanner output if available, otherwise fall back to regex extraction
+        context["backend_api_context"] = (
+            api_context_override or self._extract_api_context(backend_code)
+        )
 
         system_content = self._get_template_content(
             prompt_template_system, "frontend", "system", DEFAULT_FRONTEND_SYSTEM,

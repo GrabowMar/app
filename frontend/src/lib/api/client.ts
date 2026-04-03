@@ -525,3 +525,113 @@ export async function getGenerationBatch(id: string): Promise<GenerationBatch> {
 	const res = await apiFetch(`/generation/batches/${id}/`);
 	return res.json();
 }
+
+// ── Template CRUD ──────────────────────────────────────────────────
+
+export async function createScaffoldingTemplate(data: {
+	name: string;
+	slug: string;
+	description?: string;
+	tech_stack?: Record<string, string>;
+	substitution_vars?: string[];
+}): Promise<ScaffoldingTemplate> {
+	const res = await apiFetch('/generation/scaffolding-templates/', {
+		method: 'POST',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+export async function updateScaffoldingTemplate(
+	slug: string,
+	data: Partial<{
+		name: string;
+		description: string;
+		tech_stack: Record<string, string>;
+		substitution_vars: string[];
+	}>
+): Promise<ScaffoldingTemplate> {
+	const res = await apiFetch(`/generation/scaffolding-templates/${slug}/`, {
+		method: 'PUT',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+export async function deleteScaffoldingTemplate(slug: string): Promise<void> {
+	await apiFetch(`/generation/scaffolding-templates/${slug}/`, { method: 'DELETE' });
+}
+
+export async function createAppTemplate(data: {
+	name: string;
+	slug: string;
+	description?: string;
+	backend_requirements?: string[];
+	frontend_requirements?: string[];
+	admin_requirements?: string[];
+	api_endpoints?: Record<string, unknown>;
+	data_model?: Record<string, unknown>;
+}): Promise<AppRequirementTemplate> {
+	const res = await apiFetch('/generation/app-templates/', {
+		method: 'POST',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+export async function updateAppTemplate(
+	slug: string,
+	data: Partial<{
+		name: string;
+		description: string;
+		backend_requirements: string[];
+		frontend_requirements: string[];
+		admin_requirements: string[];
+		api_endpoints: Record<string, unknown>;
+		data_model: Record<string, unknown>;
+	}>
+): Promise<AppRequirementTemplate> {
+	const res = await apiFetch(`/generation/app-templates/${slug}/`, {
+		method: 'PUT',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+export async function deleteAppTemplate(slug: string): Promise<void> {
+	await apiFetch(`/generation/app-templates/${slug}/`, { method: 'DELETE' });
+}
+
+export async function createPromptTemplate(data: {
+	name: string;
+	slug: string;
+	stage: string;
+	role: string;
+	content: string;
+}): Promise<PromptTemplate> {
+	const res = await apiFetch('/generation/prompt-templates/', {
+		method: 'POST',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+export async function updatePromptTemplate(
+	slug: string,
+	data: Partial<{
+		name: string;
+		stage: string;
+		role: string;
+		content: string;
+	}>
+): Promise<PromptTemplate> {
+	const res = await apiFetch(`/generation/prompt-templates/${slug}/`, {
+		method: 'PUT',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+export async function deletePromptTemplate(slug: string): Promise<void> {
+	await apiFetch(`/generation/prompt-templates/${slug}/`, { method: 'DELETE' });
+}

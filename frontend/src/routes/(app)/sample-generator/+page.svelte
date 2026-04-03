@@ -91,6 +91,7 @@
 	let expandedJob = $state<GenerationJob | null>(null);
 	let expandedArtifacts = $state<GenerationArtifact[]>([]);
 	let expandedLoading = $state(false);
+	let resultTab = $state<'backend' | 'frontend' | 'scan'>('backend');
 
 	const statusColors: Record<string, string> = {
 		completed: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
@@ -357,9 +358,14 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<div>
-		<div class="flex items-center gap-3">
-			<h1 class="text-2xl font-bold tracking-tight">Sample Generator</h1>
-			<Badge variant="outline" class="text-xs">AI-Powered</Badge>
+		<div class="flex items-center justify-between">
+			<div class="flex items-center gap-3">
+				<h1 class="text-2xl font-bold tracking-tight">Sample Generator</h1>
+				<Badge variant="outline" class="text-xs">AI-Powered</Badge>
+			</div>
+			<a href="/sample-generator/templates" class="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+				<Layers class="h-3.5 w-3.5" /> Manage Templates
+			</a>
 		</div>
 		<p class="mt-1 text-sm text-muted-foreground">Generate code samples using LLMs with custom prompts, scaffolding templates, or AI copilot.</p>
 	</div>
@@ -1053,8 +1059,71 @@
 
 												{#if expandedJob.result_data && Object.keys(expandedJob.result_data).length > 0}
 													<div>
-														<h4 class="text-xs font-medium text-muted-foreground mb-1">Result Data</h4>
-														<pre class="max-h-48 overflow-auto rounded-md bg-muted/50 p-3 text-xs font-mono">{expandedJob.result_data.content ?? JSON.stringify(expandedJob.result_data, null, 2)}</pre>
+														<h4 class="text-xs font-medium text-muted-foreground mb-1">Result</h4>
+														{#if expandedJob.mode === 'scaffolding' && expandedJob.result_data.backend_code}
+															<!-- Scaffolding: show backend + frontend tabs -->
+															<div class="space-y-2">
+																<div class="flex gap-1">
+																	<button
+																		class="rounded-md px-2 py-1 text-xs {resultTab === 'backend' ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:text-foreground'}"
+																		onclick={() => resultTab = 'backend'}
+																	>Backend ({expandedJob.result_data.backend_code?.length ?? 0} chars)</button>
+																	<button
+																		class="rounded-md px-2 py-1 text-xs {resultTab === 'frontend' ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:text-foreground'}"
+																		onclick={() => resultTab = 'frontend'}
+																	>Frontend ({expandedJob.result_data.frontend_code?.length ?? 0} chars)</button>
+																	{#if expandedJob.result_data.backend_scan}
+																		<button
+																			class="rounded-md px-2 py-1 text-xs {resultTab === 'scan' ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:text-foreground'}"
+																			onclick={() => resultTab = 'scan'}
+																		>API Scan</button>
+																	{/if}
+																</div>
+																{#if resultTab === 'backend'}
+																	<pre class="max-h-64 overflow-auto rounded-md bg-muted/50 p-3 text-xs font-mono">{expandedJob.result_data.backend_code}</pre>
+																{:else if resultTab === 'frontend'}
+																	<pre class="max-h-64 overflow-auto rounded-md bg-muted/50 p-3 text-xs font-mono">{expandedJob.result_data.frontend_code}</pre>
+																{:else if resultTab === 'scan'}
+																	<div class="rounded-md bg-muted/50 p-3 text-xs space-y-2">
+																		<div><span class="text-muted-foreground">Endpoints:</span> {expandedJob.result_data.backend_scan?.endpoints?.length ?? 0}</div>
+																		<div><span class="text-muted-foreground">Models:</span> {expandedJob.result_data.backend_scan?.models?.length ?? 0}</div>
+																		{#if expandedJob.result_data.backend_dependencies?.length}
+																			<div><span class="text-muted-foreground">Dependencies:</span> {expandedJob.result_data.backend_dependencies.join(', ')}</div>
+																		{/if}
+																		{#if expandedJob.result_data.backend_scan?.endpoints}
+																			<div class="mt-2">
+																				<span class="font-medium">Endpoints:</span>
+																				{#each expandedJob.result_data.backend_scan.endpoints as ep}
+																					<div class="ml-2 font-mono">{ep.method} {ep.path} {ep.requires_auth ? '🔒' : ''}</div>
+																				{/each}
+																			</div>
+																		{/if}
+																	</div>
+																{/if}
+																{#if expandedJob.result_data.backend_truncated || expandedJob.result_data.frontend_truncated}
+																	<div class="text-xs text-amber-400">⚠ Output was truncated ({expandedJob.result_data.backend_truncated ? 'backend' : ''}{expandedJob.result_data.backend_truncated && expandedJob.result_data.frontend_truncated ? ' + ' : ''}{expandedJob.result_data.frontend_truncated ? 'frontend' : ''})</div>
+																{/if}
+															</div>
+														{:else if expandedJob.mode === 'copilot' && expandedJob.result_data.content}
+															<!-- Copilot: show result with iteration info -->
+															<div class="space-y-2">
+																{#if expandedJob.result_data.iterations_completed}
+																	<div class="flex items-center gap-3 text-xs">
+																		<span class="text-muted-foreground">Iterations: {expandedJob.result_data.iterations_completed}</span>
+																		{#if expandedJob.result_data.dependencies?.length}
+																			<span class="text-muted-foreground">Deps: {expandedJob.result_data.dependencies.join(', ')}</span>
+																		{/if}
+																		{#if expandedJob.result_data.final_errors?.length}
+																			<span class="text-amber-400">⚠ {expandedJob.result_data.final_errors.length} remaining errors</span>
+																		{/if}
+																	</div>
+																{/if}
+																<pre class="max-h-64 overflow-auto rounded-md bg-muted/50 p-3 text-xs font-mono">{expandedJob.result_data.content}</pre>
+															</div>
+														{:else}
+															<!-- Custom/other: show content or JSON -->
+															<pre class="max-h-48 overflow-auto rounded-md bg-muted/50 p-3 text-xs font-mono">{expandedJob.result_data.content ?? JSON.stringify(expandedJob.result_data, null, 2)}</pre>
+														{/if}
 													</div>
 												{/if}
 

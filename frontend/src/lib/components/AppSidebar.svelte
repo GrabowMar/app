@@ -9,6 +9,7 @@
 	import ChartColumn from '@lucide/svelte/icons/chart-column';
 	import BookOpen from '@lucide/svelte/icons/book-open';
 	import Zap from '@lucide/svelte/icons/zap';
+	import Layers from '@lucide/svelte/icons/layers';
 	import ChevronsLeft from '@lucide/svelte/icons/chevrons-left';
 	import ChevronsRight from '@lucide/svelte/icons/chevrons-right';
 	import Circle from '@lucide/svelte/icons/circle';
@@ -45,6 +46,7 @@
 			items: [
 				{ label: 'Automation', href: '/automation', icon: Zap },
 				{ label: 'Sample Generator', href: '/sample-generator', icon: WandSparkles },
+				{ label: 'Templates', href: '/sample-generator/templates', icon: Layers },
 				{ label: 'Reports', href: '/reports', icon: FileText },
 			],
 		},
@@ -60,7 +62,10 @@
 
 	function isActive(href: string): boolean {
 		if (href === '/') return page.url.pathname === '/';
-		return page.url.pathname.startsWith(href);
+		// Exact match for child routes to avoid parent always being active
+		if (page.url.pathname === href) return true;
+		// Only match parent if we're not on a more specific child
+		return page.url.pathname.startsWith(href + '/') || page.url.pathname === href;
 	}
 </script>
 
