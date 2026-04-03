@@ -1,4 +1,9 @@
-"""Celery tasks for generation jobs."""
+"""Celery tasks for generation jobs.
+
+These tasks are available when a Celery worker is running but are NOT required.
+The API views dispatch jobs via background threads (see _dispatch_job in views.py)
+so generation works without Celery.
+"""
 
 import logging
 
@@ -32,7 +37,7 @@ def run_generation_job(self, job_id: str) -> dict:
 
 @shared_task(bind=True)
 def run_generation_batch(self, batch_id: str) -> dict:
-    """Orchestrate a batch of generation jobs."""
+    """Orchestrate a batch of generation jobs via Celery."""
     from llm_lab.generation.models import GenerationBatch  # noqa: PLC0415
 
     logger.info("Starting generation batch %s", batch_id)
@@ -41,14 +46,10 @@ def run_generation_batch(self, batch_id: str) -> dict:
     except GenerationBatch.DoesNotExist:
         return {"error": f"Batch {batch_id} not found"}
 
+    batch.status = "running"
+    batch.save(update_fields=["status"])
+
     for job in batch.jobs.filter(status="pending"):
         run_generation_job.delay(str(job.id))
 
     return {"batch_id": batch_id, "status": "dispatched"}
-
-
-@shared_task(bind=True, soft_time_limit=300, time_limit=360)
-def run_copilot_iteration(self, job_id: str, iteration: int) -> dict:
-    """Execute a single copilot iteration."""
-    logger.info("Copilot iteration %d for job %s", iteration, job_id)
-    return {"job_id": job_id, "iteration": iteration}

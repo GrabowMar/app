@@ -25,7 +25,6 @@ from llm_lab.generation.models import GenerationBatch
 from llm_lab.generation.models import GenerationJob
 from llm_lab.generation.models import PromptTemplate
 from llm_lab.generation.models import ScaffoldingTemplate
-from llm_lab.generation.tasks import run_generation_job
 from llm_lab.llm_models.models import LLMModel
 
 router = Router(tags=["generation"])
@@ -229,10 +228,9 @@ def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
                 temperature=payload.temperature,
                 max_tokens=payload.max_tokens,
             )
-            run_generation_job.delay(str(job.id))
             job_count += 1
 
-    # Also dispatch the first batch of jobs in background threads
+    # Dispatch all jobs in background threads
     for pending_job in batch.jobs.all():
         _dispatch_job(pending_job)
 
@@ -262,7 +260,6 @@ def create_copilot_job(request, payload: CopilotJobCreateSchema):
         copilot_max_iterations=payload.max_iterations,
         copilot_use_open_source=payload.use_open_source,
     )
-    run_generation_job.delay(str(job.id))
     _dispatch_job(job)
     return GenerationJob.objects.get(id=job.id)
 
@@ -280,7 +277,7 @@ def list_jobs(
         "model",
         "app_requirement",
         "scaffolding_template",
-    )
+    ).order_by("-created_at")
     if mode:
         qs = qs.filter(mode=mode)
     if status:
