@@ -600,11 +600,11 @@ View Details
 <div class="sticky top-0 z-20 -mx-1 px-1 py-2 bg-background/95 backdrop-blur border-b">
 <div class="flex items-center gap-1 overflow-x-auto">
 {#each sections as sec}
+{@const SecIcon = sec.icon}
 <button
 class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {activeSection === sec.id ? 'bg-primary/10 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
 onclick={() => scrollToSection(sec.id)}
 >
-{@const SecIcon = sec.icon}
 <SecIcon class="h-3.5 w-3.5" />
 {sec.label}
 </button>
