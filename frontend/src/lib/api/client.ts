@@ -406,6 +406,19 @@ export interface GenerationArtifact {
 	created_at: string;
 }
 
+export interface CopilotIteration {
+	id: number;
+	iteration_number: number;
+	action: string;
+	llm_request: Record<string, any>;
+	llm_response: Record<string, any>;
+	build_output: string;
+	build_success: boolean;
+	errors_detected: string[];
+	fix_applied: string;
+	created_at: string;
+}
+
 export interface GenerationBatch {
 	id: string;
 	name: string;
@@ -513,6 +526,11 @@ export async function cancelGenerationJob(id: string): Promise<{ success: boolea
 
 export async function getJobArtifacts(id: string): Promise<GenerationArtifact[]> {
 	const res = await apiFetch(`/generation/jobs/${id}/artifacts/`);
+	return res.json();
+}
+
+export async function getCopilotIterations(id: string): Promise<CopilotIteration[]> {
+	const res = await apiFetch(`/generation/jobs/${id}/copilot-iterations/`);
 	return res.json();
 }
 

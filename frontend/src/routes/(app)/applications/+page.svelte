@@ -2,116 +2,155 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
+	import {
+		getGenerationJobs,
+		type GenerationJobList,
+		type PaginatedJobs,
+	} from '$lib/api/client';
+	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import Search from '@lucide/svelte/icons/search';
-	import Plus from '@lucide/svelte/icons/plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
-	import Download from '@lucide/svelte/icons/download';
-	import SquareTerminal from '@lucide/svelte/icons/square-terminal';
-	import Play from '@lucide/svelte/icons/play';
-	import Square from '@lucide/svelte/icons/square';
-	import RotateCw from '@lucide/svelte/icons/rotate-cw';
-	import Trash2 from '@lucide/svelte/icons/trash-2';
-	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import Eye from '@lucide/svelte/icons/eye';
-	import Shield from '@lucide/svelte/icons/shield';
-	import Unlock from '@lucide/svelte/icons/unlock';
-	import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
-	import Wrench from '@lucide/svelte/icons/wrench';
+	import Zap from '@lucide/svelte/icons/zap';
+	import Layers from '@lucide/svelte/icons/layers';
+	import Bot from '@lucide/svelte/icons/bot';
+	import Pencil from '@lucide/svelte/icons/pencil';
+	import AppWindow from '@lucide/svelte/icons/app-window';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import CircleX from '@lucide/svelte/icons/circle-x';
+	import Clock from '@lucide/svelte/icons/clock';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronsLeft from '@lucide/svelte/icons/chevrons-left';
+	import ChevronsRight from '@lucide/svelte/icons/chevrons-right';
+	import X from '@lucide/svelte/icons/x';
+	import Copy from '@lucide/svelte/icons/copy';
+	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+	import FlaskConical from '@lucide/svelte/icons/flask-conical';
 
-	interface Application {
-		id: string;
-		modelSlug: string;
-		modelName: string;
-		modelProvider: string;
-		appNumber: number;
-		version: string;
-		templateSlug: string;
-		templateName: string;
-		generationMode: 'guarded' | 'unguarded';
-		generationAttempts: number;
-		status: string;
-		totalFixes: number;
-		containerSize: string;
-		backendPort: number | null;
-		frontendPort: number | null;
-		analysisStatus: string;
-		analysisIssues: number;
-		createdAt: string;
-	}
-
-	const statusColors: Record<string, string> = {
-		'Running': 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-		'Stopped': 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-		'Building': 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-		'Build Failed': 'bg-orange-500/15 text-orange-500 border-orange-500/30',
-		'Dead': 'bg-red-500/15 text-red-400 border-red-500/30',
-		'Error': 'bg-red-500/15 text-red-400 border-red-500/30',
-		'Not Created': 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-	};
-
-	const analysisStatusColors: Record<string, string> = {
-		'Complete': 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-		'Running': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-		'Pending': 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-		'None': 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-		'Failed': 'bg-red-500/15 text-red-400 border-red-500/30',
-	};
-
-	const apps: Application[] = [
-		{ id: 'gpt-4o-1', modelSlug: 'gpt-4o', modelName: 'GPT-4o', modelProvider: 'OpenAI', appNumber: 1, version: 'v1.0', templateSlug: 'task-manager', templateName: 'Task Manager', generationMode: 'guarded', generationAttempts: 1, status: 'Running', totalFixes: 0, containerSize: '245 MB', backendPort: 5001, frontendPort: 8001, analysisStatus: 'Complete', analysisIssues: 3, createdAt: '19 Mar 14:32' },
-		{ id: 'gpt-4o-2', modelSlug: 'gpt-4o', modelName: 'GPT-4o', modelProvider: 'OpenAI', appNumber: 2, version: 'v1.0', templateSlug: 'blog-platform', templateName: 'Blog Platform', generationMode: 'guarded', generationAttempts: 2, status: 'Running', totalFixes: 3, containerSize: '312 MB', backendPort: 5002, frontendPort: 8002, analysisStatus: 'Complete', analysisIssues: 7, createdAt: '19 Mar 13:15' },
-		{ id: 'claude-3-5-sonnet-1', modelSlug: 'claude-3-5-sonnet', modelName: 'Claude 3.5 Sonnet', modelProvider: 'Anthropic', appNumber: 1, version: 'v1.0', templateSlug: 'task-manager', templateName: 'Task Manager', generationMode: 'guarded', generationAttempts: 1, status: 'Running', totalFixes: 0, containerSize: '198 MB', backendPort: 5003, frontendPort: 8003, analysisStatus: 'Running', analysisIssues: 0, createdAt: '19 Mar 12:45' },
-		{ id: 'claude-3-5-sonnet-2', modelSlug: 'claude-3-5-sonnet', modelName: 'Claude 3.5 Sonnet', modelProvider: 'Anthropic', appNumber: 2, version: 'v1.0', templateSlug: 'e-commerce', templateName: 'E-Commerce', generationMode: 'unguarded', generationAttempts: 1, status: 'Stopped', totalFixes: 0, containerSize: '287 MB', backendPort: null, frontendPort: null, analysisStatus: 'Complete', analysisIssues: 12, createdAt: '18 Mar 22:10' },
-		{ id: 'gemini-1-5-pro-1', modelSlug: 'gemini-1-5-pro', modelName: 'Gemini 1.5 Pro', modelProvider: 'Google', appNumber: 1, version: 'v1.0', templateSlug: 'task-manager', templateName: 'Task Manager', generationMode: 'guarded', generationAttempts: 3, status: 'Build Failed', totalFixes: 5, containerSize: '—', backendPort: null, frontendPort: null, analysisStatus: 'None', analysisIssues: 0, createdAt: '18 Mar 20:30' },
-		{ id: 'gpt-4o-mini-1', modelSlug: 'gpt-4o-mini', modelName: 'GPT-4o Mini', modelProvider: 'OpenAI', appNumber: 1, version: 'v1.0', templateSlug: 'blog-platform', templateName: 'Blog Platform', generationMode: 'guarded', generationAttempts: 1, status: 'Running', totalFixes: 1, containerSize: '201 MB', backendPort: 5004, frontendPort: 8004, analysisStatus: 'Pending', analysisIssues: 0, createdAt: '18 Mar 19:00' },
-		{ id: 'deepseek-v3-1', modelSlug: 'deepseek-v3', modelName: 'DeepSeek V3', modelProvider: 'DeepSeek', appNumber: 1, version: 'v1.0', templateSlug: 'e-commerce', templateName: 'E-Commerce', generationMode: 'unguarded', generationAttempts: 1, status: 'Dead', totalFixes: 0, containerSize: '—', backendPort: null, frontendPort: null, analysisStatus: 'Failed', analysisIssues: 0, createdAt: '18 Mar 17:45' },
-		{ id: 'qwen-2-5-coder-1', modelSlug: 'qwen-2-5-coder', modelName: 'Qwen 2.5 Coder', modelProvider: 'Alibaba', appNumber: 1, version: 'v1.0', templateSlug: 'chat-app', templateName: 'Chat Application', generationMode: 'guarded', generationAttempts: 1, status: 'Running', totalFixes: 0, containerSize: '178 MB', backendPort: 5005, frontendPort: 8005, analysisStatus: 'Complete', analysisIssues: 2, createdAt: '18 Mar 16:20' },
-		{ id: 'llama-3-1-405b-1', modelSlug: 'llama-3-1-405b', modelName: 'Llama 3.1 405B', modelProvider: 'Meta', appNumber: 1, version: 'v1.0', templateSlug: 'task-manager', templateName: 'Task Manager', generationMode: 'guarded', generationAttempts: 2, status: 'Stopped', totalFixes: 2, containerSize: '220 MB', backendPort: null, frontendPort: null, analysisStatus: 'Complete', analysisIssues: 8, createdAt: '18 Mar 15:00' },
-		{ id: 'gemini-2-0-flash-1', modelSlug: 'gemini-2-0-flash', modelName: 'Gemini 2.0 Flash', modelProvider: 'Google', appNumber: 1, version: 'v1.0', templateSlug: 'blog-platform', templateName: 'Blog Platform', generationMode: 'guarded', generationAttempts: 1, status: 'Building', totalFixes: 0, containerSize: '—', backendPort: null, frontendPort: null, analysisStatus: 'None', analysisIssues: 0, createdAt: '18 Mar 14:30' },
-	];
+	let loading = $state(true);
+	let refreshing = $state(false);
+	let data = $state<PaginatedJobs | null>(null);
 
 	let searchQuery = $state('');
-	let statusFilter = $state('all');
-	let modelFilter = $state('all');
-	let templateFilter = $state('all');
-	let selectedApps = $state(new Set<string>());
+	let modeFilter = $state('');
+	let statusFilter = $state('');
+	let currentPage = $state(1);
 	let perPage = $state(25);
-	let openMenu = $state<string | null>(null);
 
-	const uniqueModels = [...new Map(apps.map(a => [a.modelSlug, a.modelName])).entries()];
-	const uniqueTemplates = [...new Set(apps.map(a => a.templateName))];
+	const statusColors: Record<string, string> = {
+		completed: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+		failed: 'bg-red-500/15 text-red-400 border-red-500/30',
+		running: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+		pending: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+		cancelled: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+	};
 
-	const filteredApps = $derived(
-		apps.filter(a => {
-			if (searchQuery && !a.modelName.toLowerCase().includes(searchQuery.toLowerCase()) && !a.templateName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-			if (statusFilter !== 'all' && a.status !== statusFilter) return false;
-			if (modelFilter !== 'all' && a.modelSlug !== modelFilter) return false;
-			if (templateFilter !== 'all' && a.templateName !== templateFilter) return false;
-			return true;
-		})
-	);
+	const modeColors: Record<string, string> = {
+		custom: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+		scaffolding: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+		copilot: 'bg-teal-500/15 text-teal-400 border-teal-500/30',
+	};
 
-	const stats = $derived({
-		total: apps.length,
-		running: apps.filter(a => a.status === 'Running').length,
-		analyzed: apps.filter(a => a.analysisStatus === 'Complete').length,
-		uniqueModels: new Set(apps.map(a => a.modelSlug)).size,
-	});
-
-	function toggleAll() {
-		if (selectedApps.size === filteredApps.length) {
-			selectedApps = new Set();
-		} else {
-			selectedApps = new Set(filteredApps.map(a => a.id));
+	async function fetchJobs() {
+		try {
+			const params: Record<string, any> = {
+				page: currentPage,
+				per_page: perPage,
+			};
+			if (modeFilter) params.mode = modeFilter;
+			if (statusFilter) params.status = statusFilter;
+			data = await getGenerationJobs(params);
+		} catch (e: any) {
+			toast.error('Failed to load applications');
+		} finally {
+			loading = false;
+			refreshing = false;
 		}
 	}
 
-	function toggleApp(id: string) {
-		const next = new Set(selectedApps);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		selectedApps = next;
+	async function refresh() {
+		refreshing = true;
+		await fetchJobs();
+		toast.success('Refreshed');
 	}
+
+	function goToPage(p: number) {
+		currentPage = p;
+		fetchJobs();
+	}
+
+	function applyFilters() {
+		currentPage = 1;
+		fetchJobs();
+	}
+
+	function clearFilters() {
+		searchQuery = '';
+		modeFilter = '';
+		statusFilter = '';
+		currentPage = 1;
+		fetchJobs();
+	}
+
+	function formatDuration(seconds: number | null): string {
+		if (seconds == null) return '—';
+		if (seconds < 60) return `${seconds.toFixed(1)}s`;
+		const m = Math.floor(seconds / 60);
+		const s = Math.round(seconds % 60);
+		return `${m}m ${s}s`;
+	}
+
+	function timeAgo(dateStr: string): string {
+		const diff = Date.now() - new Date(dateStr).getTime();
+		const mins = Math.floor(diff / 60000);
+		if (mins < 1) return 'just now';
+		if (mins < 60) return `${mins}m ago`;
+		const hours = Math.floor(mins / 60);
+		if (hours < 24) return `${hours}h ago`;
+		const days = Math.floor(hours / 24);
+		if (days < 30) return `${days}d ago`;
+		return new Date(dateStr).toLocaleDateString();
+	}
+
+	function getDescription(job: GenerationJobList): string {
+		if (job.template_name) return job.template_name;
+		if (job.scaffolding_name) return job.scaffolding_name;
+		return '—';
+	}
+
+	function copyId(id: string) {
+		navigator.clipboard.writeText(id);
+		toast.success('Copied job ID');
+	}
+
+	const filteredItems = $derived(
+		data
+			? searchQuery
+				? data.items.filter(
+						(j) =>
+							(j.model_name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+							(j.template_name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+							(j.scaffolding_name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+					)
+				: data.items
+			: []
+	);
+
+	const stats = $derived({
+		total: data?.total ?? 0,
+		completed: filteredItems.filter((j) => j.status === 'completed').length,
+		failed: filteredItems.filter((j) => j.status === 'failed').length,
+		models: new Set(filteredItems.map((j) => j.model_name).filter(Boolean)).size,
+	});
+
+	const hasFilters = $derived(modeFilter !== '' || statusFilter !== '' || searchQuery !== '');
+
+	onMount(() => {
+		fetchJobs();
+	});
 </script>
 
 <svelte:head>
@@ -123,16 +162,16 @@
 	<div class="flex items-center justify-between">
 		<div class="page-header">
 			<h1>Applications</h1>
-			<p>View and manage generated web applications.</p>
+			<p>Generated web applications from LLM models.</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<Button variant="outline" size="sm" disabled>
-				<RefreshCw class="mr-2 h-3.5 w-3.5" />
+			<Button variant="outline" size="sm" onclick={refresh} disabled={refreshing}>
+				<RefreshCw class="mr-2 h-3.5 w-3.5 {refreshing ? 'animate-spin' : ''}" />
 				Refresh
 			</Button>
-			<Button size="sm" disabled>
-				<Plus class="mr-2 h-3.5 w-3.5" />
-				New Application
+			<Button size="sm" href="/sample-generator">
+				<FlaskConical class="mr-2 h-3.5 w-3.5" />
+				Generate New
 			</Button>
 		</div>
 	</div>
@@ -140,18 +179,21 @@
 	<!-- Stats -->
 	<div class="flex flex-wrap items-center gap-2">
 		<Badge variant="outline" class="gap-1.5">
-			<SquareTerminal class="h-3 w-3" />
-			{stats.total} apps
+			<AppWindow class="h-3 w-3" />
+			{stats.total} total
 		</Badge>
 		<Badge variant="outline" class="gap-1.5 border-emerald-500/30 text-emerald-500">
-			<Play class="h-3 w-3" />
-			{stats.running} running
+			<CircleCheck class="h-3 w-3" />
+			{stats.completed} completed
 		</Badge>
-		<Badge variant="outline" class="gap-1.5 border-blue-500/30 text-blue-400">
-			{stats.analyzed} analyzed
-		</Badge>
+		{#if stats.failed > 0}
+			<Badge variant="outline" class="gap-1.5 border-red-500/30 text-red-400">
+				<CircleX class="h-3 w-3" />
+				{stats.failed} failed
+			</Badge>
+		{/if}
 		<Badge variant="outline" class="gap-1.5">
-			{stats.uniqueModels} models
+			{stats.models} models
 		</Badge>
 	</div>
 
@@ -161,241 +203,220 @@
 			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<input
 				type="text"
-				placeholder="Search applications..."
+				placeholder="Search by model or template..."
 				class="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 				bind:value={searchQuery}
 			/>
 		</div>
-		<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={modelFilter}>
-			<option value="all">All Models</option>
-			{#each uniqueModels as [slug, name]}
-				<option value={slug}>{name}</option>
-			{/each}
+		<select
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			bind:value={modeFilter}
+			onchange={applyFilters}
+		>
+			<option value="">All Modes</option>
+			<option value="custom">Custom</option>
+			<option value="scaffolding">Scaffolding</option>
+			<option value="copilot">Copilot</option>
 		</select>
-		<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={statusFilter}>
-			<option value="all">All Statuses</option>
-			<option value="Running">Running</option>
-			<option value="Stopped">Stopped</option>
-			<option value="Building">Building</option>
-			<option value="Build Failed">Build Failed</option>
-			<option value="Dead">Dead</option>
-			<option value="Error">Error</option>
-			<option value="Not Created">Not Created</option>
+		<select
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			bind:value={statusFilter}
+			onchange={applyFilters}
+		>
+			<option value="">All Statuses</option>
+			<option value="completed">Completed</option>
+			<option value="failed">Failed</option>
+			<option value="running">Running</option>
+			<option value="pending">Pending</option>
 		</select>
-		<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={templateFilter}>
-			<option value="all">All Templates</option>
-			{#each uniqueTemplates as t}
-				<option value={t}>{t}</option>
-			{/each}
-		</select>
-		<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={perPage}>
+		<select
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			bind:value={perPage}
+			onchange={applyFilters}
+		>
 			<option value={10}>10 / page</option>
 			<option value={25}>25 / page</option>
 			<option value={50}>50 / page</option>
 			<option value={100}>100 / page</option>
 		</select>
+		{#if hasFilters}
+			<Button variant="ghost" size="sm" onclick={clearFilters} class="gap-1.5">
+				<X class="h-3.5 w-3.5" />
+				Clear
+			</Button>
+		{/if}
 	</div>
 
-	<!-- Batch Actions -->
-	{#if selectedApps.size > 0}
-		<div class="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2">
-			<span class="text-sm font-medium">{selectedApps.size} selected</span>
-			<Separator orientation="vertical" class="h-4" />
-			<Button variant="outline" size="sm" disabled>
-				<Play class="mr-1.5 h-3 w-3" /> Start
-			</Button>
-			<Button variant="outline" size="sm" disabled>
-				<Square class="mr-1.5 h-3 w-3" /> Stop
-			</Button>
-			<Button variant="outline" size="sm" disabled>
-				<RotateCw class="mr-1.5 h-3 w-3" /> Restart
-			</Button>
-			<Button variant="outline" size="sm" disabled>
-				<Wrench class="mr-1.5 h-3 w-3" /> Build
-			</Button>
-			<Button variant="outline" size="sm" disabled>
-				<Download class="mr-1.5 h-3 w-3" /> Export
-			</Button>
-			<Button variant="destructive" size="sm" disabled>
-				<Trash2 class="mr-1.5 h-3 w-3" /> Delete
-			</Button>
-		</div>
-	{/if}
-
 	<!-- Table -->
-	<Card.Root>
-		<Card.Content class="p-0">
-			<div class="overflow-x-auto">
-				<table class="w-full">
-					<thead>
-						<tr class="border-b bg-muted/30">
-							<th class="w-10 px-4 py-3">
-								<input type="checkbox" class="rounded" checked={selectedApps.size === filteredApps.length && filteredApps.length > 0} onchange={toggleAll} />
-							</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">App</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Mode</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Infra</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Analysis</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						{#each filteredApps.slice(0, perPage) as app (app.id)}
-							<tr class="transition-colors hover:bg-muted/30">
-								<!-- Checkbox -->
-								<td class="px-4 py-3">
-									<input type="checkbox" class="rounded" checked={selectedApps.has(app.id)} onchange={() => toggleApp(app.id)} />
-								</td>
-
-								<!-- Model -->
-								<td class="px-4 py-3">
-									<div class="flex flex-col gap-0.5">
-										<a href="/models/{app.modelSlug}" class="text-sm font-medium hover:underline">{app.modelName}</a>
-										<Badge variant="outline" class="w-fit text-[10px]">{app.modelProvider}</Badge>
-									</div>
-								</td>
-
-								<!-- App -->
-								<td class="px-4 py-3">
-									<div class="flex flex-col gap-0.5">
-										<span class="text-sm font-medium">#{app.appNumber} <span class="text-muted-foreground font-normal">{app.version}</span></span>
-										<span class="text-xs text-muted-foreground">{app.templateName}</span>
-										{#if app.generationAttempts > 1}
-											<span class="text-xs text-amber-500">{app.generationAttempts} attempts</span>
-										{/if}
-									</div>
-								</td>
-
-								<!-- Created -->
-								<td class="px-4 py-3 text-sm text-muted-foreground">{app.createdAt}</td>
-
-								<!-- Mode -->
-								<td class="px-4 py-3">
-									{#if app.generationMode === 'guarded'}
-										<Badge variant="outline" class="gap-1 border-emerald-500/30 text-emerald-500 text-[10px]">
-											<Shield class="h-3 w-3" /> Guarded
-										</Badge>
-									{:else}
-										<Badge variant="outline" class="gap-1 border-orange-500/30 text-orange-500 text-[10px]">
-											<Unlock class="h-3 w-3" /> Unguarded
-										</Badge>
-									{/if}
-								</td>
-
-								<!-- Status -->
-								<td class="px-4 py-3">
-									<div class="flex items-center gap-1.5">
-										<Badge variant="outline" class="text-[10px] {statusColors[app.status] ?? ''}">
-											{#if app.status === 'Running'}
-												<span class="mr-1 h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+	{#if loading}
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-6 w-6 animate-spin text-muted-foreground" />
+				<span class="ml-2 text-sm text-muted-foreground">Loading applications...</span>
+			</Card.Content>
+		</Card.Root>
+	{:else if filteredItems.length === 0}
+		<Card.Root>
+			<Card.Content class="py-16 text-center">
+				<AppWindow class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+				<h3 class="text-lg font-medium mb-1">No applications found</h3>
+				<p class="text-sm text-muted-foreground mb-4">
+					{hasFilters
+						? 'No applications match your filters.'
+						: 'Generate your first application using the Sample Generator.'}
+				</p>
+				{#if hasFilters}
+					<Button variant="outline" size="sm" onclick={clearFilters}>Clear Filters</Button>
+				{:else}
+					<Button size="sm" href="/sample-generator">Go to Sample Generator</Button>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+	{:else}
+		<Card.Root>
+			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
+					<table class="w-full">
+						<thead>
+							<tr class="border-b bg-muted/30">
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Mode</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Template</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Duration</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y">
+							{#each filteredItems as job (job.id)}
+								<tr class="transition-colors hover:bg-muted/30">
+									<!-- Mode -->
+									<td class="px-4 py-3">
+										<Badge variant="outline" class="gap-1 text-[10px] {modeColors[job.mode] ?? ''}">
+											{#if job.mode === 'custom'}
+												<Pencil class="h-3 w-3" />
+											{:else if job.mode === 'scaffolding'}
+												<Layers class="h-3 w-3" />
+											{:else if job.mode === 'copilot'}
+												<Bot class="h-3 w-3" />
 											{/if}
-											{app.status}
+											{job.mode}
 										</Badge>
-										{#if app.totalFixes > 0}
-											<Badge variant="secondary" class="text-[10px]">{app.totalFixes} fixes</Badge>
-										{/if}
-									</div>
-								</td>
+									</td>
 
-								<!-- Infra -->
-								<td class="px-4 py-3">
-									<div class="flex flex-col gap-0.5 text-xs font-mono text-muted-foreground">
-										{#if app.backendPort}
-											<span>:{app.backendPort}</span>
-										{/if}
-										{#if app.frontendPort}
-											<span>:{app.frontendPort}</span>
-										{/if}
-										{#if !app.backendPort && !app.frontendPort}
-											<span>—</span>
-										{/if}
-										<span class="text-[10px]">{app.containerSize}</span>
-									</div>
-								</td>
+									<!-- Model -->
+									<td class="px-4 py-3">
+										<div class="flex flex-col gap-0.5">
+											<span class="text-sm font-medium">{job.model_name ?? '—'}</span>
+											<span class="text-xs text-muted-foreground font-mono">{job.model_id_str ?? ''}</span>
+										</div>
+									</td>
 
-								<!-- Analysis -->
-								<td class="px-4 py-3">
-									<div class="flex items-center gap-1.5">
-										<Badge variant="outline" class="text-[10px] {analysisStatusColors[app.analysisStatus] ?? ''}">
-											{app.analysisStatus}
-										</Badge>
-										{#if app.analysisIssues > 0}
-											<Badge variant="secondary" class="text-[10px] {app.analysisIssues > 10 ? 'text-red-400' : app.analysisIssues > 5 ? 'text-amber-500' : 'text-muted-foreground'}">
-												{app.analysisIssues}
-											</Badge>
-										{/if}
-									</div>
-								</td>
-
-								<!-- Actions -->
-								<td class="px-4 py-3">
-									<div class="flex items-center gap-1">
-										<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{app.modelSlug}/{app.appNumber}" title="View details">
-											<Eye class="h-3.5 w-3.5" />
-										</Button>
-										{#if app.status === 'Running' && app.frontendPort}
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Open app" disabled>
-												<ExternalLink class="h-3.5 w-3.5" />
-											</Button>
-										{/if}
-										<div class="relative">
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" onclick={() => openMenu = openMenu === app.id ? null : app.id}>
-												<MoreHorizontal class="h-3.5 w-3.5" />
-											</Button>
-											{#if openMenu === app.id}
-												<div class="absolute right-0 top-full z-50 mt-1 w-40 rounded-md border bg-popover p-1 shadow-md">
-													{#if app.status === 'Running'}
-														<button class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent" disabled>
-															<Square class="h-3 w-3" /> Stop
-														</button>
-														<button class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent" disabled>
-															<RotateCw class="h-3 w-3" /> Restart
-														</button>
-													{:else}
-														<button class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent" disabled>
-															<Play class="h-3 w-3" /> Start
-														</button>
-													{/if}
-													<button class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent" disabled>
-														<Wrench class="h-3 w-3" /> Rebuild
-													</button>
-													<Separator class="my-1" />
-													<button class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-red-400 hover:bg-accent" disabled>
-														<Trash2 class="h-3 w-3" /> Delete
-													</button>
-												</div>
+									<!-- Template -->
+									<td class="px-4 py-3">
+										<div class="flex flex-col gap-0.5">
+											<span class="text-sm">{getDescription(job)}</span>
+											{#if job.scaffolding_name && job.template_name}
+												<span class="text-xs text-muted-foreground">{job.scaffolding_name}</span>
 											{/if}
 										</div>
-									</div>
-								</td>
-							</tr>
-						{/each}
+									</td>
 
-						{#if filteredApps.length === 0}
-							<tr>
-								<td colspan="9" class="px-4 py-12 text-center text-sm text-muted-foreground">
-									No applications match your filters.
-								</td>
-							</tr>
-						{/if}
-					</tbody>
-				</table>
-			</div>
-		</Card.Content>
-	</Card.Root>
+									<!-- Status -->
+									<td class="px-4 py-3">
+										<Badge variant="outline" class="text-[10px] {statusColors[job.status] ?? ''}">
+											{#if job.status === 'running'}
+												<span class="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+											{/if}
+											{#if job.status === 'completed'}
+												<CircleCheck class="mr-1 h-3 w-3" />
+											{:else if job.status === 'failed'}
+												<CircleX class="mr-1 h-3 w-3" />
+											{:else if job.status === 'pending'}
+												<Clock class="mr-1 h-3 w-3" />
+											{/if}
+											{job.status}
+										</Badge>
+										{#if job.error_message}
+											<div class="mt-1 flex items-center gap-1">
+												<AlertTriangle class="h-3 w-3 text-red-400 shrink-0" />
+												<span class="text-xs text-red-400 truncate max-w-[200px]">{job.error_message}</span>
+											</div>
+										{/if}
+									</td>
 
-	<!-- Pagination -->
-	{#if filteredApps.length > perPage}
-		<div class="flex items-center justify-between text-sm text-muted-foreground">
-			<span>Showing 1-{Math.min(perPage, filteredApps.length)} of {filteredApps.length}</span>
-			<div class="flex items-center gap-1">
-				<Button variant="outline" size="sm" disabled>Previous</Button>
-				<Button variant="outline" size="sm" class="bg-primary/10">1</Button>
-				<Button variant="outline" size="sm" disabled>Next</Button>
+									<!-- Duration -->
+									<td class="px-4 py-3 text-sm font-mono text-muted-foreground">
+										{formatDuration(job.duration_seconds)}
+									</td>
+
+									<!-- Created -->
+									<td class="px-4 py-3">
+										<div class="flex flex-col gap-0.5">
+											<span class="text-sm text-muted-foreground">{timeAgo(job.created_at)}</span>
+											<span class="text-xs text-muted-foreground/70">{new Date(job.created_at).toLocaleString()}</span>
+										</div>
+									</td>
+
+									<!-- Actions -->
+									<td class="px-4 py-3">
+										<div class="flex items-center gap-1">
+											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
+												<Eye class="h-3.5 w-3.5" />
+											</Button>
+											{#if job.status === 'failed'}
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
+													<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
+												</Button>
+											{/if}
+											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Copy ID" onclick={() => copyId(job.id)}>
+												<Copy class="h-3.5 w-3.5" />
+											</Button>
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Pagination -->
+		{#if data && data.pages > 1}
+			<div class="flex items-center justify-between text-sm text-muted-foreground">
+				<span>
+					Page {data.page} of {data.pages} ({data.total} total)
+				</span>
+				<div class="flex items-center gap-1">
+					<Button variant="outline" size="sm" disabled={data.page <= 1} onclick={() => goToPage(1)}>
+						<ChevronsLeft class="h-3.5 w-3.5" />
+					</Button>
+					<Button variant="outline" size="sm" disabled={data.page <= 1} onclick={() => goToPage(data!.page - 1)}>
+						<ChevronLeft class="h-3.5 w-3.5" />
+					</Button>
+					{#each Array.from({ length: Math.min(5, data.pages) }, (_, i) => {
+						const start = Math.max(1, Math.min(data!.page - 2, data!.pages - 4));
+						return start + i;
+					}).filter((p) => p <= data!.pages) as p}
+						<Button
+							variant="outline"
+							size="sm"
+							class={p === data.page ? 'bg-primary/10 border-primary/30' : ''}
+							onclick={() => goToPage(p)}
+						>
+							{p}
+						</Button>
+					{/each}
+					<Button variant="outline" size="sm" disabled={data.page >= data.pages} onclick={() => goToPage(data!.page + 1)}>
+						<ChevronRight class="h-3.5 w-3.5" />
+					</Button>
+					<Button variant="outline" size="sm" disabled={data.page >= data.pages} onclick={() => goToPage(data!.pages)}>
+						<ChevronsRight class="h-3.5 w-3.5" />
+					</Button>
+				</div>
 			</div>
-		</div>
+		{/if}
 	{/if}
 </div>
