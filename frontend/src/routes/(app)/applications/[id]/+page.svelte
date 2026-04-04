@@ -521,7 +521,8 @@ View Details
 <div class="flex items-start gap-4">
 <div class="flex h-12 w-12 items-center justify-center rounded-xl {modeColors[job.mode] ?? 'bg-zinc-500/15'}">
 {#if modeIcons[job.mode]}
-<svelte:component this={modeIcons[job.mode]} class="h-6 w-6" />
+{@const Icon = modeIcons[job.mode]}
+<Icon class="h-6 w-6" />
 {/if}
 </div>
 <div>
@@ -603,7 +604,8 @@ View Details
 class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {activeSection === sec.id ? 'bg-primary/10 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
 onclick={() => scrollToSection(sec.id)}
 >
-<svelte:component this={sec.icon} class="h-3.5 w-3.5" />
+{@const SecIcon = sec.icon}
+<SecIcon class="h-3.5 w-3.5" />
 {sec.label}
 </button>
 {/each}
