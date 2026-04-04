@@ -353,6 +353,11 @@ export interface GenerationJob {
 	status: string;
 	model_name: string | null;
 	model_id_str: string | null;
+	batch_id: string | null;
+	batch_name: string | null;
+	template_name: string | null;
+	scaffolding_name: string | null;
+	created_by_email: string | null;
 	temperature: number;
 	max_tokens: number;
 	custom_system_prompt: string;
@@ -531,6 +536,11 @@ export async function getJobArtifacts(id: string): Promise<GenerationArtifact[]>
 
 export async function getCopilotIterations(id: string): Promise<CopilotIteration[]> {
 	const res = await apiFetch(`/generation/jobs/${id}/copilot-iterations/`);
+	return res.json();
+}
+
+export async function exportGenerationJob(id: string): Promise<Record<string, any>> {
+	const res = await apiFetch(`/generation/jobs/${id}/export/`);
 	return res.json();
 }
 

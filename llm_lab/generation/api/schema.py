@@ -106,6 +106,11 @@ class PromptTemplateCreateSchema(Schema):
 class GenerationJobSchema(ModelSchema):
     model_name: str | None = None
     model_id_str: str | None = None
+    batch_id: UUID | None = None
+    batch_name: str | None = None
+    template_name: str | None = None
+    scaffolding_name: str | None = None
+    created_by_email: str | None = None
 
     class Meta:
         model = GenerationJob
@@ -142,6 +147,36 @@ class GenerationJobSchema(ModelSchema):
     def resolve_model_id_str(obj: GenerationJob) -> str | None:
         if obj.model:
             return obj.model.model_id
+        return None
+
+    @staticmethod
+    def resolve_batch_id(obj: GenerationJob) -> UUID | None:
+        if obj.batch_id:
+            return obj.batch_id
+        return None
+
+    @staticmethod
+    def resolve_batch_name(obj: GenerationJob) -> str | None:
+        if obj.batch:
+            return obj.batch.name
+        return None
+
+    @staticmethod
+    def resolve_template_name(obj: GenerationJob) -> str | None:
+        if obj.app_requirement:
+            return obj.app_requirement.name
+        return None
+
+    @staticmethod
+    def resolve_scaffolding_name(obj: GenerationJob) -> str | None:
+        if obj.scaffolding_template:
+            return obj.scaffolding_template.name
+        return None
+
+    @staticmethod
+    def resolve_created_by_email(obj: GenerationJob) -> str | None:
+        if obj.created_by:
+            return obj.created_by.email
         return None
 
 

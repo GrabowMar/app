@@ -319,7 +319,17 @@ def list_jobs(
 
 @router.get("/jobs/{job_id}/", response=GenerationJobSchema)
 def get_job(request, job_id: str):
-    return get_object_or_404(GenerationJob, id=job_id, created_by=request.auth)
+    return get_object_or_404(
+        GenerationJob.objects.select_related(
+            "model",
+            "app_requirement",
+            "scaffolding_template",
+            "batch",
+            "created_by",
+        ),
+        id=job_id,
+        created_by=request.auth,
+    )
 
 
 @router.post("/jobs/{job_id}/cancel/")
@@ -349,6 +359,31 @@ def get_job_artifacts(request, job_id: str):
 def get_copilot_iterations(request, job_id: str):
     job = get_object_or_404(GenerationJob, id=job_id, created_by=request.auth)
     return job.copilot_iterations.all()
+
+
+@router.get("/jobs/{job_id}/export/")
+def export_job(request, job_id: str):
+    """Export full job data as JSON (job + artifacts + iterations)."""
+    job = get_object_or_404(
+        GenerationJob.objects.select_related(
+            "model", "app_requirement", "scaffolding_template", "batch", "created_by",
+        ),
+        id=job_id,
+        created_by=request.auth,
+    )
+    artifacts = list(job.artifacts.values(
+        "id", "stage", "request_payload", "response_payload",
+        "prompt_tokens", "completion_tokens", "total_cost", "created_at",
+    ))
+    iterations = list(job.copilot_iterations.values(
+        "id", "iteration_number", "action", "llm_request", "llm_response",
+        "build_output", "build_success", "errors_detected", "fix_applied", "created_at",
+    ))
+    return {
+        "job": GenerationJobSchema.from_orm(job).dict(),
+        "artifacts": artifacts,
+        "copilot_iterations": iterations,
+    }
 
 
 # -- Batches ------------------------------------------------------------
