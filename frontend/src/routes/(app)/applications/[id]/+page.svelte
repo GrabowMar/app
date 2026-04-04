@@ -46,6 +46,9 @@ import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 import FlaskConical from '@lucide/svelte/icons/flask-conical';
 import GitBranch from '@lucide/svelte/icons/git-branch';
 import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+import Zap from '@lucide/svelte/icons/zap';
+import Wrench from '@lucide/svelte/icons/wrench';
+import FileText from '@lucide/svelte/icons/file-text';
 
 const jobId = $derived($page.params.id);
 let loading = $state(true);
@@ -222,6 +225,142 @@ const tokensPerSec = job?.duration_seconds ? totalTokens / job.duration_seconds 
 
 return { totalCost, totalPrompt, totalCompletion, totalTokens, tokensPerSec, byStage };
 });
+
+// Compact date formatter
+function fmtDateCompact(d: string | null): string {
+    if (!d) return '—';
+    const dt = new Date(d);
+    const mo = (dt.getMonth() + 1).toString().padStart(2, '0');
+    const day = dt.getDate().toString().padStart(2, '0');
+    const hr = dt.getHours().toString().padStart(2, '0');
+    const mn = dt.getMinutes().toString().padStart(2, '0');
+    return `${mo}/${day} ${hr}:${mn}`;
+}
+
+// Fixes data from copilot iterations
+const fixesData = $derived.by(() => {
+    if (!iterations || iterations.length === 0) return { total: 0, retry: 0, autofix: 0, llm: 0 };
+    let retry = 0, autofix = 0, llm = 0;
+    for (const it of iterations) {
+        const action = (it.action ?? '').toLowerCase();
+        if (action.includes('retry')) retry++;
+        else if (action.includes('auto') || action.includes('autofix')) autofix++;
+        else if (action.includes('llm')) llm++;
+    }
+    return { total: retry + autofix + llm, retry, autofix, llm };
+});
+
+// Parse framework info from scaffolding_name
+const frameworkInfo = $derived.by(() => {
+    const name = job?.scaffolding_name ?? '';
+    let backend = '—', frontend = '—', database = '—';
+    if (name) {
+        const parts = name.split(/\s*\+\s*/);
+        if (parts.length >= 2) {
+            frontend = parts[0].trim();
+            backend = parts[1].trim();
+        } else if (parts.length === 1) {
+            backend = parts[0].trim();
+        }
+        const lower = name.toLowerCase();
+        if (lower.includes('postgres')) database = 'PostgreSQL';
+        else if (lower.includes('mysql')) database = 'MySQL';
+        else if (lower.includes('sqlite')) database = 'SQLite';
+        else if (lower.includes('mongo')) database = 'MongoDB';
+    }
+    return { backend, frontend, database };
+});
+
+// Key artifact files for quick access
+const keyArtifactFiles = $derived.by(() => {
+    const notable = ['docker-compose.yml', 'docker-compose.yaml', 'readme.md', 'requirements.txt', 'package.json', 'dockerfile', '.env', 'manage.py', 'app.py', 'index.html'];
+    const found: { name: string; idx: number; icon: string; subtitle: string }[] = [];
+    for (let i = 0; i < virtualFiles.length; i++) {
+        const f = virtualFiles[i];
+        const basename = (f.name.split('/').pop() ?? f.name).toLowerCase();
+        if (notable.includes(basename)) {
+            let icon = '📄', subtitle = 'File';
+            if (basename.includes('docker-compose')) { icon = '🐳'; subtitle = 'Docker Compose'; }
+            else if (basename === 'dockerfile') { icon = '🐳'; subtitle = 'Docker'; }
+            else if (basename === 'readme.md') { icon = '📖'; subtitle = 'Documentation'; }
+            else if (basename === 'requirements.txt') { icon = '📦'; subtitle = 'Python deps'; }
+            else if (basename === 'package.json') { icon = '📦'; subtitle = 'Node.js deps'; }
+            else if (basename === '.env') { icon = '🔧'; subtitle = 'Environment'; }
+            else if (basename === 'manage.py') { icon = '🐍'; subtitle = 'Django management'; }
+            else if (basename === 'app.py') { icon = '🐍'; subtitle = 'Application entry'; }
+            else if (basename === 'index.html') { icon = '🌐'; subtitle = 'HTML entry'; }
+            found.push({ name: f.name.split('/').pop() ?? f.name, idx: i, icon, subtitle });
+        }
+    }
+    return found;
+});
+
+// File statistics
+const fileStats = $derived.by(() => {
+    const codeExts = new Set(['py', 'js', 'jsx', 'ts', 'tsx', 'html', 'css', 'svelte', 'vue']);
+    const configExts = new Set(['json', 'yml', 'yaml', 'toml', 'env', 'txt', 'cfg', 'ini']);
+    let totalSize = 0, codeCount = 0, configCount = 0;
+    for (const f of virtualFiles) {
+        totalSize += f.code.length;
+        const ext = (f.name.split('.').pop() ?? '').toLowerCase();
+        if (codeExts.has(ext)) codeCount++;
+        else if (configExts.has(ext)) configCount++;
+    }
+    return { totalSize, codeCount, configCount, totalFiles: virtualFiles.length };
+});
+
+// Extension breakdown for file analysis
+const extensionBreakdown = $derived.by(() => {
+    const exts: Record<string, { count: number; size: number }> = {};
+    for (const f of virtualFiles) {
+        const ext = '.' + ((f.name.split('.').pop() ?? 'other').toLowerCase());
+        if (!exts[ext]) exts[ext] = { count: 0, size: 0 };
+        exts[ext].count++;
+        exts[ext].size += f.code.length;
+    }
+    const total = virtualFiles.length || 1;
+    return Object.entries(exts)
+        .sort((a, b) => b[1].count - a[1].count)
+        .map(([ext, data]) => ({ ext, ...data, pct: (data.count / total) * 100 }));
+});
+
+// Prompt segment border colors
+const segmentBorderColors: Record<string, string> = {
+    metadata: 'border-l-purple-400 bg-purple-500/5',
+    system: 'border-l-blue-400 bg-blue-500/5',
+    user: 'border-l-emerald-400 bg-emerald-500/5',
+    template: 'border-l-sky-400 bg-sky-500/5',
+    requirements: 'border-l-emerald-400 bg-emerald-500/5',
+    scaffolding: 'border-l-orange-400 bg-orange-500/5',
+    default: '',
+};
+
+// Parse prompt content into color-coded segments
+function parsePromptSegments(text: string): { type: string; content: string }[] {
+    const lines = text.split('\n');
+    const segments: { type: string; content: string }[] = [];
+    let currentType = 'default';
+    let currentLines: string[] = [];
+    for (const line of lines) {
+        let newType = currentType;
+        if (line.startsWith('=== REQUEST METADATA ===') || line.startsWith('=== META')) newType = 'metadata';
+        else if (line.startsWith('=== SYSTEM ===')) newType = 'system';
+        else if (line.startsWith('=== USER ===') || line.startsWith('## Output')) newType = 'user';
+        else if (line.startsWith('=== TEMPLATE ===') || line.startsWith('## Mindset')) newType = 'template';
+        else if (line.startsWith('=== REQUIREMENTS ===')) newType = 'requirements';
+        else if (line.startsWith('=== SCAFFOLDING ===')) newType = 'scaffolding';
+        if (newType !== currentType && currentLines.length > 0) {
+            segments.push({ type: currentType, content: currentLines.join('\n') });
+            currentLines = [];
+        }
+        currentType = newType;
+        currentLines.push(line);
+    }
+    if (currentLines.length > 0) {
+        segments.push({ type: currentType, content: currentLines.join('\n') });
+    }
+    return segments;
+}
 
 // ── Actions ──────────────────────────────────────────────────────
 
@@ -471,226 +610,334 @@ onclick={() => scrollToSection(sec.id)}
 </div>
 </div>
 
-<!-- ═══════════════ OVERVIEW SECTION ═══════════════ -->
-<section id="overview" class="space-y-4">
-<h2 class="text-lg font-semibold flex items-center gap-2"><Eye class="h-5 w-5" /> Overview</h2>
-<div class="grid md:grid-cols-2 gap-4">
-<!-- Identity & Generation -->
-<Card.Root>
-<Card.Header class="pb-3"><Card.Title class="text-sm font-medium">Identity & Generation</Card.Title></Card.Header>
-<Card.Content class="space-y-2 text-sm">
-<div class="flex justify-between"><dt class="text-muted-foreground">Model</dt><dd class="font-medium">{job.model_name ?? '—'}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Provider</dt><dd><Badge variant="outline" class="text-xs">{provider}</Badge></dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Mode</dt><dd><Badge variant="outline" class="text-xs {modeColors[job.mode] ?? ''}">{job.mode}</Badge></dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Status</dt><dd><Badge variant="outline" class="text-xs {statusColors[job.status] ?? ''}">{job.status}</Badge></dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Job ID</dt><dd class="font-mono text-xs">{job.id.substring(0, 16)}...</dd></div>
-{#if job.template_name}
-<div class="flex justify-between"><dt class="text-muted-foreground">Template</dt><dd>{job.template_name}</dd></div>
-{/if}
-{#if job.scaffolding_name}
-<div class="flex justify-between"><dt class="text-muted-foreground">Scaffolding</dt><dd>{job.scaffolding_name}</dd></div>
-{/if}
-{#if job.batch_name}
-<div class="flex justify-between"><dt class="text-muted-foreground">Batch</dt><dd>{job.batch_name}</dd></div>
-{/if}
-{#if job.created_by_email}
-<div class="flex justify-between"><dt class="text-muted-foreground">Created by</dt><dd>{job.created_by_email}</dd></div>
-{/if}
-</Card.Content>
-</Card.Root>
+    <!-- ═══════════════ OVERVIEW SECTION ═══════════════ -->
+    <section id="overview" class="space-y-4">
+      <h2 class="text-lg font-semibold flex items-center gap-2"><Eye class="h-5 w-5" /> Overview</h2>
 
-<!-- Code Footprint -->
-<Card.Root>
-<Card.Header class="pb-3"><Card.Title class="text-sm font-medium">Code Footprint</Card.Title></Card.Header>
-<Card.Content>
-{#if codeFootprint && codeFootprint.totalLines > 0}
-<div class="grid grid-cols-3 gap-4 mb-4">
-<div class="text-center">
-<div class="text-2xl font-bold text-blue-400">{fmt(codeFootprint.totalLines, 0)}</div>
-<div class="text-xs text-muted-foreground">Lines</div>
-</div>
-<div class="text-center">
-<div class="text-2xl font-bold text-emerald-400">{codeFootprint.fileCount}</div>
-<div class="text-xs text-muted-foreground">Files</div>
-</div>
-<div class="text-center">
-<div class="text-2xl font-bold text-purple-400">{(codeFootprint.totalChars / 1024).toFixed(1)}</div>
-<div class="text-xs text-muted-foreground">KB</div>
-</div>
-</div>
-<div class="flex flex-wrap gap-1.5">
-{#each Object.entries(codeFootprint.languages) as [lang, count]}
-<Badge variant="outline" class="text-xs">{lang}: {count}</Badge>
-{/each}
-</div>
-{#if codeFootprint.truncated}
-<p class="text-xs text-amber-400 mt-2">⚠ Output was truncated</p>
-{/if}
-{:else}
-<p class="text-sm text-muted-foreground">No code generated</p>
-{/if}
-</Card.Content>
-</Card.Root>
+      <!-- 4-Card Grid -->
+      <div class="grid md:grid-cols-4 gap-4">
+        <!-- Card 1: Identity -->
+        <Card.Root>
+          <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Identity</Card.Title></Card.Header>
+          <Card.Content class="space-y-2 text-sm">
+            <div class="flex justify-between"><span class="text-muted-foreground">Model</span><span class="font-medium truncate max-w-[140px]" title={job.model_name ?? '—'}>{job.model_name ?? '—'}</span></div>
+            <div class="flex justify-between"><span class="text-muted-foreground">Provider</span><Badge variant="outline" class="text-xs">{provider}</Badge></div>
+            <div class="flex justify-between"><span class="text-muted-foreground">Application</span><span class="font-mono text-xs">{job.id.substring(0, 8)}</span></div>
+            <div class="flex justify-between"><span class="text-muted-foreground">Mode</span><Badge variant="outline" class="text-xs {modeColors[job.mode] ?? ''}">{job.mode}</Badge></div>
+          </Card.Content>
+        </Card.Root>
 
-<!-- Timing -->
-<Card.Root>
-<Card.Header class="pb-3"><Card.Title class="text-sm font-medium">Timing</Card.Title></Card.Header>
-<Card.Content class="space-y-2 text-sm">
-<div class="flex justify-between"><dt class="text-muted-foreground">Created</dt><dd>{fmtDate(job.created_at)}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Started</dt><dd>{fmtDate(job.started_at)}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Completed</dt><dd>{fmtDate(job.completed_at)}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Duration</dt><dd class="font-semibold">{fmtDur(job.duration_seconds)}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Updated</dt><dd>{fmtDate(job.updated_at)}</dd></div>
-{#if job.metrics?.backend_duration}
-<div class="flex justify-between"><dt class="text-muted-foreground">Backend duration</dt><dd>{fmtDur(job.metrics.backend_duration)}</dd></div>
-{/if}
-{#if job.metrics?.frontend_duration}
-<div class="flex justify-between"><dt class="text-muted-foreground">Frontend duration</dt><dd>{fmtDur(job.metrics.frontend_duration)}</dd></div>
-{/if}
-</Card.Content>
-</Card.Root>
+        <!-- Card 2: Lifecycle -->
+        <Card.Root>
+          <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Lifecycle</Card.Title></Card.Header>
+          <Card.Content class="space-y-2 text-sm">
+            <div class="flex justify-between items-center">
+              <span class="text-muted-foreground">Status</span>
+              <Badge variant="outline" class="text-xs {statusColors[job.status] ?? ''}">
+                <span class="mr-1.5 h-1.5 w-1.5 rounded-full inline-block {job.status === 'completed' ? 'bg-emerald-500' : job.status === 'failed' ? 'bg-red-500' : job.status === 'running' ? 'bg-amber-500 animate-pulse' : 'bg-zinc-500'}"></span>
+                {job.status}
+              </Badge>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-muted-foreground">Generation</span>
+              <Badge variant="outline" class="text-xs {job.status === 'completed' ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' : job.status === 'failed' ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-amber-500/15 text-amber-500 border-amber-500/30'}">
+                {job.status === 'completed' ? 'Completed' : job.status === 'failed' ? 'Failed' : job.status === 'running' ? 'Running' : 'Pending'}
+              </Badge>
+            </div>
+            <div class="flex justify-between"><span class="text-muted-foreground">Created</span><span class="text-xs">{fmtDateCompact(job.created_at)}</span></div>
+            <div class="flex justify-between"><span class="text-muted-foreground">Duration</span><span class="font-semibold">{fmtDur(job.duration_seconds)}</span></div>
+          </Card.Content>
+        </Card.Root>
 
-<!-- Generation Config -->
-<Card.Root>
-<Card.Header class="pb-3"><Card.Title class="text-sm font-medium">Generation Config</Card.Title></Card.Header>
-<Card.Content class="space-y-2 text-sm">
-<div class="flex justify-between"><dt class="text-muted-foreground">Temperature</dt><dd>{job.temperature}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Max Tokens</dt><dd>{fmt(job.max_tokens, 0)}</dd></div>
-{#if job.mode === 'copilot'}
-<div class="flex justify-between"><dt class="text-muted-foreground">Max Iterations</dt><dd>{job.copilot_max_iterations}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Iterations Used</dt><dd>{job.copilot_current_iteration}</dd></div>
-<div class="flex justify-between"><dt class="text-muted-foreground">Open Source</dt><dd>{job.copilot_use_open_source ? 'Yes' : 'No'}</dd></div>
-{/if}
-{#if job.copilot_description}
-<div class="pt-2 border-t"><dt class="text-muted-foreground mb-1">Description</dt><dd class="text-xs bg-muted/50 rounded p-2">{job.copilot_description}</dd></div>
-{/if}
-</Card.Content>
-</Card.Root>
-</div>
-</section>
+        <!-- Card 3: Code Footprint -->
+        <Card.Root>
+          <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Code Footprint</Card.Title></Card.Header>
+          <Card.Content>
+            {#if codeFootprint && codeFootprint.totalLines > 0}
+              <div class="flex items-center justify-around mb-3">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-blue-400">{fmt(codeFootprint.totalLines, 0)}</div>
+                  <div class="text-[10px] text-muted-foreground uppercase">Lines</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-emerald-400">{codeFootprint.fileCount}</div>
+                  <div class="text-[10px] text-muted-foreground uppercase">Files</div>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-1">
+                {#each Object.entries(codeFootprint.languages) as [lang, count]}
+                  <Badge variant="outline" class="text-[10px]">{lang}: {count}</Badge>
+                {/each}
+              </div>
+              {#if codeFootprint.truncated}
+                <p class="text-[10px] text-amber-400 mt-1">⚠ Truncated</p>
+              {/if}
+            {:else}
+              <p class="text-sm text-muted-foreground">No code generated</p>
+            {/if}
+          </Card.Content>
+        </Card.Root>
 
-<!-- ═══════════════ PROMPTS SECTION ═══════════════ -->
-<section id="prompts" class="space-y-4">
-<h2 class="text-lg font-semibold flex items-center gap-2"><Terminal class="h-5 w-5" /> Prompts</h2>
-{#if promptEntries.length === 0}
-<Card.Root>
-<Card.Content class="py-12 text-center">
-<Terminal class="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
-<p class="text-sm text-muted-foreground">No prompts recorded for this job</p>
-</Card.Content>
-</Card.Root>
-{:else}
-<Card.Root>
-<Card.Content class="p-0">
-<div class="flex" style="height: 450px;">
-<!-- Left: Prompt Tree -->
-<div class="w-2/5 border-r overflow-y-auto bg-muted/20">
-<div class="p-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b px-3 py-2">
-Prompt Exchange ({promptEntries.length})
-</div>
-{#each promptEntries as entry, i}
-<button
-class="w-full text-left px-3 py-2.5 text-sm border-b border-border/50 transition-colors flex items-start gap-2 {selectedPromptIdx === i ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-muted/50'}"
-onclick={() => (selectedPromptIdx = i)}
->
-<span class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded {entry.badgeColor}">{entry.badge}</span>
-<div class="min-w-0">
-<div class="font-medium truncate">{entry.label}</div>
-{#if entry.meta}
-<div class="text-xs text-muted-foreground mt-0.5">{entry.meta.stage ?? ''} · {entry.meta.tokens ?? ''}</div>
-{/if}
-</div>
-</button>
-{/each}
-</div>
-<!-- Right: Content Preview -->
-<div class="w-3/5 flex flex-col">
-<div class="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
-<span class="text-sm font-medium">{promptEntries[selectedPromptIdx]?.label ?? ''}</span>
-<Button variant="ghost" size="sm" class="h-7" onclick={() => copyText(promptEntries[selectedPromptIdx]?.content ?? '', 'Copied')}>
-<Copy class="h-3.5 w-3.5 mr-1" />Copy
-</Button>
-</div>
-{#if promptEntries[selectedPromptIdx]?.meta}
-<div class="flex flex-wrap gap-3 px-4 py-1.5 border-b bg-muted/10 text-xs text-muted-foreground">
-{#each Object.entries(promptEntries[selectedPromptIdx].meta ?? {}) as [k, v]}
-<span><strong>{k}:</strong> {v}</span>
-{/each}
-</div>
-{/if}
-<div class="flex-1 overflow-auto p-4">
-<pre class="text-xs font-mono whitespace-pre-wrap break-words text-foreground/90">{promptEntries[selectedPromptIdx]?.content ?? ''}</pre>
-</div>
-</div>
-</div>
-</Card.Content>
-</Card.Root>
-{/if}
-</section>
+        <!-- Card 4: Fixes Applied -->
+        <Card.Root>
+          <Card.Header class="pb-2"><Card.Title class="text-sm font-medium flex items-center gap-1.5"><Wrench class="h-3.5 w-3.5" /> Fixes Applied</Card.Title></Card.Header>
+          <Card.Content>
+            {#if job.mode === 'copilot' && fixesData.total > 0}
+              <div class="text-2xl font-bold text-amber-400 mb-2">{fixesData.total}</div>
+              <div class="space-y-1.5 text-sm">
+                <div class="flex justify-between"><span class="text-muted-foreground">Retry</span><Badge variant="outline" class="text-xs">{fixesData.retry}</Badge></div>
+                <div class="flex justify-between"><span class="text-muted-foreground">Auto-fix</span><Badge variant="outline" class="text-xs">{fixesData.autofix}</Badge></div>
+                <div class="flex justify-between"><span class="text-muted-foreground">LLM</span><Badge variant="outline" class="text-xs">{fixesData.llm}</Badge></div>
+              </div>
+            {:else}
+              <div class="flex items-center gap-2 text-emerald-500">
+                <CircleCheck class="h-5 w-5" />
+                <span class="text-sm font-medium">No fixes needed</span>
+              </div>
+            {/if}
+          </Card.Content>
+        </Card.Root>
+      </div>
 
-<!-- ═══════════════ FILES SECTION ═══════════════ -->
-<section id="files" class="space-y-4">
-<h2 class="text-lg font-semibold flex items-center gap-2"><FolderTree class="h-5 w-5" /> Files & Code</h2>
-{#if virtualFiles.length === 0}
-<Card.Root>
-<Card.Content class="py-12 text-center">
-<FolderTree class="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
-<p class="text-sm text-muted-foreground">No files generated</p>
-</Card.Content>
-</Card.Root>
-{:else}
-<!-- Key Artifacts Bar -->
-<div class="flex items-center gap-2 flex-wrap">
-{#each virtualFiles as f, i}
-<Button variant={selectedFileIdx === i ? 'default' : 'outline'} size="sm" onclick={() => (selectedFileIdx = i)}>
-<FileCode class="h-3.5 w-3.5 mr-1.5" />
-{f.name}
-</Button>
-{/each}
-</div>
+      <!-- Highlights Row -->
+      <div class="flex items-center gap-2 flex-wrap text-sm">
+        {#if job.batch_name}
+          <Badge variant="outline" class="text-xs bg-amber-500/10 text-amber-400 border-amber-500/30">
+            <Zap class="h-3 w-3 mr-1" />{job.batch_name}
+          </Badge>
+        {/if}
+        {#if job.template_name}
+          <Badge variant="outline" class="text-xs bg-sky-500/10 text-sky-400 border-sky-500/30">📋 {job.template_name}</Badge>
+        {/if}
+        {#if job.scaffolding_name}
+          <Badge variant="outline" class="text-xs bg-purple-500/10 text-purple-400 border-purple-500/30">🏗️ {job.scaffolding_name}</Badge>
+        {/if}
+        {#if job.batch_name}
+          <Badge variant="outline" class="text-xs">Batch run</Badge>
+        {/if}
+        {#if job.updated_at}
+          <span class="text-xs text-muted-foreground ml-auto">Updated {fmtDateCompact(job.updated_at)}</span>
+        {/if}
+      </div>
 
-<Card.Root>
-<Card.Content class="p-0">
-<div class="flex" style="height: 500px;">
-<!-- Left: File Tree -->
-<div class="w-1/3 border-r overflow-y-auto bg-muted/20">
-<div class="p-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b px-3 py-2">
-Files ({virtualFiles.length})
-</div>
-{#each virtualFiles as f, i}
-<button
-class="w-full text-left px-3 py-2.5 text-sm border-b border-border/50 transition-colors flex items-center gap-2 {selectedFileIdx === i ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-muted/50'}"
-onclick={() => (selectedFileIdx = i)}
->
-<FileCode class="h-4 w-4 text-muted-foreground shrink-0" />
-<div class="min-w-0 flex-1">
-<div class="font-medium truncate font-mono text-xs">{f.name}</div>
-<div class="text-xs text-muted-foreground">{f.code.split('\n').length} lines · {(f.code.length / 1024).toFixed(1)} KB</div>
-</div>
-</button>
-{/each}
-</div>
-<!-- Right: File Preview -->
-<div class="w-2/3 flex flex-col">
-<div class="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
-<span class="text-sm font-medium font-mono">{virtualFiles[selectedFileIdx]?.name ?? ''}</span>
-<div class="flex items-center gap-1">
-<Badge variant="outline" class="text-xs">{virtualFiles[selectedFileIdx]?.lang}</Badge>
-<Button variant="ghost" size="sm" class="h-7" onclick={() => copyText(virtualFiles[selectedFileIdx]?.code ?? '', 'Copied file')}>
-<Copy class="h-3.5 w-3.5" />
-</Button>
-</div>
-</div>
-<div class="flex-1 overflow-auto bg-zinc-950">
-<pre class="p-4 text-xs font-mono text-zinc-300 leading-relaxed">{#each (virtualFiles[selectedFileIdx]?.code ?? '').split('\n') as line, ln}<span class="inline-block w-10 text-right mr-4 text-zinc-600 select-none">{ln + 1}</span>{line}
+      <!-- Generation Details -->
+      <Card.Root>
+        <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Generation Details</Card.Title></Card.Header>
+        <Card.Content>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Backend</span><span class="font-medium">{frameworkInfo.backend}</span></div>
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Frontend</span><span class="font-medium">{frameworkInfo.frontend}</span></div>
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Database</span><span class="font-medium">{frameworkInfo.database}</span></div>
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Duration</span><span class="font-medium">{fmtDur(job.duration_seconds)}</span></div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-3 pt-3 border-t">
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Template</span><span class="font-medium">{job.template_name ?? '—'}</span></div>
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Tokens</span><span class="font-medium">{fmt(costData.totalTokens, 0)}</span></div>
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Updated</span><span class="font-medium">{fmtDateCompact(job.updated_at)}</span></div>
+            <div><span class="text-xs text-muted-foreground block mb-0.5">Type</span><Badge variant="outline" class="text-xs {modeColors[job.mode] ?? ''}">{job.mode}</Badge></div>
+          </div>
+        </Card.Content>
+      </Card.Root>
+    </section>
+
+    <!-- ═══════════════ PROMPTS SECTION ═══════════════ -->
+    <section id="prompts" class="space-y-4">
+      <h2 class="text-lg font-semibold flex items-center gap-2"><Terminal class="h-5 w-5" /> Prompts</h2>
+
+      <!-- Source Legend -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-muted-foreground font-medium">Sources:</span>
+        <Badge variant="outline" class="text-[10px] bg-sky-500/10 text-sky-400 border-sky-500/30">📋 Template</Badge>
+        <Badge variant="outline" class="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">📝 Requirements</Badge>
+        <Badge variant="outline" class="text-[10px] bg-orange-500/10 text-orange-400 border-orange-500/30">🏗️ Scaffolding</Badge>
+        <Badge variant="outline" class="text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30">📊 Metadata</Badge>
+      </div>
+
+      {#if promptEntries.length === 0}
+        <Card.Root>
+          <Card.Content class="py-12 text-center">
+            <Terminal class="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p class="text-sm text-muted-foreground">No prompts recorded for this job</p>
+          </Card.Content>
+        </Card.Root>
+      {:else}
+        <Card.Root>
+          <Card.Content class="p-0">
+            <div class="flex" style="height: 450px;">
+              <!-- Left: Prompt Tree -->
+              <div class="w-2/5 border-r overflow-y-auto bg-muted/20">
+                <div class="p-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b px-3 py-2">
+                  Prompt Exchange ({promptEntries.length})
+                </div>
+                {#each promptEntries as entry, i}
+                  <button
+                    class="w-full text-left px-3 py-2.5 text-sm border-b border-border/50 transition-colors flex items-start gap-2 {selectedPromptIdx === i ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-muted/50'}"
+                    onclick={() => (selectedPromptIdx = i)}
+                  >
+                    <span class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded {entry.badgeColor}">{entry.badge}</span>
+                    <div class="min-w-0">
+                      <div class="font-medium truncate">{entry.label}</div>
+                      {#if entry.meta}
+                        <div class="text-xs text-muted-foreground mt-0.5">{entry.meta.stage ?? ''} · {entry.meta.tokens ?? ''}</div>
+                      {/if}
+                    </div>
+                  </button>
+                {/each}
+              </div>
+              <!-- Right: Content Preview with Color-Coded Sections -->
+              <div class="w-3/5 flex flex-col">
+                <div class="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+                  <span class="text-sm font-medium">{promptEntries[selectedPromptIdx]?.label ?? ''}</span>
+                  <Button variant="ghost" size="sm" class="h-7" onclick={() => copyText(promptEntries[selectedPromptIdx]?.content ?? '', 'Copied')}>
+                    <Copy class="h-3.5 w-3.5 mr-1" />Copy
+                  </Button>
+                </div>
+                {#if promptEntries[selectedPromptIdx]?.meta}
+                  <div class="flex flex-wrap gap-3 px-4 py-1.5 border-b bg-muted/10 text-xs text-muted-foreground">
+                    {#each Object.entries(promptEntries[selectedPromptIdx].meta ?? {}) as [k, v]}
+                      <span><strong>{k}:</strong> {v}</span>
+                    {/each}
+                  </div>
+                {/if}
+                <div class="flex-1 overflow-auto p-4">
+                  {#each parsePromptSegments(promptEntries[selectedPromptIdx]?.content ?? '') as segment}
+                    {#if segment.type !== 'default'}
+                      <div class="border-l-2 pl-3 mb-1.5 py-0.5 rounded-r {segmentBorderColors[segment.type] ?? ''}">
+                        <pre class="text-xs font-mono whitespace-pre-wrap break-words text-foreground/90">{segment.content}</pre>
+                      </div>
+                    {:else}
+                      <pre class="text-xs font-mono whitespace-pre-wrap break-words text-foreground/90 mb-1.5">{segment.content}</pre>
+                    {/if}
+                  {/each}
+                </div>
+              </div>
+            </div>
+          </Card.Content>
+        </Card.Root>
+      {/if}
+    </section>
+
+    <!-- ═══════════════ FILES SECTION ═══════════════ -->
+    <section id="files" class="space-y-4">
+      <h2 class="text-lg font-semibold flex items-center gap-2"><FolderTree class="h-5 w-5" /> Files & Code</h2>
+      {#if virtualFiles.length === 0}
+        <Card.Root>
+          <Card.Content class="py-12 text-center">
+            <FolderTree class="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p class="text-sm text-muted-foreground">No files generated</p>
+          </Card.Content>
+        </Card.Root>
+      {:else}
+        <!-- Key Artifacts Card -->
+        {#if keyArtifactFiles.length > 0}
+          <Card.Root>
+            <Card.Header class="pb-2"><Card.Title class="text-sm font-medium flex items-center gap-1.5"><FileText class="h-3.5 w-3.5" /> Key Artifacts</Card.Title></Card.Header>
+            <Card.Content class="p-0">
+              <div class="divide-y">
+                {#each keyArtifactFiles as artifact}
+                  <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors">
+                    <span class="text-lg">{artifact.icon}</span>
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm font-medium font-mono">{artifact.name}</div>
+                      <div class="text-xs text-muted-foreground">{artifact.subtitle}</div>
+                    </div>
+                    <Button variant="ghost" size="sm" class="h-7 w-7 p-0" onclick={() => (selectedFileIdx = artifact.idx)} title="View file">
+                      <Eye class="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                {/each}
+              </div>
+            </Card.Content>
+          </Card.Root>
+        {/if}
+
+        <!-- File Stats Badges -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" class="text-xs bg-primary/10 text-primary border-primary/30">📁 {fileStats.totalFiles} Files</Badge>
+          <Badge variant="outline" class="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/30">📊 {(fileStats.totalSize / 1024).toFixed(1)} KB</Badge>
+          <Badge variant="outline" class="text-xs bg-sky-500/10 text-sky-400 border-sky-500/30">&lt;/&gt; {fileStats.codeCount} Code</Badge>
+          <Badge variant="outline" class="text-xs bg-amber-500/10 text-amber-400 border-amber-500/30">⚙️ {fileStats.configCount} Config</Badge>
+        </div>
+
+        <!-- File Explorer -->
+        <Card.Root>
+          <Card.Content class="p-0">
+            <div class="flex" style="height: 500px;">
+              <!-- Left: File Tree -->
+              <div class="w-1/3 border-r overflow-y-auto bg-muted/20">
+                <div class="p-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b px-3 py-2">
+                  Files ({virtualFiles.length})
+                </div>
+                {#each virtualFiles as f, i}
+                  <button
+                    class="w-full text-left px-3 py-2.5 text-sm border-b border-border/50 transition-colors flex items-center gap-2 {selectedFileIdx === i ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-muted/50'}"
+                    onclick={() => (selectedFileIdx = i)}
+                  >
+                    <FileCode class="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div class="min-w-0 flex-1">
+                      <div class="font-medium truncate font-mono text-xs">{f.name}</div>
+                      <div class="text-xs text-muted-foreground">{f.code.split('\n').length} lines · {(f.code.length / 1024).toFixed(1)} KB</div>
+                    </div>
+                  </button>
+                {/each}
+              </div>
+              <!-- Right: File Preview -->
+              <div class="w-2/3 flex flex-col">
+                <div class="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+                  <span class="text-sm font-medium font-mono">{virtualFiles[selectedFileIdx]?.name ?? ''}</span>
+                  <div class="flex items-center gap-1">
+                    <Badge variant="outline" class="text-xs">{virtualFiles[selectedFileIdx]?.lang}</Badge>
+                    <Button variant="ghost" size="sm" class="h-7" onclick={() => copyText(virtualFiles[selectedFileIdx]?.code ?? '', 'Copied file')}>
+                      <Copy class="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div class="flex-1 overflow-auto bg-zinc-950">
+                  <pre class="p-4 text-xs font-mono text-zinc-300 leading-relaxed">{#each (virtualFiles[selectedFileIdx]?.code ?? '').split('\n') as line, ln}<span class="inline-block w-10 text-right mr-4 text-zinc-600 select-none">{ln + 1}</span>{line}
 {/each}</pre>
-</div>
-</div>
-</div>
-</Card.Content>
-</Card.Root>
-{/if}
-</section>
+                </div>
+              </div>
+            </div>
+          </Card.Content>
+        </Card.Root>
+
+        <!-- By Extension Breakdown -->
+        {#if extensionBreakdown.length > 0}
+          <Card.Root>
+            <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">By Extension</Card.Title></Card.Header>
+            <Card.Content class="p-0">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b bg-muted/30">
+                    <th class="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Extension</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Files</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Size</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-muted-foreground w-1/3">%</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  {#each extensionBreakdown as ext}
+                    <tr class="hover:bg-muted/30">
+                      <td class="px-4 py-2 font-mono text-xs font-medium">{ext.ext}</td>
+                      <td class="px-4 py-2">{ext.count}</td>
+                      <td class="px-4 py-2 text-muted-foreground">{(ext.size / 1024).toFixed(1)} KB</td>
+                      <td class="px-4 py-2">
+                        <div class="flex items-center gap-2">
+                          <div class="flex-1 h-2 rounded-full bg-zinc-800 overflow-hidden">
+                            <div class="h-full rounded-full {ext.pct > 30 ? 'bg-primary' : ext.pct > 10 ? 'bg-sky-500' : 'bg-zinc-600'}" style="width: {ext.pct}%"></div>
+                          </div>
+                          <span class="text-xs text-muted-foreground w-10 text-right">{ext.pct.toFixed(0)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </Card.Content>
+          </Card.Root>
+        {/if}
+      {/if}
+    </section>
 
 <!-- ═══════════════ API SCAN SECTION ═══════════════ -->
 {#if backendScan}
