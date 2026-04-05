@@ -37,6 +37,7 @@ import Braces from '@lucide/svelte/icons/braces';
 import Gift from '@lucide/svelte/icons/gift';
 import Sparkles from '@lucide/svelte/icons/sparkles';
 import Zap from '@lucide/svelte/icons/zap';
+import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 
 let searchQuery = $state('');
 let selectedProvider = $state('');
@@ -50,6 +51,7 @@ let filterCapability = $state('');
 let filterPriceRange = $state('');
 let filterContextRange = $state('');
 let filterFreeOnly = $state(false);
+let showAdvancedFilters = $state(false);
 
 let data = $state<PaginatedModels | null>(null);
 let stats = $state<ModelsStats | null>(null);
@@ -267,16 +269,16 @@ loadMeta();
 <div class="flex items-center justify-between">
 <div class="page-header">
 <h1>Models</h1>
-<p>Browse and manage AI models available for research.</p>
+<p class="hidden sm:block">Browse and manage AI models available for research.</p>
 </div>
 <div class="flex items-center gap-2">
 <Button variant="outline" size="sm" href="/rankings">
-<Trophy class="mr-2 h-3.5 w-3.5" />
-Rankings
+<Trophy class="h-3.5 w-3.5 sm:mr-2" />
+<span class="hidden sm:inline">Rankings</span>
 </Button>
 <Button variant="outline" size="sm" href="/models/import">
-<Upload class="mr-2 h-3.5 w-3.5" />
-Import
+<Upload class="h-3.5 w-3.5 sm:mr-2" />
+<span class="hidden sm:inline">Import</span>
 </Button>
 </div>
 </div>
@@ -300,34 +302,34 @@ Import
 {/if}
 
 <!-- Quick Filter Presets -->
-<div class="flex flex-wrap items-center gap-1.5">
-<span class="text-xs text-muted-foreground mr-1">Quick:</span>
+<div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+<span class="text-xs text-muted-foreground mr-1 shrink-0">Quick:</span>
 <button
-class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-muted {filterPriceRange === 'free' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-400' : 'border-input'}"
+class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted shrink-0 whitespace-nowrap {filterPriceRange === 'free' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-400' : 'border-input'}"
 onclick={() => applyQuickFilter('free')}
 >
 <Gift class="h-3 w-3" /> Free Models
 </button>
 <button
-class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-muted {filterCapability === 'vision' ? 'bg-violet-500/10 border-violet-500/40 text-violet-700 dark:text-violet-400' : 'border-input'}"
+class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted shrink-0 whitespace-nowrap {filterCapability === 'vision' ? 'bg-violet-500/10 border-violet-500/40 text-violet-700 dark:text-violet-400' : 'border-input'}"
 onclick={() => applyQuickFilter('vision')}
 >
 <Eye class="h-3 w-3" /> Vision
 </button>
 <button
-class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-muted {filterCapability === 'function_calling' ? 'bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-400' : 'border-input'}"
+class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted shrink-0 whitespace-nowrap {filterCapability === 'function_calling' ? 'bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-400' : 'border-input'}"
 onclick={() => applyQuickFilter('functions')}
 >
 <Wrench class="h-3 w-3" /> Functions
 </button>
 <button
-class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-muted {filterContextRange === 'xlarge' ? 'bg-blue-500/10 border-blue-500/40 text-blue-700 dark:text-blue-400' : 'border-input'}"
+class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted shrink-0 whitespace-nowrap {filterContextRange === 'xlarge' ? 'bg-blue-500/10 border-blue-500/40 text-blue-700 dark:text-blue-400' : 'border-input'}"
 onclick={() => applyQuickFilter('large-context')}
 >
 128K+ Context
 </button>
 <button
-class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-muted {sortBy === 'cost_efficiency' && sortDir === 'desc' ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-400' : 'border-input'}"
+class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted shrink-0 whitespace-nowrap {sortBy === 'cost_efficiency' && sortDir === 'desc' ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-400' : 'border-input'}"
 onclick={() => applyQuickFilter('efficient')}
 >
 <Sparkles class="h-3 w-3" /> Most Efficient
@@ -356,16 +358,19 @@ onchange={() => applyFilterAndReload()}
 {/each}
 </select>
 <div class="flex items-center gap-2 sm:ml-auto">
+<Button variant="outline" size="sm" class="sm:hidden" onclick={() => showAdvancedFilters = !showAdvancedFilters}>
+<SlidersHorizontal class="h-3.5 w-3.5" />
+</Button>
 <Button variant="outline" size="sm" onclick={handleSync} disabled={syncing}>
 {#if syncing}
-<LoaderCircle class="mr-2 h-3.5 w-3.5 animate-spin" />
-Syncing…
+<LoaderCircle class="h-3.5 w-3.5 animate-spin sm:mr-2" />
+<span class="hidden sm:inline">Syncing…</span>
 {:else}
-<CloudDownload class="mr-2 h-3.5 w-3.5" />
-Sync from OpenRouter
+<CloudDownload class="h-3.5 w-3.5 sm:mr-2" />
+<span class="hidden sm:inline">Sync from OpenRouter</span>
 {/if}
 </Button>
-<Button variant="outline" size="sm" disabled>
+<Button variant="outline" size="sm" disabled class="hidden sm:inline-flex">
 <Download class="mr-2 h-3.5 w-3.5" />
 Export
 </Button>
@@ -373,7 +378,7 @@ Export
 </div>
 
 <!-- Advanced Filters Row (inline, not a panel) -->
-<div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+<div class="{showAdvancedFilters ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-6 gap-y-2">
 <!-- Capabilities -->
 <div class="flex items-center gap-2">
 <span class="text-xs font-semibold uppercase text-muted-foreground">Cap:</span>

@@ -399,6 +399,15 @@
     }
   }
 
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Hide specific columns on mobile */
   @media (max-width: 767px) {
     .hide-mobile {
