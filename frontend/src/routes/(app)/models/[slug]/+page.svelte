@@ -78,22 +78,17 @@
 	const calcTotalCost = $derived(calcInputCost + calcOutputCost);
 
 	const sections = [
-		{ id: 'overview', label: 'Overview', icon: Info, color: 'text-primary', border: 'bg-primary', bg: 'bg-primary/10' },
-		{ id: 'capabilities', label: 'Capabilities', icon: Zap, color: 'text-amber-500', border: 'bg-amber-500', bg: 'bg-amber-500/10' },
-		{ id: 'pricing', label: 'Pricing', icon: DollarSign, color: 'text-emerald-500', border: 'bg-emerald-500', bg: 'bg-emerald-500/10' },
-		{ id: 'metadata', label: 'Metadata', icon: Layers, color: 'text-purple-500', border: 'bg-purple-500', bg: 'bg-purple-500/10' },
-		{ id: 'related', label: 'Related', icon: Users, color: 'text-blue-500', border: 'bg-blue-500', bg: 'bg-blue-500/10' },
+		{ id: 'overview', label: 'Overview', icon: Info },
+		{ id: 'capabilities', label: 'Capabilities', icon: Zap },
+		{ id: 'pricing', label: 'Pricing', icon: DollarSign },
+		{ id: 'metadata', label: 'Metadata', icon: Layers },
+		{ id: 'related', label: 'Related', icon: Users },
 	] as const;
 	let activeSection = $state<string>('overview');
 
 	function scrollToSection(id: string) {
 		activeSection = id;
-		const el = document.getElementById(id);
-		if (el) {
-			const offset = 56 + 44; // header h-14 (56px) + nav bar (~44px)
-			const top = el.getBoundingClientRect().top + window.scrollY - offset;
-			window.scrollTo({ top, behavior: 'smooth' });
-		}
+		document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
 	// Scroll-spy
@@ -318,16 +313,16 @@
 	<title>{model?.model_name ?? slug} - Models - LLM Lab</title>
 </svelte:head>
 
-<div class="space-y-4 min-w-0">
+<div class="space-y-5 min-w-0">
 	<!-- Breadcrumb -->
-	<div class="flex items-center gap-2 text-sm text-muted-foreground">
-		<Button variant="ghost" size="sm" href="/models" class="gap-1.5 px-2">
+	<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted-foreground">
+		<a href="/models" class="hover:text-foreground transition-colors flex items-center gap-1">
 			<ArrowLeft class="h-3.5 w-3.5" />
-			Models
-		</Button>
+			<span class="font-medium text-foreground">Models</span>
+		</a>
 		<span>/</span>
-		<span class="text-foreground font-medium">{model?.model_name ?? slug}</span>
-	</div>
+		<span class="text-muted-foreground truncate max-w-[300px]">{model?.model_name ?? slug}</span>
+	</nav>
 
 	{#if loading}
 		<div class="flex items-center justify-center py-20">
@@ -339,207 +334,130 @@
 		</div>
 	{:else if model}
 
-		<!-- Header Bar -->
-		<Card.Root class="border-l-4 border-l-primary">
-			<Card.Content class="py-4">
-				<div class="flex flex-wrap items-center gap-4">
-					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-						<Cpu class="h-6 w-6 text-primary" />
-					</div>
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2 flex-wrap">
-							<h2 class="text-xl font-bold">{model.model_name}</h2>
-							<Badge variant="secondary">{model.provider}</Badge>
-							{#if model.is_free}
-								<Badge variant="secondary" class="gap-1 text-emerald-600 dark:text-emerald-400">
-									<Gift class="h-3 w-3" /> Free
-								</Badge>
-							{/if}
+		<!-- Header Card -->
+		<Card.Root>
+			<Card.Content class="p-5">
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div class="flex items-start gap-4">
+						<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+							<Cpu class="h-6 w-6 text-primary" />
 						</div>
-						{#if model.description}
-							<p class="text-sm text-muted-foreground mt-1 line-clamp-2">{stripMarkdown(model.description)}</p>
-						{/if}
-					</div>
-					<div class="hidden md:flex items-center gap-4 text-sm">
-						<div class="text-center">
-							<div class="font-semibold">{model.context_window_display}</div>
-							<div class="text-xs text-muted-foreground">Context</div>
-						</div>
-						<Separator orientation="vertical" class="h-8" />
-						<div class="text-center">
-							<div class="font-semibold">{formatPrice(model.input_price_per_million)}</div>
-							<div class="text-xs text-muted-foreground">Input/1M</div>
-						</div>
-						<Separator orientation="vertical" class="h-8" />
-						<div class="text-center">
-							<div class="flex items-center justify-center">
-								<div class="flex h-9 w-9 items-center justify-center rounded-full border-2 {efficiency.color === 'text-emerald-500' ? 'border-emerald-500' : efficiency.color === 'text-emerald-400' ? 'border-emerald-400' : efficiency.color === 'text-blue-500' ? 'border-blue-500' : efficiency.color === 'text-blue-400' ? 'border-blue-400' : efficiency.color === 'text-amber-500' ? 'border-amber-500' : 'border-red-500'}">
-									<span class="text-sm font-bold {efficiency.color}">{efficiency.grade}</span>
-								</div>
+						<div>
+							<h1 class="text-xl font-semibold">{model.model_name}</h1>
+							<div class="flex flex-wrap items-center gap-2 mt-1.5">
+								<Badge variant="outline" class="text-xs">{model.provider}</Badge>
+								{#if model.is_free}
+									<Badge variant="outline" class="text-xs bg-emerald-500/15 text-emerald-500 border-emerald-500/30">
+										<Gift class="h-3 w-3 mr-1" /> Free
+									</Badge>
+								{/if}
+								<Badge variant="outline" class="text-xs hidden sm:inline-flex">{model.context_window_display} ctx</Badge>
 							</div>
-							<div class="text-xs text-muted-foreground mt-0.5">Efficiency</div>
+							<p class="text-xs text-muted-foreground mt-1 font-mono truncate max-w-full">{model.model_id}</p>
 						</div>
 					</div>
-					<div class="flex flex-wrap items-center gap-2">
-						<Button variant="outline" size="sm" href="https://openrouter.ai/models/{model.model_id}" target="_blank" rel="noopener noreferrer" class="gap-1.5">
-							<Globe class="h-3.5 w-3.5" />
-							<span class="hidden sm:inline">OpenRouter</span>
+					<div class="flex flex-wrap items-center gap-2 sm:shrink-0">
+						<Button variant="outline" size="sm" onclick={() => copyToClipboard(model!.model_id)} title="Copy Model ID">
+							<Copy class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">ID</span>
 						</Button>
-						<Button variant="outline" size="sm" disabled>
-							<Sparkles class="h-3.5 w-3.5" />
-							<span class="hidden sm:inline ml-1">Generate App</span>
+						<Button variant="outline" size="sm" href="https://openrouter.ai/models/{model.model_id}" target="_blank" rel="noopener noreferrer" title="View on OpenRouter">
+							<Globe class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">OpenRouter</span>
 						</Button>
-						<Button variant="outline" size="sm" href="/models/compare?models={slug}">
-							<GitCompareArrows class="h-3.5 w-3.5" />
-							<span class="hidden sm:inline ml-1">Compare</span>
+						<Button variant="outline" size="sm" href="/models/compare?models={slug}" title="Compare">
+							<GitCompareArrows class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Compare</span>
 						</Button>
-						<Button variant="ghost" size="icon" class="h-8 w-8" onclick={load}>
-							<RefreshCw class="h-3.5 w-3.5" />
+						<Button size="sm" onclick={load} title="Refresh">
+							<RefreshCw class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Refresh</span>
 						</Button>
 					</div>
 				</div>
 			</Card.Content>
 		</Card.Root>
 
-		<!-- Metric Grid -->
-		<div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-			<Card.Root class="border-l-2 border-l-blue-500">
-				<Card.Content class="p-3 text-center">
-					<div class="text-lg font-bold">{model.context_window_display}</div>
-					<div class="text-xs font-medium text-muted-foreground">Context Window</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root class="border-l-2 border-l-emerald-500">
-				<Card.Content class="p-3 text-center">
-					<div class="text-lg font-bold">{formatPrice(model.input_price_per_million)}</div>
-					<div class="text-xs font-medium text-muted-foreground">Input $/1M</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root class="border-l-2 border-l-blue-400">
-				<Card.Content class="p-3 text-center">
-					<div class="text-lg font-bold">{formatPrice(model.output_price_per_million)}</div>
-					<div class="text-xs font-medium text-muted-foreground">Output $/1M</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root class="border-l-2 border-l-amber-500">
-				<Card.Content class="p-3 text-center">
-					<div class="flex items-center justify-center">
-						<div class="flex h-10 w-10 items-center justify-center rounded-full border-2 {efficiency.color === 'text-emerald-500' ? 'border-emerald-500 bg-emerald-500/10' : efficiency.color === 'text-emerald-400' ? 'border-emerald-400 bg-emerald-400/10' : efficiency.color === 'text-blue-500' ? 'border-blue-500 bg-blue-500/10' : efficiency.color === 'text-blue-400' ? 'border-blue-400 bg-blue-400/10' : efficiency.color === 'text-amber-500' ? 'border-amber-500 bg-amber-500/10' : 'border-red-500 bg-red-500/10'}">
-							<span class="text-sm font-bold {efficiency.color}">{efficiency.grade}</span>
-						</div>
-					</div>
-					<div class="text-xs font-medium text-muted-foreground mt-1">Efficiency ({model.cost_efficiency.toFixed(2)})</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root class="border-l-2 border-l-purple-500">
-				<Card.Content class="p-3 text-center">
-					<div class="text-lg font-bold">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : 'N/A'}</div>
-					<div class="text-xs font-medium text-muted-foreground">Max Output</div>
-				</Card.Content>
-			</Card.Root>
+		<!-- KPI Row -->
+		<div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+			<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+				<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Context</div>
+				<div class="text-sm sm:text-lg font-semibold">{model.context_window_display}</div>
+			</div>
+			<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+				<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Input $/1M</div>
+				<div class="text-sm sm:text-lg font-semibold">{formatPrice(model.input_price_per_million)}</div>
+			</div>
+			<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+				<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Output $/1M</div>
+				<div class="text-sm sm:text-lg font-semibold">{formatPrice(model.output_price_per_million)}</div>
+			</div>
+			<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+				<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Efficiency</div>
+				<div class="text-sm sm:text-lg font-semibold {efficiency.color}">{efficiency.grade}</div>
+			</div>
+			<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+				<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Max Output</div>
+				<div class="text-sm sm:text-lg font-semibold">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : 'N/A'}</div>
+			</div>
 		</div>
 
-		<!-- Section Navigation -->
-		<nav class="sticky top-14 z-20 -mx-4 md:-mx-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-			<div class="flex flex-nowrap px-4 md:px-6 overflow-x-auto scrollbar-none">
+		<!-- Sticky Section Nav -->
+		<div class="sticky top-0 z-20 -mx-1 px-1 py-2 bg-background/95 backdrop-blur border-b">
+			<div class="flex items-center gap-1 overflow-x-auto">
 				{#each sections as section}
 					<button
-						class="relative flex items-center gap-2 px-3 py-3 text-xs sm:text-sm sm:px-4 font-medium whitespace-nowrap transition-colors
-							{activeSection === section.id
-								? `${section.color}`
-								: 'text-muted-foreground hover:text-foreground'}"
+						class="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {activeSection === section.id ? 'bg-primary/10 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
 						onclick={() => scrollToSection(section.id)}
 					>
 						<section.icon class="h-3.5 w-3.5" />
 						{section.label}
-						{#if activeSection === section.id}
-							<span class="absolute bottom-0 inset-x-2 h-0.5 rounded-full {section.border} transition-all"></span>
-						{/if}
 					</button>
 				{/each}
 			</div>
-			<div class="h-px bg-border"></div>
-		</nav>
+		</div>
 
 		<!-- ==================== OVERVIEW SECTION ==================== -->
-		<div id="overview" class="space-y-3">
+		<section id="overview" class="space-y-4">
+			<h2 class="text-lg font-semibold flex items-center gap-2"><Info class="h-5 w-5" /> Overview</h2>
+
 			<div class="grid gap-3 lg:grid-cols-2">
 				<!-- Identity Card -->
 				<Card.Root>
-					<Card.Content class="p-4">
-						<div class="flex items-center gap-2 mb-3">
-							<Info class="h-4 w-4 text-primary" />
-							<span class="text-xs font-bold uppercase text-muted-foreground">Identity</span>
-						</div>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-							<div>
-								<div class="text-xs text-muted-foreground">Display Name</div>
-								<div class="text-sm font-medium truncate" title={model.model_name}>{model.model_name}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Provider</div>
-								<Badge variant="secondary" class="mt-0.5">{model.provider}</Badge>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Model ID</div>
-								<code class="text-xs truncate block" title={model.model_id}>{model.model_id}</code>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Canonical Slug</div>
-								<code class="text-xs truncate block" title={model.canonical_slug}>{model.canonical_slug}</code>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Database ID</div>
-								<div class="text-sm font-medium">#{model.id}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Last Updated</div>
-								<div class="text-sm font-medium">{new Date(model.updated_at).toLocaleDateString()}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Added to DB</div>
-								<div class="text-sm font-medium">{new Date(model.created_at).toLocaleDateString()}</div>
-							</div>
-						</div>
+					<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Identity</Card.Title></Card.Header>
+					<Card.Content class="space-y-2 text-sm">
+						<div class="flex justify-between"><span class="text-muted-foreground">Model ID</span><code class="text-xs truncate max-w-[180px]" title={model.model_id}>{model.model_id}</code></div>
+						<div class="flex justify-between"><span class="text-muted-foreground">Provider</span><Badge variant="outline" class="text-xs">{model.provider}</Badge></div>
+						<div class="flex justify-between"><span class="text-muted-foreground">Last Updated</span><span class="text-xs">{new Date(model.updated_at).toLocaleDateString()}</span></div>
+						{#if hfId}
+							<div class="flex justify-between"><span class="text-muted-foreground">HuggingFace</span><code class="text-xs truncate max-w-[140px]">{hfId}</code></div>
+						{/if}
 					</Card.Content>
 				</Card.Root>
 
 				<!-- Capacity Card -->
 				<Card.Root>
-					<Card.Content class="p-4">
-						<div class="flex items-center gap-2 mb-3">
-							<Gauge class="h-4 w-4 text-blue-500" />
-							<span class="text-xs font-bold uppercase text-muted-foreground">Capacity</span>
-						</div>
-						<div class="flex items-center justify-center gap-8 mb-3">
+					<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Capacity</Card.Title></Card.Header>
+					<Card.Content>
+						<div class="flex items-center justify-around mb-3">
 							<div class="text-center">
-								<div class="text-3xl font-bold text-primary">{model.context_window_display}</div>
-								<div class="text-xs text-muted-foreground">Context Window</div>
+								<div class="text-2xl font-bold text-primary">{model.context_window_display}</div>
+								<div class="text-[10px] text-muted-foreground uppercase">Context</div>
 							</div>
-							<Separator orientation="vertical" class="h-12" />
 							<div class="text-center">
-								<div class="text-3xl font-bold text-emerald-500">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : '—'}</div>
-								<div class="text-xs text-muted-foreground">Max Output</div>
+								<div class="text-2xl font-bold text-emerald-500">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : '—'}</div>
+								<div class="text-[10px] text-muted-foreground uppercase">Max Output</div>
 							</div>
 						</div>
-						<div class="flex flex-wrap gap-1.5 justify-center">
+						<div class="flex flex-wrap gap-1 justify-center">
 							{#if model.is_free}
 								<Badge variant="secondary" class="gap-1 text-emerald-600 dark:text-emerald-400"><Gift class="h-3 w-3" /> Free</Badge>
 							{/if}
 							{#if (meta.openrouter_top_provider as Record<string, unknown>)?.is_moderated}
 								<Badge variant="secondary" class="gap-1 text-blue-600 dark:text-blue-400"><Shield class="h-3 w-3" /> Moderated</Badge>
 							{/if}
-							{#if meta.openrouter_created}
-								<Badge variant="outline" class="gap-1 text-muted-foreground">
-									Created {new Date(Number(meta.openrouter_created) * 1000).toLocaleDateString()}
-								</Badge>
-							{/if}
 						</div>
 					</Card.Content>
 				</Card.Root>
 			</div>
 
-			<!-- External Links -->
+			<!-- Description & Links -->
 			<Card.Root>
 				<Card.Content class="p-4">
 					<div class="flex flex-wrap items-center gap-3">
@@ -568,18 +486,14 @@
 					{/if}
 				</Card.Content>
 			</Card.Root>
-		</div>
+		</section>
 
 		<!-- ==================== CAPABILITIES SECTION ==================== -->
-		<div id="capabilities" class="space-y-3">
-			<Card.Root class="border-l-4 border-l-amber-500">
-				<Card.Header class="pb-3">
-					<div class="flex items-center gap-2">
-						<Zap class="h-4 w-4 text-amber-500" />
-						<Card.Title>Capabilities</Card.Title>
-					</div>
-				</Card.Header>
-				<Card.Content class="space-y-4">
+		<section id="capabilities" class="space-y-4">
+			<h2 class="text-lg font-semibold flex items-center gap-2"><Zap class="h-5 w-5" /> Capabilities</h2>
+
+			<Card.Root>
+				<Card.Content class="space-y-4 pt-4">
 					<!-- Core Skills -->
 					<div>
 						<div class="flex items-center gap-2 mb-2">
@@ -740,78 +654,46 @@
 					{/if}
 				</Card.Content>
 			</Card.Root>
-		</div>
+		</section>
 
 		<!-- ==================== PRICING SECTION ==================== -->
-		<div id="pricing" class="space-y-3">
+		<section id="pricing" class="space-y-4">
+			<h2 class="text-lg font-semibold flex items-center gap-2"><DollarSign class="h-5 w-5" /> Pricing</h2>
 			<!-- Pricing Stat Cards -->
-			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
 				<Card.Root>
-					<Card.Content class="p-3">
-						<div class="flex items-center gap-2">
-							<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-								<ArrowDownToLine class="h-4 w-4 text-emerald-500" />
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Input</div>
-								<div class="text-sm font-bold">{formatPrice(model.input_price_per_million)}/1M</div>
-							</div>
-						</div>
+					<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Input</Card.Title></Card.Header>
+					<Card.Content class="space-y-1">
+						<div class="text-xl font-bold">{formatPrice(model.input_price_per_million)}</div>
+						<div class="text-xs text-muted-foreground">per 1M tokens</div>
 					</Card.Content>
 				</Card.Root>
 				<Card.Root>
-					<Card.Content class="p-3">
-						<div class="flex items-center gap-2">
-							<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
-								<ArrowUpFromLine class="h-4 w-4 text-blue-500" />
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Output</div>
-								<div class="text-sm font-bold">{formatPrice(model.output_price_per_million)}/1M</div>
-							</div>
-						</div>
+					<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Output</Card.Title></Card.Header>
+					<Card.Content class="space-y-1">
+						<div class="text-xl font-bold">{formatPrice(model.output_price_per_million)}</div>
+						<div class="text-xs text-muted-foreground">per 1M tokens</div>
 					</Card.Content>
 				</Card.Root>
 				<Card.Root>
-					<Card.Content class="p-3">
-						<div class="flex items-center gap-2">
-							<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
-								<BarChart3 class="h-4 w-4 text-amber-500" />
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Efficiency</div>
-								<div class="text-sm font-bold {efficiency.color}">{efficiency.grade} ({model.cost_efficiency.toFixed(2)})</div>
-							</div>
-						</div>
+					<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Efficiency</Card.Title></Card.Header>
+					<Card.Content class="space-y-1">
+						<div class="text-xl font-bold {efficiency.color}">{efficiency.grade}</div>
+						<div class="text-xs text-muted-foreground">score {model.cost_efficiency.toFixed(2)}</div>
 					</Card.Content>
 				</Card.Root>
 				<Card.Root>
-					<Card.Content class="p-3">
-						<div class="flex items-center gap-2">
-							<div class="flex h-8 w-8 items-center justify-center rounded-lg {model.is_free ? 'bg-emerald-500/10' : 'bg-muted'}">
-								{#if model.is_free}
-									<Gift class="h-4 w-4 text-emerald-500" />
-								{:else}
-									<DollarSign class="h-4 w-4 text-muted-foreground" />
-								{/if}
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Tier</div>
-								<div class="text-sm font-bold">{model.is_free ? 'Free' : 'Paid'}</div>
-							</div>
-						</div>
+					<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Tier</Card.Title></Card.Header>
+					<Card.Content class="space-y-1">
+						<div class="text-xl font-bold {model.is_free ? 'text-emerald-500' : ''}">{model.is_free ? 'Free' : 'Paid'}</div>
+						<div class="text-xs text-muted-foreground">{model.is_free ? 'No cost' : 'Usage-based'}</div>
 					</Card.Content>
 				</Card.Root>
 			</div>
 
 			<!-- Pricing Table -->
-			<Card.Root class="border-l-4 border-l-emerald-500">
-				<Card.Header class="pb-3">
-					<div class="flex items-center gap-2">
-						<DollarSign class="h-4 w-4 text-muted-foreground" />
-						<Card.Title>Pricing Breakdown</Card.Title>
-					</div>
-				</Card.Header>
+			<Card.Root>
+				<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Pricing Breakdown</Card.Title></Card.Header>
 				<Card.Content class="p-0">
 					<div class="table-scroll-wrapper">
 					<table class="w-full">
@@ -851,13 +733,8 @@
 			</Card.Root>
 
 			<!-- Cost Calculator -->
-			<Card.Root class="border-l-4 border-l-blue-500">
-				<Card.Header class="pb-3">
-					<div class="flex items-center gap-2">
-						<Calculator class="h-4 w-4 text-blue-500" />
-						<Card.Title>Cost Calculator</Card.Title>
-					</div>
-				</Card.Header>
+			<Card.Root>
+				<Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Cost Calculator</Card.Title></Card.Header>
 				<Card.Content>
 					<div class="grid gap-4 grid-cols-1 sm:grid-cols-[1fr_1fr_auto]">
 						<div>
@@ -885,12 +762,14 @@
 					</div>
 				</Card.Content>
 			</Card.Root>
-		</div>
+		</section>
 
 		<!-- ==================== METADATA SECTION ==================== -->
-		<div id="metadata" class="space-y-3">
+		<section id="metadata" class="space-y-4">
+			<h2 class="text-lg font-semibold flex items-center gap-2"><Layers class="h-5 w-5" /> Metadata</h2>
+
 			<!-- Quick Reference Bar -->
-			<Card.Root class="border-l-4 border-l-purple-500">
+			<Card.Root>
 				<Card.Content class="p-3">
 					<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
 						<div class="flex items-center gap-1">
@@ -907,21 +786,14 @@
 							<span class="text-xs text-muted-foreground">Provider:</span>
 							<Badge variant="secondary" class="text-xs">{model.provider}</Badge>
 						</div>
-						{#if model.canonical_slug}
-							<Separator orientation="vertical" class="h-4 hidden sm:block" />
-							<div class="hidden sm:flex items-center gap-1">
-								<span class="text-xs text-muted-foreground">Slug:</span>
-								<code class="text-xs">{model.canonical_slug}</code>
-							</div>
-						{/if}
 						<div class="ml-auto flex gap-1">
 							<Button variant="ghost" size="sm" class="h-7 text-xs gap-1" onclick={() => exportJson(model!)}>
 								<Download class="h-3 w-3" />
-								Export JSON
+								<span class="hidden sm:inline">Export</span>
 							</Button>
 							<Button variant="ghost" size="sm" class="h-7 text-xs gap-1" onclick={() => copyToClipboard(JSON.stringify({ ...model, capabilities_json: model!.capabilities_json }, null, 2))}>
 								<Copy class="h-3 w-3" />
-								Copy
+								<span class="hidden sm:inline">Copy</span>
 							</Button>
 						</div>
 					</div>
@@ -933,15 +805,14 @@
 				<!-- OpenRouter Metadata -->
 				{#if Object.keys(caps).length}
 					<Card.Root>
-						<Card.Header class="py-3 px-4">
-							<button class="flex w-full items-center gap-2 text-left md:cursor-default" onclick={() => metaOpenRouter = !metaOpenRouter}>
+						<Card.Header class="pb-2">
+							<Card.Title class="text-sm font-medium flex items-center gap-2">
 								<Code class="h-4 w-4 text-purple-500" />
-								<span class="text-sm font-bold">OpenRouter Metadata</span>
+								OpenRouter Metadata
 								<Badge variant="outline" class="text-xs">{Object.keys(caps).length} keys</Badge>
-								<ChevronDown class="h-4 w-4 text-muted-foreground ml-auto transition-transform md:hidden {metaOpenRouter ? 'rotate-180' : ''}" />
-							</button>
+							</Card.Title>
 						</Card.Header>
-						<Card.Content class="p-0 hidden md:block">
+						<Card.Content class="p-0">
 							<div class="max-h-[300px] overflow-y-auto">
 								<table class="w-full">
 									<tbody class="divide-y">
@@ -955,37 +826,20 @@
 								</table>
 							</div>
 						</Card.Content>
-						{#if metaOpenRouter}
-							<Card.Content class="p-0 md:hidden">
-								<div class="max-h-[300px] overflow-y-auto">
-									<table class="w-full">
-										<tbody class="divide-y">
-											{#each Object.entries(caps).filter(([, v]) => v !== null && v !== '') as [key, value]}
-												<tr class="hover:bg-muted/30">
-													<td class="px-3 py-1.5 text-xs text-muted-foreground w-2/5"><code>{key}</code></td>
-													<td class="px-3 py-1.5 text-xs">{formatMetaValue(value)}</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-							</Card.Content>
-						{/if}
 					</Card.Root>
 				{/if}
 
 				<!-- Enriched Metadata -->
 				{#if Object.keys(meta).length}
 					<Card.Root>
-						<Card.Header class="py-3 px-4">
-							<button class="flex w-full items-center gap-2 text-left md:cursor-default" onclick={() => metaEnriched = !metaEnriched}>
+						<Card.Header class="pb-2">
+							<Card.Title class="text-sm font-medium flex items-center gap-2">
 								<Layers class="h-4 w-4 text-emerald-500" />
-								<span class="text-sm font-bold">Enriched Dataset</span>
+								Enriched Dataset
 								<Badge variant="outline" class="text-xs">{Object.keys(meta).length} keys</Badge>
-								<ChevronDown class="h-4 w-4 text-muted-foreground ml-auto transition-transform md:hidden {metaEnriched ? 'rotate-180' : ''}" />
-							</button>
+							</Card.Title>
 						</Card.Header>
-						<Card.Content class="p-0 hidden md:block">
+						<Card.Content class="p-0">
 							<div class="max-h-[300px] overflow-y-auto">
 								<table class="w-full">
 									<tbody class="divide-y">
@@ -999,22 +853,6 @@
 								</table>
 							</div>
 						</Card.Content>
-						{#if metaEnriched}
-							<Card.Content class="p-0 md:hidden">
-								<div class="max-h-[300px] overflow-y-auto">
-									<table class="w-full">
-										<tbody class="divide-y">
-											{#each Object.entries(meta).filter(([, v]) => v !== null && v !== '') as [key, value]}
-												<tr class="hover:bg-muted/30">
-													<td class="px-3 py-1.5 text-xs text-muted-foreground w-2/5"><code>{key}</code></td>
-													<td class="px-3 py-1.5 text-xs">{formatMetaValue(value)}</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-							</Card.Content>
-						{/if}
 					</Card.Root>
 				{/if}
 			</div>
@@ -1046,18 +884,19 @@
 					{/if}
 				</Card.Content>
 			</Card.Root>
-		</div>
+		</section>
 
 		<!-- ==================== RELATED MODELS SECTION ==================== -->
-		<div id="related" class="space-y-3">
-			<Card.Root class="border-l-4 border-l-indigo-500">
-				<Card.Header class="pb-3">
+		<section id="related" class="space-y-4">
+			<h2 class="text-lg font-semibold flex items-center gap-2"><Users class="h-5 w-5" /> Related Models</h2>
+
+			<Card.Root>
+				<Card.Header class="pb-2">
 					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<Users class="h-4 w-4 text-indigo-500" />
-							<Card.Title>Related Models</Card.Title>
-							<Badge variant="outline" class="text-xs">{model.provider}</Badge>
-						</div>
+						<Card.Title class="text-sm font-medium flex items-center gap-2">
+							Models from {model.provider}
+							<Badge variant="outline" class="text-xs">{relatedModels.length}</Badge>
+						</Card.Title>
 						{#if relatedModels.length > 4}
 							<div class="flex items-center gap-1">
 								<Button variant="ghost" size="icon" class="h-7 w-7" onclick={() => scrollRelated('left')}>
@@ -1115,7 +954,7 @@
 					{/if}
 				</Card.Content>
 			</Card.Root>
-		</div>
+		</section>
 
 
 	{/if}
