@@ -76,6 +76,7 @@ services:
       context: .
       dockerfile: ./compose/local/frontend/Dockerfile
     image: llm_lab_local_frontend
+    restart: unless-stopped
     depends_on:
       - django
     volumes:
@@ -86,6 +87,7 @@ services:
       - ORIGIN=https://grabowmar.ovh
       - PORT=8080
       - HOST=0.0.0.0
+      - NODE_ENV=production
     ports:
       - '8080:8080'
     command: ["node", "build/index.js"]
