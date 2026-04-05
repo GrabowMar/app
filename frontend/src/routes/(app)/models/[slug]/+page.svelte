@@ -357,7 +357,7 @@
 							<p class="text-sm text-muted-foreground mt-1 line-clamp-2">{stripMarkdown(model.description)}</p>
 						{/if}
 					</div>
-					<div class="flex items-center gap-4 text-sm">
+					<div class="hidden md:flex items-center gap-4 text-sm">
 						<div class="text-center">
 							<div class="font-semibold">{model.context_window_display}</div>
 							<div class="text-xs text-muted-foreground">Context</div>
@@ -377,7 +377,7 @@
 							<div class="text-xs text-muted-foreground mt-0.5">Efficiency</div>
 						</div>
 					</div>
-					<div class="flex items-center gap-2">
+					<div class="flex flex-wrap items-center gap-2">
 						<Button variant="outline" size="sm" href="https://openrouter.ai/models/{model.model_id}" target="_blank" rel="noopener noreferrer" class="gap-1.5">
 							<Globe class="h-3.5 w-3.5" />
 							OpenRouter
@@ -438,7 +438,7 @@
 
 		<!-- Section Navigation -->
 		<nav class="sticky top-14 z-20 -mx-4 md:-mx-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-			<div class="flex px-4 md:px-6 overflow-x-auto scrollbar-none">
+			<div class="flex flex-nowrap px-4 md:px-6 overflow-x-auto scrollbar-none">
 				{#each sections as section}
 					<button
 						class="relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors
@@ -555,11 +555,11 @@
 						{/if}
 					</div>
 					{#if model.description}
-						<p class="text-sm text-muted-foreground leading-relaxed mt-2">
+						<p class="text-sm text-muted-foreground leading-relaxed mt-2 break-words">
 							{stripMarkdown(model.description)}
 						</p>
 					{:else}
-						<p class="text-sm text-muted-foreground leading-relaxed mt-2">
+						<p class="text-sm text-muted-foreground leading-relaxed mt-2 break-words">
 							{model.model_name} by {model.provider}. A large language model available via OpenRouter.
 						</p>
 					{/if}
@@ -799,6 +799,7 @@
 					</div>
 				</Card.Header>
 				<Card.Content class="p-0">
+					<div class="table-scroll-wrapper">
 					<table class="w-full">
 						<thead>
 							<tr class="border-b bg-muted/30">
@@ -831,6 +832,7 @@
 							{/each}
 						</tbody>
 					</table>
+					</div>
 				</Card.Content>
 			</Card.Root>
 

@@ -65,14 +65,14 @@
 	<title>Statistics - LLM Lab</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
 	<div>
 		<h1 class="text-2xl font-bold tracking-tight">Statistics</h1>
 		<p class="mt-1 text-sm text-muted-foreground">Platform-wide analytics and performance metrics.</p>
 	</div>
 
 	<!-- System Health -->
-	<div class="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
+	<div class="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
 		<Activity class="h-5 w-5 text-emerald-500" />
 		<div class="flex-1">
 			<span class="text-sm font-medium text-emerald-500">System Healthy</span>
@@ -161,7 +161,7 @@
 			<Card.Title>Model Comparison</Card.Title>
 		</Card.Header>
 		<Card.Content class="p-0">
-			<div class="overflow-x-auto">
+			<div class="table-scroll-wrapper">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -203,6 +203,7 @@
 					<Card.Title>Tool Effectiveness</Card.Title>
 				</Card.Header>
 				<Card.Content class="p-0">
+					<div class="table-scroll-wrapper">
 					<table class="w-full text-sm">
 						<thead>
 							<tr class="border-b bg-muted/30">
@@ -227,6 +228,7 @@
 							{/each}
 						</tbody>
 					</table>
+					</div>
 				</Card.Content>
 			</Card.Root>
 		</div>

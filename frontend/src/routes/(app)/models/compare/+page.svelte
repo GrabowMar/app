@@ -50,7 +50,7 @@
 	<title>Model Comparison - LLM Lab</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
 	<!-- Breadcrumb -->
 	<div class="flex items-center gap-2 text-sm text-muted-foreground">
 		<Button variant="ghost" size="sm" href="/models" class="gap-1.5 px-2">
@@ -75,7 +75,7 @@
 			</div>
 		</Card.Header>
 		<Card.Content>
-			<div class="flex flex-wrap items-center gap-4">
+			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
 				<div class="flex items-center gap-2">
 					<label class="text-sm font-medium">Baseline:</label>
 					<select class="h-8 rounded-md border border-input bg-background px-2 text-sm" bind:value={baseline}>
@@ -96,7 +96,7 @@
 					<input type="checkbox" id="normalize" bind:checked={normalize} class="rounded" />
 					<label for="normalize" class="text-sm">Normalize values</label>
 				</div>
-				<div class="ml-auto">
+				<div class="sm:ml-auto">
 					<Button variant="outline" size="sm" disabled>
 						<Link class="mr-2 h-3.5 w-3.5" />
 						Share Link
@@ -121,7 +121,7 @@
 			<Card.Title>Core Metrics</Card.Title>
 		</Card.Header>
 		<Card.Content class="p-0">
-			<div class="overflow-x-auto">
+			<div class="hidden md:block overflow-x-auto">
 				<table class="w-full">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -162,6 +162,44 @@
 						</tr>
 					</tbody>
 				</table>
+			</div>
+			<!-- Mobile card view -->
+			<div class="md:hidden space-y-3 p-4">
+				{#each compareModels as m (m.slug)}
+					<div class="rounded-lg border p-4 {highlightSlug === m.slug ? 'border-primary' : ''}">
+						<div class="flex items-center gap-2 mb-3">
+							<Cpu class="h-4 w-4 text-primary" />
+							<span class="font-medium">{m.name}</span>
+							<Badge variant="secondary" class="text-xs">{m.provider}</Badge>
+						</div>
+						<div class="grid grid-cols-2 gap-2 text-sm">
+							<div>
+								<div class="text-xs text-muted-foreground">Context Window</div>
+								<div class="font-mono">{m.contextWindow}</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground">Input $/1M tokens</div>
+								<div class="font-mono">${m.inputPrice.toFixed(2)}</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground">Output $/1M tokens</div>
+								<div class="font-mono">${m.outputPrice.toFixed(2)}</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground">Apps Generated</div>
+								<div class="font-semibold">{m.appsGenerated}</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground">Avg Score</div>
+								<div class="font-semibold">{m.avgScore}</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground">Success Rate</div>
+								<div>{m.successRate}</div>
+							</div>
+						</div>
+					</div>
+				{/each}
 			</div>
 		</Card.Content>
 	</Card.Root>
@@ -212,7 +250,7 @@
 			<Card.Title>Capabilities Comparison</Card.Title>
 		</Card.Header>
 		<Card.Content class="p-0">
-			<div class="overflow-x-auto">
+			<div class="hidden md:block overflow-x-auto">
 				<table class="w-full">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -239,6 +277,29 @@
 						{/each}
 					</tbody>
 				</table>
+			</div>
+			<!-- Mobile card view -->
+			<div class="md:hidden space-y-3 p-4">
+				{#each compareModels as m (m.slug)}
+					<div class="rounded-lg border p-4">
+						<div class="flex items-center gap-2 mb-3">
+							<Cpu class="h-4 w-4 text-primary" />
+							<span class="font-medium">{m.name}</span>
+						</div>
+						<div class="flex flex-wrap gap-1.5">
+							{#each allCapabilities as cap (cap)}
+								<Badge variant="outline" class="text-xs gap-1 {m.capabilities[cap] ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'opacity-40'}">
+									{#if m.capabilities[cap]}
+										<Check class="h-2.5 w-2.5" />
+									{:else}
+										<X class="h-2.5 w-2.5" />
+									{/if}
+									{cap}
+								</Badge>
+							{/each}
+						</div>
+					</div>
+				{/each}
 			</div>
 		</Card.Content>
 	</Card.Root>

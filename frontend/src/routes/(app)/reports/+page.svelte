@@ -64,7 +64,7 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight">Reports</h1>
 			<p class="mt-1 text-sm text-muted-foreground">Generate and view analysis reports.</p>
@@ -91,8 +91,8 @@
 	</div>
 
 	<!-- Filters -->
-	<div class="flex flex-wrap items-center gap-3">
-		<div class="relative flex-1 max-w-sm">
+	<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+		<div class="relative sm:flex-1 sm:max-w-sm">
 			<Search class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
 			<Input bind:value={searchQuery} placeholder="Search reports..." class="h-9 pl-8 text-sm" />
 		</div>
@@ -120,12 +120,13 @@
 	<!-- Table -->
 	<Card.Root>
 		<Card.Content class="p-0">
+			<div class="table-scroll-wrapper">
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="border-b bg-muted/30">
 						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Title</th>
-						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Type</th>
-						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Config</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground hide-mobile">Type</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground hide-mobile">Config</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
@@ -144,12 +145,12 @@
 									<div class="text-xs text-muted-foreground line-clamp-1">{report.description}</div>
 								</div>
 							</td>
-							<td class="px-4 py-3">
+							<td class="px-4 py-3 hide-mobile">
 								<Badge variant="outline" class="text-[10px] {typeConfig[report.type]?.color ?? ''}">
 									{typeConfig[report.type]?.label ?? report.type}
 								</Badge>
 							</td>
-							<td class="px-4 py-3">
+							<td class="px-4 py-3 hide-mobile">
 								<Badge variant="secondary" class="text-[10px] font-mono">{report.config}</Badge>
 							</td>
 							<td class="px-4 py-3">
@@ -186,6 +187,7 @@
 					{/each}
 				</tbody>
 			</table>
+			</div>
 		</Card.Content>
 	</Card.Root>
 
