@@ -159,7 +159,7 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div class="page-header">
 			<h1>Applications</h1>
 			<p>Generated web applications from LLM models.</p>
@@ -171,7 +171,8 @@
 			</Button>
 			<Button size="sm" href="/sample-generator">
 				<FlaskConical class="mr-2 h-3.5 w-3.5" />
-				Generate New
+				<span class="hidden sm:inline">Generate New</span>
+				<span class="sm:hidden">New</span>
 			</Button>
 		</div>
 	</div>
@@ -198,8 +199,8 @@
 	</div>
 
 	<!-- Filters -->
-	<div class="flex flex-wrap items-center gap-3">
-		<div class="relative flex-1 max-w-sm">
+	<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+		<div class="relative flex-1 sm:max-w-sm">
 			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<input
 				type="text"
@@ -208,37 +209,39 @@
 				bind:value={searchQuery}
 			/>
 		</div>
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-			bind:value={modeFilter}
-			onchange={applyFilters}
-		>
-			<option value="">All Modes</option>
-			<option value="custom">Custom</option>
-			<option value="scaffolding">Scaffolding</option>
-			<option value="copilot">Copilot</option>
-		</select>
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-			bind:value={statusFilter}
-			onchange={applyFilters}
-		>
-			<option value="">All Statuses</option>
-			<option value="completed">Completed</option>
-			<option value="failed">Failed</option>
-			<option value="running">Running</option>
-			<option value="pending">Pending</option>
-		</select>
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-			bind:value={perPage}
-			onchange={applyFilters}
-		>
-			<option value={10}>10 / page</option>
-			<option value={25}>25 / page</option>
-			<option value={50}>50 / page</option>
-			<option value={100}>100 / page</option>
-		</select>
+		<div class="flex flex-wrap gap-2">
+			<select
+				class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm sm:flex-none"
+				bind:value={modeFilter}
+				onchange={applyFilters}
+			>
+				<option value="">All Modes</option>
+				<option value="custom">Custom</option>
+				<option value="scaffolding">Scaffolding</option>
+				<option value="copilot">Copilot</option>
+			</select>
+			<select
+				class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm sm:flex-none"
+				bind:value={statusFilter}
+				onchange={applyFilters}
+			>
+				<option value="">All Statuses</option>
+				<option value="completed">Completed</option>
+				<option value="failed">Failed</option>
+				<option value="running">Running</option>
+				<option value="pending">Pending</option>
+			</select>
+			<select
+				class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+				bind:value={perPage}
+				onchange={applyFilters}
+			>
+				<option value={10}>10 / page</option>
+				<option value={25}>25 / page</option>
+				<option value={50}>50 / page</option>
+				<option value={100}>100 / page</option>
+			</select>
+		</div>
 		{#if hasFilters}
 			<Button variant="ghost" size="sm" onclick={clearFilters} class="gap-1.5">
 				<X class="h-3.5 w-3.5" />
@@ -273,115 +276,195 @@
 			</Card.Content>
 		</Card.Root>
 	{:else}
-		<Card.Root>
-			<Card.Content class="p-0">
-				<div class="overflow-x-auto">
-					<table class="w-full">
-						<thead>
-							<tr class="border-b bg-muted/30">
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Mode</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Template</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Duration</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y">
-							{#each filteredItems as job (job.id)}
-								<tr class="transition-colors hover:bg-muted/30">
-									<!-- Mode -->
-									<td class="px-4 py-3">
-										<Badge variant="outline" class="gap-1 text-[10px] {modeColors[job.mode] ?? ''}">
-											{#if job.mode === 'custom'}
-												<Pencil class="h-3 w-3" />
-											{:else if job.mode === 'scaffolding'}
-												<Layers class="h-3 w-3" />
-											{:else if job.mode === 'copilot'}
-												<Bot class="h-3 w-3" />
-											{/if}
-											{job.mode}
-										</Badge>
-									</td>
-
-									<!-- Model -->
-									<td class="px-4 py-3">
-										<div class="flex flex-col gap-0.5">
-											<span class="text-sm font-medium">{job.model_name ?? '—'}</span>
-											<span class="text-xs text-muted-foreground font-mono">{job.model_id_str ?? ''}</span>
-										</div>
-									</td>
-
-									<!-- Template -->
-									<td class="px-4 py-3">
-										<div class="flex flex-col gap-0.5">
-											<span class="text-sm">{getDescription(job)}</span>
-											{#if job.scaffolding_name && job.template_name}
-												<span class="text-xs text-muted-foreground">{job.scaffolding_name}</span>
-											{/if}
-										</div>
-									</td>
-
-									<!-- Status -->
-									<td class="px-4 py-3">
-										<Badge variant="outline" class="text-[10px] {statusColors[job.status] ?? ''}">
-											{#if job.status === 'running'}
-												<span class="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-											{/if}
-											{#if job.status === 'completed'}
-												<CircleCheck class="mr-1 h-3 w-3" />
-											{:else if job.status === 'failed'}
-												<CircleX class="mr-1 h-3 w-3" />
-											{:else if job.status === 'pending'}
-												<Clock class="mr-1 h-3 w-3" />
-											{/if}
-											{job.status}
-										</Badge>
-										{#if job.error_message}
-											<div class="mt-1 flex items-center gap-1">
-												<AlertTriangle class="h-3 w-3 text-red-400 shrink-0" />
-												<span class="text-xs text-red-400 truncate max-w-[200px]">{job.error_message}</span>
-											</div>
-										{/if}
-									</td>
-
-									<!-- Duration -->
-									<td class="px-4 py-3 text-sm font-mono text-muted-foreground">
-										{formatDuration(job.duration_seconds)}
-									</td>
-
-									<!-- Created -->
-									<td class="px-4 py-3">
-										<div class="flex flex-col gap-0.5">
-											<span class="text-sm text-muted-foreground">{timeAgo(job.created_at)}</span>
-											<span class="text-xs text-muted-foreground/70">{new Date(job.created_at).toLocaleString()}</span>
-										</div>
-									</td>
-
-									<!-- Actions -->
-									<td class="px-4 py-3">
-										<div class="flex items-center gap-1">
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
-												<Eye class="h-3.5 w-3.5" />
-											</Button>
-											{#if job.status === 'failed'}
-												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
-													<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
-												</Button>
-											{/if}
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Copy ID" onclick={() => copyId(job.id)}>
-												<Copy class="h-3.5 w-3.5" />
-											</Button>
-										</div>
-									</td>
+		<!-- Table (desktop) -->
+		<div class="hidden md:block">
+			<Card.Root>
+				<Card.Content class="p-0">
+					<div class="overflow-x-auto">
+						<table class="w-full">
+							<thead>
+								<tr class="border-b bg-muted/30">
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Mode</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Template</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Duration</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
 								</tr>
-							{/each}
-						</tbody>
-					</table>
+							</thead>
+							<tbody class="divide-y">
+								{#each filteredItems as job (job.id)}
+									<tr class="transition-colors hover:bg-muted/30">
+										<!-- Mode -->
+										<td class="px-4 py-3">
+											<Badge variant="outline" class="gap-1 text-[10px] {modeColors[job.mode] ?? ''}">
+												{#if job.mode === 'custom'}
+													<Pencil class="h-3 w-3" />
+												{:else if job.mode === 'scaffolding'}
+													<Layers class="h-3 w-3" />
+												{:else if job.mode === 'copilot'}
+													<Bot class="h-3 w-3" />
+												{/if}
+												{job.mode}
+											</Badge>
+										</td>
+
+										<!-- Model -->
+										<td class="px-4 py-3">
+											<div class="flex flex-col gap-0.5">
+												<span class="text-sm font-medium">{job.model_name ?? '—'}</span>
+												<span class="text-xs text-muted-foreground font-mono">{job.model_id_str ?? ''}</span>
+											</div>
+										</td>
+
+										<!-- Template -->
+										<td class="px-4 py-3">
+											<div class="flex flex-col gap-0.5">
+												<span class="text-sm">{getDescription(job)}</span>
+												{#if job.scaffolding_name && job.template_name}
+													<span class="text-xs text-muted-foreground">{job.scaffolding_name}</span>
+												{/if}
+											</div>
+										</td>
+
+										<!-- Status -->
+										<td class="px-4 py-3">
+											<Badge variant="outline" class="text-[10px] {statusColors[job.status] ?? ''}">
+												{#if job.status === 'running'}
+													<span class="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+												{/if}
+												{#if job.status === 'completed'}
+													<CircleCheck class="mr-1 h-3 w-3" />
+												{:else if job.status === 'failed'}
+													<CircleX class="mr-1 h-3 w-3" />
+												{:else if job.status === 'pending'}
+													<Clock class="mr-1 h-3 w-3" />
+												{/if}
+												{job.status}
+											</Badge>
+											{#if job.error_message}
+												<div class="mt-1 flex items-center gap-1">
+													<AlertTriangle class="h-3 w-3 text-red-400 shrink-0" />
+													<span class="text-xs text-red-400 truncate max-w-[200px]">{job.error_message}</span>
+												</div>
+											{/if}
+										</td>
+
+										<!-- Duration -->
+										<td class="px-4 py-3 text-sm font-mono text-muted-foreground">
+											{formatDuration(job.duration_seconds)}
+										</td>
+
+										<!-- Created -->
+										<td class="px-4 py-3">
+											<div class="flex flex-col gap-0.5">
+												<span class="text-sm text-muted-foreground">{timeAgo(job.created_at)}</span>
+												<span class="text-xs text-muted-foreground/70">{new Date(job.created_at).toLocaleString()}</span>
+											</div>
+										</td>
+
+										<!-- Actions -->
+										<td class="px-4 py-3">
+											<div class="flex items-center gap-1">
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
+													<Eye class="h-3.5 w-3.5" />
+												</Button>
+												{#if job.status === 'failed'}
+													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
+														<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
+													</Button>
+												{/if}
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Copy ID" onclick={() => copyId(job.id)}>
+													<Copy class="h-3.5 w-3.5" />
+												</Button>
+											</div>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		</div>
+
+		<!-- Cards (mobile) -->
+		<div class="md:hidden space-y-3">
+			{#each filteredItems as job (job.id)}
+				<div class="border rounded-lg p-3 bg-card">
+					<!-- Card header: Template + Mode badge -->
+					<div class="flex items-start justify-between gap-2 mb-2">
+						<div class="min-w-0">
+							<div class="text-sm font-medium truncate">{getDescription(job)}</div>
+							{#if job.scaffolding_name && job.template_name}
+								<div class="text-xs text-muted-foreground truncate">{job.scaffolding_name}</div>
+							{/if}
+						</div>
+						<Badge variant="outline" class="shrink-0 gap-1 text-[10px] {modeColors[job.mode] ?? ''}">
+							{#if job.mode === 'custom'}
+								<Pencil class="h-3 w-3" />
+							{:else if job.mode === 'scaffolding'}
+								<Layers class="h-3 w-3" />
+							{:else if job.mode === 'copilot'}
+								<Bot class="h-3 w-3" />
+							{/if}
+							{job.mode}
+						</Badge>
+					</div>
+
+					<!-- Card body: Model, Status, Duration -->
+					<div class="space-y-1.5 mb-2">
+						<div class="flex items-center justify-between gap-2">
+							<span class="text-sm truncate">{job.model_name ?? '—'}</span>
+							<Badge variant="outline" class="shrink-0 text-[10px] {statusColors[job.status] ?? ''}">
+								{#if job.status === 'running'}
+									<span class="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+								{/if}
+								{#if job.status === 'completed'}
+									<CircleCheck class="mr-1 h-3 w-3" />
+								{:else if job.status === 'failed'}
+									<CircleX class="mr-1 h-3 w-3" />
+								{:else if job.status === 'pending'}
+									<Clock class="mr-1 h-3 w-3" />
+								{/if}
+								{job.status}
+							</Badge>
+						</div>
+						{#if job.model_id_str}
+							<div class="text-xs text-muted-foreground font-mono">{job.model_id_str}</div>
+						{/if}
+						<div class="text-xs text-muted-foreground font-mono">
+							Duration: {formatDuration(job.duration_seconds)}
+						</div>
+						{#if job.error_message}
+							<div class="flex items-center gap-1">
+								<AlertTriangle class="h-3 w-3 text-red-400 shrink-0" />
+								<span class="text-xs text-red-400 line-clamp-2">{job.error_message}</span>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Card footer: Created + Actions -->
+					<div class="flex items-center justify-between border-t pt-2">
+						<span class="text-xs text-muted-foreground">{timeAgo(job.created_at)}</span>
+						<div class="flex items-center gap-1">
+							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
+								<Eye class="h-3.5 w-3.5" />
+							</Button>
+							{#if job.status === 'failed'}
+								<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
+									<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
+								</Button>
+							{/if}
+							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Copy ID" onclick={() => copyId(job.id)}>
+								<Copy class="h-3.5 w-3.5" />
+							</Button>
+						</div>
+					</div>
 				</div>
-			</Card.Content>
-		</Card.Root>
+			{/each}
+		</div>
 
 		<!-- Pagination -->
 		{#if data && data.pages > 1}

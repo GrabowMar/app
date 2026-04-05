@@ -175,7 +175,7 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div class="page-header">
 			<h1>Analysis Hub</h1>
 			<p>Run and monitor analysis tasks across your applications.</p>
@@ -183,7 +183,8 @@
 		<div class="flex items-center gap-2">
 			<Button variant="outline" size="sm" disabled>
 				<StopCircle class="mr-2 h-3.5 w-3.5" />
-				Stop All
+				<span class="hidden sm:inline">Stop All</span>
+				<span class="sm:hidden">Stop</span>
 			</Button>
 			<Button variant="outline" size="sm" disabled>
 				<RefreshCw class="mr-2 h-3.5 w-3.5" />
@@ -191,7 +192,7 @@
 			</Button>
 			<Button size="sm" href="/analysis/create">
 				<Plus class="mr-2 h-3.5 w-3.5" />
-				New Analysis
+				New
 			</Button>
 		</div>
 	</div>
@@ -211,8 +212,8 @@
 	</div>
 
 	<!-- Filters -->
-	<div class="flex flex-wrap items-center gap-3">
-		<div class="relative flex-1 max-w-sm">
+	<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+		<div class="relative flex-1 sm:max-w-sm">
 			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<input
 				type="text"
@@ -221,178 +222,308 @@
 				bind:value={searchQuery}
 			/>
 		</div>
-		<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={statusFilter}>
-			<option value="all">All Statuses</option>
-			<option value="Running">Running</option>
-			<option value="Pending">Pending</option>
-			<option value="Completed">Completed</option>
-			<option value="Partial">Partial</option>
-			<option value="Failed">Failed</option>
-			<option value="Cancelled">Cancelled</option>
-		</select>
-		<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={perPage}>
-			<option value={10}>10 / page</option>
-			<option value={25}>25 / page</option>
-			<option value={50}>50 / page</option>
-			<option value={100}>100 / page</option>
-		</select>
+		<div class="flex gap-2">
+			<select class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm sm:flex-none" bind:value={statusFilter}>
+				<option value="all">All Statuses</option>
+				<option value="Running">Running</option>
+				<option value="Pending">Pending</option>
+				<option value="Completed">Completed</option>
+				<option value="Partial">Partial</option>
+				<option value="Failed">Failed</option>
+				<option value="Cancelled">Cancelled</option>
+			</select>
+			<select class="h-9 rounded-md border border-input bg-background px-3 text-sm" bind:value={perPage}>
+				<option value={10}>10 / page</option>
+				<option value={25}>25 / page</option>
+				<option value={50}>50 / page</option>
+				<option value={100}>100 / page</option>
+			</select>
+		</div>
 	</div>
 
-	<!-- Tasks Table -->
-	<Card.Root>
-		<Card.Content class="p-0">
-			<div class="overflow-x-auto">
-				<table class="w-full">
-					<thead>
-						<tr class="border-b bg-muted/30">
-							<th class="w-8 px-4 py-3"></th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Task ID</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">App</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Tools</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Progress / Findings</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Time</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						{#each filteredTasks.slice(0, perPage) as task (task.id)}
-							<!-- Main Row -->
-							<tr class="transition-colors hover:bg-muted/30 cursor-pointer" onclick={() => toggleExpand(task.id)}>
-								<td class="px-4 py-3">
-									{#if task.subtasks.length > 0}
-										{#if expandedTasks.has(task.id)}
-											<ChevronDown class="h-3.5 w-3.5 text-muted-foreground" />
-										{:else}
-											<ChevronRight class="h-3.5 w-3.5 text-muted-foreground" />
-										{/if}
-									{/if}
-								</td>
-								<td class="px-4 py-3 font-mono text-xs">{task.id}</td>
-								<td class="px-4 py-3">
-									<div class="flex flex-col gap-0.5">
-										<a href="/models/{task.modelSlug}" class="text-sm font-medium hover:underline" onclick={(e) => e.stopPropagation()}>{task.model}</a>
-										<span class="text-xs text-muted-foreground">{task.type}</span>
-									</div>
-								</td>
-								<td class="px-4 py-3 text-sm">#{task.appNumber}</td>
-								<td class="px-4 py-3">
-									<div class="flex flex-wrap gap-1">
-										{#each task.tools.slice(0, 3) as tool}
-											<Badge variant="secondary" class="text-[10px]">{tool}</Badge>
-										{/each}
-										{#if task.tools.length > 3}
-											<Badge variant="outline" class="text-[10px]">+{task.tools.length - 3}</Badge>
-										{/if}
-									</div>
-								</td>
-								<td class="px-4 py-3">
-									<Badge variant="outline" class="text-[10px] {statusColors[task.status] ?? ''}">
-										{#if task.status === 'Running'}
-											<LoaderCircle class="mr-1 h-3 w-3 animate-spin" />
-										{:else if task.status === 'Pending'}
-											<Clock class="mr-1 h-3 w-3" />
-										{:else if task.status === 'Completed'}
-											<Check class="mr-1 h-3 w-3" />
-										{:else if task.status === 'Failed'}
-											<X class="mr-1 h-3 w-3" />
-										{:else if task.status === 'Cancelled'}
-											<Ban class="mr-1 h-3 w-3" />
-										{/if}
-										{task.status}
-									</Badge>
-								</td>
-								<td class="px-4 py-3">
-									<div class="flex items-center gap-3">
-										{#if task.status === 'Running'}
-											<div class="flex items-center gap-2">
-												<div class="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
-													<div class="h-full rounded-full bg-amber-500 transition-all" style="width: {task.progress}%"></div>
-												</div>
-												<span class="text-xs text-muted-foreground">{task.progress}%</span>
-											</div>
-										{/if}
-										{#if task.findings > 0}
-											<div class="flex gap-1">
-												{#each Object.entries(task.severityBreakdown).filter(([, v]) => v > 0) as [sev, count]}
-													<Badge variant="outline" class="text-[10px] {severityColors[sev] ?? ''}">{count} {sev.charAt(0).toUpperCase()}</Badge>
-												{/each}
-											</div>
-										{:else}
-											<span class="text-xs text-muted-foreground">—</span>
-										{/if}
-									</div>
-								</td>
-								<td class="px-4 py-3 text-sm text-muted-foreground">
-									<div class="flex flex-col">
-										<span>{task.duration}</span>
-										<span class="text-xs">{task.createdAt}</span>
-									</div>
-								</td>
-								<td class="px-4 py-3">
-									<!-- svelte-ignore a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
-									<div class="flex items-center gap-1" onclick={(e) => e.stopPropagation()}>
-										{#if task.status === 'Completed' || task.status === 'Partial'}
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/analysis/{task.id}" title="View results">
-												<Eye class="h-3.5 w-3.5" />
-											</Button>
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" disabled title="Download">
-												<Download class="h-3.5 w-3.5" />
-											</Button>
-										{:else if task.status === 'Running'}
-											<Button variant="ghost" size="sm" class="h-7 w-7 p-0" disabled title="Stop">
-												<StopCircle class="h-3.5 w-3.5" />
-											</Button>
-										{/if}
-									</div>
-								</td>
+	<!-- Tasks Table (desktop) -->
+	<div class="hidden md:block">
+		<Card.Root>
+			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
+					<table class="w-full">
+						<thead>
+							<tr class="border-b bg-muted/30">
+								<th class="w-8 px-4 py-3"></th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Task ID</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">App</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Tools</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Progress / Findings</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Time</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
 							</tr>
-
-							<!-- Subtask Rows -->
-							{#if expandedTasks.has(task.id)}
-								{#each task.subtasks as sub}
-									<tr class="bg-muted/10">
-										<td class="px-4 py-2"></td>
-										<td class="px-4 py-2"></td>
-										<td class="px-4 py-2 pl-8 text-sm text-muted-foreground">{sub.service}</td>
-										<td class="px-4 py-2"></td>
-										<td class="px-4 py-2"></td>
-										<td class="px-4 py-2">
-											<Badge variant="outline" class="text-[10px] {statusColors[sub.status] ?? ''}">{sub.status}</Badge>
-										</td>
-										<td class="px-4 py-2">
-											<div class="flex items-center gap-2">
-												{#if sub.status === 'Running'}
-													<div class="h-1.5 w-12 rounded-full bg-muted overflow-hidden">
-														<div class="h-full rounded-full bg-amber-500" style="width: {sub.progress}%"></div>
+						</thead>
+						<tbody class="divide-y">
+							{#each filteredTasks.slice(0, perPage) as task (task.id)}
+								<!-- Main Row -->
+								<tr class="transition-colors hover:bg-muted/30 cursor-pointer" onclick={() => toggleExpand(task.id)}>
+									<td class="px-4 py-3">
+										{#if task.subtasks.length > 0}
+											{#if expandedTasks.has(task.id)}
+												<ChevronDown class="h-3.5 w-3.5 text-muted-foreground" />
+											{:else}
+												<ChevronRight class="h-3.5 w-3.5 text-muted-foreground" />
+											{/if}
+										{/if}
+									</td>
+									<td class="px-4 py-3 font-mono text-xs">{task.id}</td>
+									<td class="px-4 py-3">
+										<div class="flex flex-col gap-0.5">
+											<a href="/models/{task.modelSlug}" class="text-sm font-medium hover:underline" onclick={(e) => e.stopPropagation()}>{task.model}</a>
+											<span class="text-xs text-muted-foreground">{task.type}</span>
+										</div>
+									</td>
+									<td class="px-4 py-3 text-sm">#{task.appNumber}</td>
+									<td class="px-4 py-3">
+										<div class="flex flex-wrap gap-1">
+											{#each task.tools.slice(0, 3) as tool}
+												<Badge variant="secondary" class="text-[10px]">{tool}</Badge>
+											{/each}
+											{#if task.tools.length > 3}
+												<Badge variant="outline" class="text-[10px]">+{task.tools.length - 3}</Badge>
+											{/if}
+										</div>
+									</td>
+									<td class="px-4 py-3">
+										<Badge variant="outline" class="text-[10px] {statusColors[task.status] ?? ''}">
+											{#if task.status === 'Running'}
+												<LoaderCircle class="mr-1 h-3 w-3 animate-spin" />
+											{:else if task.status === 'Pending'}
+												<Clock class="mr-1 h-3 w-3" />
+											{:else if task.status === 'Completed'}
+												<Check class="mr-1 h-3 w-3" />
+											{:else if task.status === 'Failed'}
+												<X class="mr-1 h-3 w-3" />
+											{:else if task.status === 'Cancelled'}
+												<Ban class="mr-1 h-3 w-3" />
+											{/if}
+											{task.status}
+										</Badge>
+									</td>
+									<td class="px-4 py-3">
+										<div class="flex items-center gap-3">
+											{#if task.status === 'Running'}
+												<div class="flex items-center gap-2">
+													<div class="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+														<div class="h-full rounded-full bg-amber-500 transition-all" style="width: {task.progress}%"></div>
 													</div>
-													<span class="text-xs text-muted-foreground">{sub.progress}%</span>
-												{/if}
-												{#if sub.findings > 0}
-													<span class="text-xs font-mono">{sub.findings} findings</span>
-												{/if}
-											</div>
-										</td>
-										<td class="px-4 py-2"></td>
-										<td class="px-4 py-2"></td>
-									</tr>
-								{/each}
-							{/if}
-						{/each}
+													<span class="text-xs text-muted-foreground">{task.progress}%</span>
+												</div>
+											{/if}
+											{#if task.findings > 0}
+												<div class="flex gap-1">
+													{#each Object.entries(task.severityBreakdown).filter(([, v]) => v > 0) as [sev, count]}
+														<Badge variant="outline" class="text-[10px] {severityColors[sev] ?? ''}">{count} {sev.charAt(0).toUpperCase()}</Badge>
+													{/each}
+												</div>
+											{:else}
+												<span class="text-xs text-muted-foreground">—</span>
+											{/if}
+										</div>
+									</td>
+									<td class="px-4 py-3 text-sm text-muted-foreground">
+										<div class="flex flex-col">
+											<span>{task.duration}</span>
+											<span class="text-xs">{task.createdAt}</span>
+										</div>
+									</td>
+									<td class="px-4 py-3">
+										<!-- svelte-ignore a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
+										<div class="flex items-center gap-1" onclick={(e) => e.stopPropagation()}>
+											{#if task.status === 'Completed' || task.status === 'Partial'}
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/analysis/{task.id}" title="View results">
+													<Eye class="h-3.5 w-3.5" />
+												</Button>
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" disabled title="Download">
+													<Download class="h-3.5 w-3.5" />
+												</Button>
+											{:else if task.status === 'Running'}
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" disabled title="Stop">
+													<StopCircle class="h-3.5 w-3.5" />
+												</Button>
+											{/if}
+										</div>
+									</td>
+								</tr>
 
-						{#if filteredTasks.length === 0}
-							<tr>
-								<td colspan="9" class="px-4 py-12 text-center text-sm text-muted-foreground">
-									No tasks match your filters.
-								</td>
-							</tr>
+								<!-- Subtask Rows -->
+								{#if expandedTasks.has(task.id)}
+									{#each task.subtasks as sub}
+										<tr class="bg-muted/10">
+											<td class="px-4 py-2"></td>
+											<td class="px-4 py-2"></td>
+											<td class="px-4 py-2 pl-8 text-sm text-muted-foreground">{sub.service}</td>
+											<td class="px-4 py-2"></td>
+											<td class="px-4 py-2"></td>
+											<td class="px-4 py-2">
+												<Badge variant="outline" class="text-[10px] {statusColors[sub.status] ?? ''}">{sub.status}</Badge>
+											</td>
+											<td class="px-4 py-2">
+												<div class="flex items-center gap-2">
+													{#if sub.status === 'Running'}
+														<div class="h-1.5 w-12 rounded-full bg-muted overflow-hidden">
+															<div class="h-full rounded-full bg-amber-500" style="width: {sub.progress}%"></div>
+														</div>
+														<span class="text-xs text-muted-foreground">{sub.progress}%</span>
+													{/if}
+													{#if sub.findings > 0}
+														<span class="text-xs font-mono">{sub.findings} findings</span>
+													{/if}
+												</div>
+											</td>
+											<td class="px-4 py-2"></td>
+											<td class="px-4 py-2"></td>
+										</tr>
+									{/each}
+								{/if}
+							{/each}
+
+							{#if filteredTasks.length === 0}
+								<tr>
+									<td colspan="9" class="px-4 py-12 text-center text-sm text-muted-foreground">
+										No tasks match your filters.
+									</td>
+								</tr>
+							{/if}
+						</tbody>
+					</table>
+				</div>
+			</Card.Content>
+		</Card.Root>
+	</div>
+
+	<!-- Tasks Cards (mobile) -->
+	<div class="md:hidden space-y-3">
+		{#each filteredTasks.slice(0, perPage) as task (task.id)}
+			<div class="border rounded-lg p-3 bg-card">
+				<!-- Card header: Task ID + Status -->
+				<div class="flex items-center justify-between gap-2 mb-2">
+					<div class="flex items-center gap-2 min-w-0">
+						{#if task.subtasks.length > 0}
+							<button class="shrink-0" onclick={() => toggleExpand(task.id)}>
+								{#if expandedTasks.has(task.id)}
+									<ChevronDown class="h-4 w-4 text-muted-foreground" />
+								{:else}
+									<ChevronRight class="h-4 w-4 text-muted-foreground" />
+								{/if}
+							</button>
 						{/if}
-					</tbody>
-				</table>
+						<span class="font-mono text-xs text-muted-foreground truncate">{task.id}</span>
+					</div>
+					<Badge variant="outline" class="shrink-0 text-[10px] {statusColors[task.status] ?? ''}">
+						{#if task.status === 'Running'}
+							<LoaderCircle class="mr-1 h-3 w-3 animate-spin" />
+						{:else if task.status === 'Pending'}
+							<Clock class="mr-1 h-3 w-3" />
+						{:else if task.status === 'Completed'}
+							<Check class="mr-1 h-3 w-3" />
+						{:else if task.status === 'Failed'}
+							<X class="mr-1 h-3 w-3" />
+						{:else if task.status === 'Cancelled'}
+							<Ban class="mr-1 h-3 w-3" />
+						{/if}
+						{task.status}
+					</Badge>
+				</div>
+
+				<!-- Card body: Model, App, Progress -->
+				<div class="space-y-1.5 mb-2">
+					<div class="flex items-center justify-between gap-2">
+						<a href="/models/{task.modelSlug}" class="text-sm font-medium hover:underline truncate">{task.model}</a>
+						<span class="text-xs text-muted-foreground shrink-0">App #{task.appNumber}</span>
+					</div>
+					<span class="text-xs text-muted-foreground">{task.type}</span>
+
+					{#if task.status === 'Running'}
+						<div class="flex items-center gap-2">
+							<div class="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+								<div class="h-full rounded-full bg-amber-500 transition-all" style="width: {task.progress}%"></div>
+							</div>
+							<span class="text-xs text-muted-foreground shrink-0">{task.progress}%</span>
+						</div>
+					{/if}
+
+					{#if task.findings > 0}
+						<div class="flex flex-wrap gap-1">
+							{#each Object.entries(task.severityBreakdown).filter(([, v]) => v > 0) as [sev, count]}
+								<Badge variant="outline" class="text-[10px] {severityColors[sev] ?? ''}">{count} {sev.charAt(0).toUpperCase()}</Badge>
+							{/each}
+						</div>
+					{/if}
+
+					<div class="flex flex-wrap gap-1">
+						{#each task.tools.slice(0, 3) as tool}
+							<Badge variant="secondary" class="text-[10px]">{tool}</Badge>
+						{/each}
+						{#if task.tools.length > 3}
+							<Badge variant="outline" class="text-[10px]">+{task.tools.length - 3}</Badge>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Card footer: Time + Actions -->
+				<div class="flex items-center justify-between border-t pt-2">
+					<div class="text-xs text-muted-foreground">
+						<span>{task.duration}</span>
+						<span class="mx-1">·</span>
+						<span>{task.createdAt}</span>
+					</div>
+					<div class="flex items-center gap-1">
+						{#if task.status === 'Completed' || task.status === 'Partial'}
+							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/analysis/{task.id}" title="View results">
+								<Eye class="h-3.5 w-3.5" />
+							</Button>
+							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" disabled title="Download">
+								<Download class="h-3.5 w-3.5" />
+							</Button>
+						{:else if task.status === 'Running'}
+							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" disabled title="Stop">
+								<StopCircle class="h-3.5 w-3.5" />
+							</Button>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Inline subtasks (expanded) -->
+				{#if expandedTasks.has(task.id) && task.subtasks.length > 0}
+					<div class="mt-2 border-t pt-2 space-y-2">
+						{#each task.subtasks as sub}
+							<div class="flex items-center justify-between gap-2 rounded bg-muted/10 px-2 py-1.5">
+								<span class="text-xs text-muted-foreground">{sub.service}</span>
+								<div class="flex items-center gap-2">
+									{#if sub.status === 'Running'}
+										<div class="flex items-center gap-1">
+											<div class="h-1 w-10 rounded-full bg-muted overflow-hidden">
+												<div class="h-full rounded-full bg-amber-500" style="width: {sub.progress}%"></div>
+											</div>
+											<span class="text-[10px] text-muted-foreground">{sub.progress}%</span>
+										</div>
+									{/if}
+									{#if sub.findings > 0}
+										<span class="text-[10px] font-mono">{sub.findings} findings</span>
+									{/if}
+									<Badge variant="outline" class="text-[10px] {statusColors[sub.status] ?? ''}">{sub.status}</Badge>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
-		</Card.Content>
-	</Card.Root>
+		{/each}
+
+		{#if filteredTasks.length === 0}
+			<div class="px-4 py-12 text-center text-sm text-muted-foreground">
+				No tasks match your filters.
+			</div>
+		{/if}
+	</div>
 
 	<!-- Pagination -->
 	{#if filteredTasks.length > perPage}
