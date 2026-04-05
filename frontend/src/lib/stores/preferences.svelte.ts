@@ -57,6 +57,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 function loadFromStorage(): UserPreferences {
+	if (typeof globalThis.localStorage === 'undefined') {
+		return { ...DEFAULT_PREFERENCES, cookieConsent: { ...DEFAULT_PREFERENCES.cookieConsent } };
+	}
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return { ...DEFAULT_PREFERENCES, cookieConsent: { ...DEFAULT_PREFERENCES.cookieConsent } };
@@ -130,6 +133,7 @@ function validatePreferences(parsed: Partial<UserPreferences>): UserPreferences 
 }
 
 function saveToStorage(prefs: UserPreferences): void {
+	if (typeof globalThis.localStorage === 'undefined') return;
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
 	} catch {
