@@ -36,13 +36,13 @@
 	<title>Two-Factor Authentication - LLM Lab</title>
 </svelte:head>
 
-<div class="flex min-h-[60vh] items-center justify-center">
-	<Card.Root class="w-full max-w-md">
-		<Card.Header>
-			<Card.Title class="text-2xl">Two-Factor Authentication</Card.Title>
-			<Card.Description>Enter the code from your authenticator app.</Card.Description>
+<div class="flex min-h-[50vh] items-center justify-center sm:min-h-[60vh]">
+	<Card.Root class="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
+		<Card.Header class="px-0 sm:px-6">
+			<Card.Title class="text-xl sm:text-2xl">Two-Factor Authentication</Card.Title>
+			<Card.Description class="text-xs sm:text-sm">Enter the code from your authenticator app.</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="px-0 sm:px-6">
 			{#if error}
 				<Alert variant="destructive" class="mb-4">
 					<AlertDescription>{error}</AlertDescription>
@@ -60,9 +60,10 @@
 						bind:value={code}
 						required
 						autocomplete="one-time-code"
+						class="h-11 text-center text-lg tracking-[0.3em] sm:h-9 sm:text-base sm:tracking-normal sm:text-left"
 					/>
 				</div>
-				<Button type="submit" class="w-full" disabled={submitting}>
+				<Button type="submit" class="h-11 w-full sm:h-9" disabled={submitting}>
 					{submitting ? 'Verifying...' : 'Verify'}
 				</Button>
 			</form>

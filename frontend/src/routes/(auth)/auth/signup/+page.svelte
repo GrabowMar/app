@@ -49,12 +49,12 @@
 	<title>Sign Up - LLM Lab</title>
 </svelte:head>
 
-<Card.Root class="w-full">
-		<Card.Header>
-			<Card.Title class="text-2xl">Create Account</Card.Title>
-			<Card.Description>Enter your email and choose a password.</Card.Description>
+<Card.Root class="w-full border-0 shadow-none sm:border sm:shadow-sm">
+		<Card.Header class="px-0 sm:px-6">
+			<Card.Title class="text-xl sm:text-2xl">Create Account</Card.Title>
+			<Card.Description class="text-xs sm:text-sm">Enter your email and choose a password.</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="px-0 sm:px-6">
 			{#if error}
 				<Alert variant="destructive" class="mb-4">
 					<AlertDescription>{error}</AlertDescription>
@@ -70,6 +70,7 @@
 						bind:value={email}
 						required
 						autocomplete="email"
+						class="h-11 sm:h-9"
 					/>
 				</div>
 				<div class="space-y-2">
@@ -80,6 +81,7 @@
 						bind:value={password}
 						required
 						autocomplete="new-password"
+						class="h-11 sm:h-9"
 					/>
 				</div>
 				<div class="space-y-2">
@@ -90,14 +92,15 @@
 						bind:value={password2}
 						required
 						autocomplete="new-password"
+						class="h-11 sm:h-9"
 					/>
 				</div>
-				<Button type="submit" class="w-full" disabled={submitting}>
+				<Button type="submit" class="h-11 w-full sm:h-9" disabled={submitting}>
 					{submitting ? 'Creating account...' : 'Sign Up'}
 				</Button>
 			</form>
 		</Card.Content>
-		<Card.Footer class="text-sm text-center">
+		<Card.Footer class="px-0 text-sm text-center sm:px-6">
 			<p class="text-muted-foreground">
 				Already have an account?
 				<a href="/auth/login" class="underline hover:text-foreground">Log in</a>

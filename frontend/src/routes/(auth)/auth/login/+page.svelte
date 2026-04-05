@@ -50,12 +50,12 @@
 	<title>Log In - LLM Lab</title>
 </svelte:head>
 
-<Card.Root class="w-full">
-		<Card.Header>
-			<Card.Title class="text-2xl">Log In</Card.Title>
-			<Card.Description>Enter your email and password to sign in.</Card.Description>
+<Card.Root class="w-full border-0 shadow-none sm:border sm:shadow-sm">
+		<Card.Header class="px-0 sm:px-6">
+			<Card.Title class="text-xl sm:text-2xl">Log In</Card.Title>
+			<Card.Description class="text-xs sm:text-sm">Enter your email and password to sign in.</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="px-0 sm:px-6">
 			{#if error}
 				<Alert variant="destructive" class="mb-4">
 					<AlertDescription>{error}</AlertDescription>
@@ -71,6 +71,7 @@
 						bind:value={email}
 						required
 						autocomplete="email"
+						class="h-11 sm:h-9"
 					/>
 				</div>
 				<div class="space-y-2">
@@ -81,14 +82,15 @@
 						bind:value={password}
 						required
 						autocomplete="current-password"
+						class="h-11 sm:h-9"
 					/>
 				</div>
-				<Button type="submit" class="w-full" disabled={submitting}>
+				<Button type="submit" class="h-11 w-full sm:h-9" disabled={submitting}>
 					{submitting ? 'Signing in...' : 'Sign In'}
 				</Button>
 			</form>
 		</Card.Content>
-		<Card.Footer class="flex flex-col space-y-2 text-sm text-center">
+		<Card.Footer class="flex flex-col space-y-2 px-0 text-sm text-center sm:px-6">
 			<a href="/auth/password/reset" class="text-muted-foreground hover:text-foreground underline">
 				Forgot your password?
 			</a>

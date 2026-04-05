@@ -36,13 +36,13 @@
 	<title>Reset Password - LLM Lab</title>
 </svelte:head>
 
-<div class="flex min-h-[60vh] items-center justify-center">
-	<Card.Root class="w-full max-w-md">
-		<Card.Header>
-			<Card.Title class="text-2xl">Reset Password</Card.Title>
-			<Card.Description>Enter your email and we'll send you a reset link.</Card.Description>
+<div class="flex min-h-[50vh] items-center justify-center sm:min-h-[60vh]">
+	<Card.Root class="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
+		<Card.Header class="px-0 sm:px-6">
+			<Card.Title class="text-xl sm:text-2xl">Reset Password</Card.Title>
+			<Card.Description class="text-xs sm:text-sm">Enter your email and we'll send you a reset link.</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="px-0 sm:px-6">
 			{#if success}
 				<Alert>
 					<AlertDescription>
@@ -66,15 +66,16 @@
 							bind:value={email}
 							required
 							autocomplete="email"
+							class="h-11 sm:h-9"
 						/>
 					</div>
-					<Button type="submit" class="w-full" disabled={submitting}>
+					<Button type="submit" class="h-11 w-full sm:h-9" disabled={submitting}>
 						{submitting ? 'Sending...' : 'Send Reset Link'}
 					</Button>
 				</form>
 			{/if}
 		</Card.Content>
-		<Card.Footer class="text-sm text-center">
+		<Card.Footer class="px-0 text-sm text-center sm:px-6">
 			<a href="/auth/login" class="text-muted-foreground underline hover:text-foreground">
 				Back to login
 			</a>
