@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { getAuth } from '$lib/stores/auth.svelte';
+	import { getAnalysisStats, getAnalysisTasks } from '$lib/api/client';
+	import type { AnalysisTaskList } from '$lib/api/client';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
@@ -25,21 +28,77 @@
 
 	const auth = getAuth();
 
+	function timeAgo(dateStr: string): string {
+		const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+		if (seconds < 60) return 'just now';
+		if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+		if (seconds < 86400) return `${Math.floor(seconds / 3600)} hour${Math.floor(seconds / 3600) > 1 ? 's' : ''} ago`;
+		return `${Math.floor(seconds / 86400)} day${Math.floor(seconds / 86400) > 1 ? 's' : ''} ago`;
+	}
+
+	const validStatuses = ['completed', 'running', 'failed', 'pending'] as const;
+	type AnalysisStatus = (typeof validStatuses)[number];
+
+	function normalizeStatus(status: string): AnalysisStatus {
+		const lower = status.toLowerCase();
+		if (validStatuses.includes(lower as AnalysisStatus)) return lower as AnalysisStatus;
+		return 'pending';
+	}
+
+	interface RecentAnalysis {
+		id: string;
+		name: string;
+		status: AnalysisStatus;
+		time: string;
+	}
+
+	let analysisStatsValue = $state<string>('—');
+	let analysisStatsSubtitle = $state<string>('Loading…');
+	let analysisStatsChange = $state<string>('');
+	let recentAnalyses = $state<RecentAnalysis[]>([]);
+
+	onMount(async () => {
+		const [statsResult, tasksResult] = await Promise.allSettled([
+			getAnalysisStats(),
+			getAnalysisTasks({ per_page: 5 }),
+		]);
+
+		if (statsResult.status === 'fulfilled') {
+			const stats = statsResult.value;
+			analysisStatsValue = String(stats.total_tasks);
+			analysisStatsSubtitle = `${stats.completed_tasks} completed`;
+			analysisStatsChange = `${stats.running_tasks} running`;
+		} else {
+			analysisStatsValue = '—';
+			analysisStatsSubtitle = 'Unable to load';
+			analysisStatsChange = '';
+		}
+
+		if (tasksResult.status === 'fulfilled') {
+			recentAnalyses = tasksResult.value.items.map((task: AnalysisTaskList) => ({
+				id: task.id,
+				name: task.name,
+				status: normalizeStatus(task.status),
+				time: timeAgo(task.created_at),
+			}));
+		}
+	});
+
 	interface SummaryCard {
 		title: string;
-		value: string;
-		subtitle: string;
-		change: string;
+		value: () => string;
+		subtitle: () => string;
+		change: () => string;
 		icon: Component;
 		href: string;
 		color: string;
 	}
 
 	const summaryCards: SummaryCard[] = [
-		{ title: 'Models', value: '24', subtitle: 'Registered models', change: '3 new apps this week', icon: Boxes, href: '/models', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50' },
-		{ title: 'Applications', value: '156', subtitle: 'Generated apps', change: '8 generated in 24h', icon: AppWindow, href: '/applications', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50' },
-		{ title: 'Security Analyses', value: '89', subtitle: 'Tasks completed', change: '5 run in 24h', icon: BarChart3, href: '/analysis', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50' },
-		{ title: 'Performance Tests', value: '42', subtitle: 'Tests executed', change: '3 run in 24h', icon: FileText, href: '/reports', color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/50' },
+		{ title: 'Models', value: () => '24', subtitle: () => 'Registered models', change: () => '3 new apps this week', icon: Boxes, href: '/models', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50' },
+		{ title: 'Applications', value: () => '156', subtitle: () => 'Generated apps', change: () => '8 generated in 24h', icon: AppWindow, href: '/applications', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50' },
+		{ title: 'Security Analyses', value: () => analysisStatsValue, subtitle: () => analysisStatsSubtitle, change: () => analysisStatsChange, icon: BarChart3, href: '/analysis', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50' },
+		{ title: 'Performance Tests', value: () => '42', subtitle: () => 'Tests executed', change: () => '3 run in 24h', icon: FileText, href: '/reports', color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/50' },
 	];
 
 	interface ServiceStatus {
@@ -54,21 +113,6 @@
 		{ name: 'Dynamic Analyzer', status: 'online' },
 		{ name: 'Performance Tester', status: 'offline' },
 		{ name: 'AI Analyzer', status: 'pending' },
-	];
-
-	interface RecentAnalysis {
-		name: string;
-		model: string;
-		status: 'completed' | 'running' | 'failed' | 'pending';
-		time: string;
-	}
-
-	const recentAnalyses: RecentAnalysis[] = [
-		{ name: 'Full Security Scan', model: 'GPT-4o / App #3', status: 'completed', time: '2 min ago' },
-		{ name: 'Static + Dynamic', model: 'Claude 3.5 Sonnet / App #1', status: 'running', time: '5 min ago' },
-		{ name: 'Performance Suite', model: 'Gemini 1.5 Pro / App #2', status: 'completed', time: '18 min ago' },
-		{ name: 'AI Code Review', model: 'DeepSeek V3 / App #1', status: 'failed', time: '1 hour ago' },
-		{ name: 'Full Analysis', model: 'GPT-4o-mini / App #5', status: 'completed', time: '2 hours ago' },
 	];
 
 	interface RecentApp {
@@ -156,9 +200,9 @@
 						</div>
 					</Card.Header>
 					<Card.Content class="px-3 pb-3 sm:px-6 sm:pb-6">
-						<div class="text-xl sm:text-2xl font-bold">{card.value}</div>
-						<p class="text-[11px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{card.subtitle}</p>
-						<p class="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 mt-1 sm:mt-2">{card.change}</p>
+						<div class="text-xl sm:text-2xl font-bold">{card.value()}</div>
+						<p class="text-[11px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{card.subtitle()}</p>
+						<p class="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 mt-1 sm:mt-2">{card.change()}</p>
 					</Card.Content>
 					<div class="absolute bottom-3 right-4 opacity-0 transition-opacity group-hover:opacity-100">
 						<ArrowRight class="h-4 w-4 text-muted-foreground" />
@@ -251,19 +295,15 @@
 							<thead>
 								<tr class="border-b bg-muted/30">
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Task</th>
-									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hide-mobile">Target</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Time</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
-								{#each recentAnalyses as analysis (analysis.name + analysis.model)}
+								{#each recentAnalyses as analysis (analysis.id)}
 									<tr class="transition-colors hover:bg-muted/30">
 										<td class="px-4 py-2.5" data-label="Task">
 											<span class="text-sm font-medium">{analysis.name}</span>
-										</td>
-										<td class="px-4 py-2.5 hide-mobile" data-label="Target">
-											<span class="text-sm text-muted-foreground">{analysis.model}</span>
 										</td>
 										<td class="px-4 py-2.5" data-label="Status">
 											<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusColors[analysis.status]}">
@@ -273,6 +313,10 @@
 										<td class="px-4 py-2.5" data-label="Time">
 											<span class="text-xs text-muted-foreground">{analysis.time}</span>
 										</td>
+									</tr>
+								{:else}
+									<tr>
+										<td colspan="3" class="px-4 py-6 text-center text-sm text-muted-foreground">No recent analyses</td>
 									</tr>
 								{/each}
 							</tbody>
