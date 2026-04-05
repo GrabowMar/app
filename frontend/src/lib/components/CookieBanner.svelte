@@ -26,11 +26,11 @@
 </script>
 
 {#if visible}
-	<div class="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg rounded-lg border bg-card p-4 shadow-lg md:left-auto md:right-6 md:max-w-md">
+	<div class="fixed bottom-0 left-0 right-0 z-50 border-t bg-card p-3 shadow-lg sm:bottom-4 sm:left-auto sm:right-6 sm:max-w-md sm:rounded-lg sm:border sm:border-t sm:p-4">
 		<div class="flex items-start gap-3">
-			<Cookie class="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+			<Cookie class="mt-0.5 hidden h-5 w-5 shrink-0 text-muted-foreground sm:block" />
 			<div class="flex-1 space-y-2">
-				<p class="text-sm">
+				<p class="text-xs sm:text-sm">
 					We use cookies for essential functionality. By continuing, you agree to our use of cookies.
 				</p>
 				<div class="flex gap-2">

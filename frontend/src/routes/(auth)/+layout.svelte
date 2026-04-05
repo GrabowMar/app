@@ -6,7 +6,7 @@
 	let { children } = $props();
 </script>
 
-<div class="relative flex min-h-screen flex-col items-center justify-center px-4 py-8 sm:p-4">
+<div class="relative flex min-h-screen flex-col items-center justify-center px-4 py-8 pb-20 sm:p-4">
 	<!-- Subtle radial gradient background -->
 	<div
 		class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--color-primary)/0.04,transparent_60%)]" aria-hidden="true"

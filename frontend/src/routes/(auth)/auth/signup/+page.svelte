@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getAuth } from '$lib/stores/auth.svelte';
-	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
@@ -49,12 +48,13 @@
 	<title>Sign Up - LLM Lab</title>
 </svelte:head>
 
-<Card.Root class="w-full border-0 shadow-none sm:border sm:shadow-sm">
-		<Card.Header class="px-0 sm:px-6">
-			<Card.Title class="text-xl sm:text-2xl">Create Account</Card.Title>
-			<Card.Description class="text-xs sm:text-sm">Enter your email and choose a password.</Card.Description>
-		</Card.Header>
-		<Card.Content class="px-0 sm:px-6">
+<!-- Mobile: borderless inline form. Desktop: bordered card -->
+<div class="w-full sm:rounded-xl sm:border sm:bg-card sm:py-6 sm:shadow-sm">
+		<div class="space-y-1.5 sm:px-6">
+			<h2 class="text-xl font-semibold leading-none tracking-tight sm:text-2xl">Create Account</h2>
+			<p class="text-xs text-muted-foreground sm:text-sm">Enter your email and choose a password.</p>
+		</div>
+		<div class="pt-4 sm:px-6">
 			{#if error}
 				<Alert variant="destructive" class="mb-4">
 					<AlertDescription>{error}</AlertDescription>
@@ -70,7 +70,7 @@
 						bind:value={email}
 						required
 						autocomplete="email"
-						class="h-11 sm:h-9"
+						class="h-11 text-base sm:h-9 sm:text-sm"
 					/>
 				</div>
 				<div class="space-y-2">
@@ -81,7 +81,7 @@
 						bind:value={password}
 						required
 						autocomplete="new-password"
-						class="h-11 sm:h-9"
+						class="h-11 text-base sm:h-9 sm:text-sm"
 					/>
 				</div>
 				<div class="space-y-2">
@@ -92,18 +92,18 @@
 						bind:value={password2}
 						required
 						autocomplete="new-password"
-						class="h-11 sm:h-9"
+						class="h-11 text-base sm:h-9 sm:text-sm"
 					/>
 				</div>
-				<Button type="submit" class="h-11 w-full sm:h-9" disabled={submitting}>
+				<Button type="submit" class="h-11 w-full text-base sm:h-9 sm:text-sm" disabled={submitting}>
 					{submitting ? 'Creating account...' : 'Sign Up'}
 				</Button>
 			</form>
-		</Card.Content>
-		<Card.Footer class="px-0 text-sm text-center sm:px-6">
+		</div>
+		<div class="pt-4 text-center text-sm sm:px-6">
 			<p class="text-muted-foreground">
 				Already have an account?
 				<a href="/auth/login" class="underline hover:text-foreground">Log in</a>
 			</p>
-		</Card.Footer>
-	</Card.Root>
+		</div>
+	</div>

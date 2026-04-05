@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { requestPasswordReset } from '$lib/api/client';
-	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
@@ -37,12 +36,12 @@
 </svelte:head>
 
 <div class="flex min-h-[50vh] items-center justify-center sm:min-h-[60vh]">
-	<Card.Root class="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
-		<Card.Header class="px-0 sm:px-6">
-			<Card.Title class="text-xl sm:text-2xl">Reset Password</Card.Title>
-			<Card.Description class="text-xs sm:text-sm">Enter your email and we'll send you a reset link.</Card.Description>
-		</Card.Header>
-		<Card.Content class="px-0 sm:px-6">
+	<div class="w-full max-w-md sm:rounded-xl sm:border sm:bg-card sm:py-6 sm:shadow-sm">
+		<div class="space-y-1.5 sm:px-6">
+			<h2 class="text-xl font-semibold leading-none tracking-tight sm:text-2xl">Reset Password</h2>
+			<p class="text-xs text-muted-foreground sm:text-sm">Enter your email and we'll send you a reset link.</p>
+		</div>
+		<div class="pt-4 sm:px-6">
 			{#if success}
 				<Alert>
 					<AlertDescription>
@@ -66,19 +65,19 @@
 							bind:value={email}
 							required
 							autocomplete="email"
-							class="h-11 sm:h-9"
+							class="h-11 text-base sm:h-9 sm:text-sm"
 						/>
 					</div>
-					<Button type="submit" class="h-11 w-full sm:h-9" disabled={submitting}>
+					<Button type="submit" class="h-11 w-full text-base sm:h-9 sm:text-sm" disabled={submitting}>
 						{submitting ? 'Sending...' : 'Send Reset Link'}
 					</Button>
 				</form>
 			{/if}
-		</Card.Content>
-		<Card.Footer class="px-0 text-sm text-center sm:px-6">
+		</div>
+		<div class="pt-4 text-center text-sm sm:px-6">
 			<a href="/auth/login" class="text-muted-foreground underline hover:text-foreground">
 				Back to login
 			</a>
-		</Card.Footer>
-	</Card.Root>
+		</div>
+	</div>
 </div>
