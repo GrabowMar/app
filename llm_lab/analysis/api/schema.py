@@ -1,0 +1,203 @@
+"""Django Ninja schemas for analysis."""
+
+from __future__ import annotations
+
+from datetime import datetime  # noqa: TC003
+from typing import Any
+from uuid import UUID  # noqa: TC003
+
+from ninja import ModelSchema
+from ninja import Schema
+
+from llm_lab.analysis.models import AnalysisResult
+from llm_lab.analysis.models import AnalysisTask
+from llm_lab.analysis.models import Finding
+
+# ── Request schemas ───────────────────────────────────────────────────
+
+
+class AnalysisTaskCreateSchema(Schema):
+    name: str = ""
+    generation_job_id: str | None = None
+    source_code: dict[str, str] = {}
+    analyzers: list[str]
+    settings: dict[str, Any] = {}
+    auto_start: bool = True
+
+
+# ── Task schemas ──────────────────────────────────────────────────────
+
+
+class AnalysisTaskSchema(ModelSchema):
+    generation_job_id: str | None = None
+    generation_job_name: str | None = None
+    created_by_email: str = ""
+    results_count: int = 0
+    findings_count: int = 0
+
+    class Meta:
+        model = AnalysisTask
+        fields = [
+            "id",
+            "name",
+            "status",
+            "source_code",
+            "configuration",
+            "results_summary",
+            "started_at",
+            "completed_at",
+            "duration_seconds",
+            "error_message",
+            "created_at",
+            "updated_at",
+        ]
+
+    @staticmethod
+    def resolve_generation_job_id(obj: AnalysisTask) -> str | None:
+        if obj.generation_job_id:
+            return str(obj.generation_job_id)
+        return None
+
+    @staticmethod
+    def resolve_generation_job_name(obj: AnalysisTask) -> str | None:
+        if obj.generation_job_id:
+            return str(obj.generation_job_id)
+        return None
+
+    @staticmethod
+    def resolve_created_by_email(obj: AnalysisTask) -> str:
+        if obj.created_by:
+            return obj.created_by.email
+        return ""
+
+    @staticmethod
+    def resolve_results_count(obj: AnalysisTask) -> int:
+        return obj.results.count()
+
+    @staticmethod
+    def resolve_findings_count(obj: AnalysisTask) -> int:
+        return Finding.objects.filter(result__task=obj).count()
+
+
+class AnalysisTaskListSchema(Schema):
+    id: UUID
+    name: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    generation_job_id: str | None = None
+    created_by_email: str = ""
+    results_summary: dict = {}
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    duration_seconds: float | None = None
+
+
+class PaginatedAnalysisTasksSchema(Schema):
+    items: list[AnalysisTaskListSchema]
+    total: int
+    page: int
+    per_page: int
+    pages: int
+
+
+# ── Result schemas ────────────────────────────────────────────────────
+
+
+class AnalysisResultSchema(ModelSchema):
+    findings_count: int = 0
+    finding_summary: dict = {}
+
+    class Meta:
+        model = AnalysisResult
+        fields = [
+            "id",
+            "analyzer_type",
+            "analyzer_name",
+            "status",
+            "raw_output",
+            "summary",
+            "error_message",
+            "started_at",
+            "completed_at",
+            "duration_seconds",
+            "created_at",
+        ]
+
+    @staticmethod
+    def resolve_findings_count(obj: AnalysisResult) -> int:
+        return obj.findings.count()
+
+    @staticmethod
+    def resolve_finding_summary(obj: AnalysisResult) -> dict:
+        counts: dict[str, int] = {}
+        for severity in Finding.Severity:
+            count = obj.findings.filter(severity=severity.value).count()
+            if count:
+                counts[severity.value] = count
+        return counts
+
+
+# ── Finding schemas ───────────────────────────────────────────────────
+
+
+class FindingSchema(ModelSchema):
+    analyzer_name: str = ""
+
+    class Meta:
+        model = Finding
+        fields = [
+            "id",
+            "severity",
+            "category",
+            "confidence",
+            "title",
+            "description",
+            "suggestion",
+            "file_path",
+            "line_number",
+            "column_number",
+            "code_snippet",
+            "rule_id",
+            "tool_specific_data",
+            "created_at",
+        ]
+
+    @staticmethod
+    def resolve_analyzer_name(obj: Finding) -> str:
+        return obj.result.analyzer_name
+
+
+class PaginatedFindingsSchema(Schema):
+    items: list[FindingSchema]
+    total: int
+    page: int
+    per_page: int
+    pages: int
+
+
+# ── Analyzer info schemas ─────────────────────────────────────────────
+
+
+class AnalyzerInfoSchema(Schema):
+    name: str
+    type: str
+    display_name: str
+    description: str
+    available: bool
+    availability_message: str
+    default_config: dict
+
+
+# ── Stats schema ──────────────────────────────────────────────────────
+
+
+class AnalysisStatsSchema(Schema):
+    total_tasks: int
+    completed_tasks: int
+    failed_tasks: int
+    running_tasks: int
+    total_findings: int
+    findings_by_severity: dict[str, int]
+    findings_by_category: dict[str, int]
+    most_common_issues: list[dict]

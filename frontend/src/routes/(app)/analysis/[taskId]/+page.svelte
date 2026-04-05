@@ -26,7 +26,7 @@
 		type PaginatedFindings,
 	} from '$lib/api/client';
 
-	const taskId = $derived($page.params.taskId);
+	const taskId = $derived($page.params.taskId ?? '');
 
 	let task = $state<AnalysisTask | null>(null);
 	let results = $state<AnalysisResult[]>([]);

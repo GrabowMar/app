@@ -130,7 +130,7 @@
 
 			const task = await createAnalysisTask({
 				name: taskName || undefined,
-				generation_job_id: sourceMode === 'job' ? selectedJobId : null,
+				generation_job_id: sourceMode === 'job' ? selectedJobId : undefined,
 				source_code:
 					sourceMode === 'paste'
 						? { backend: pasteBackend, frontend: pasteFrontend }
