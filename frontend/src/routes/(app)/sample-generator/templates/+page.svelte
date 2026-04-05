@@ -299,23 +299,23 @@
 	</div>
 
 	<!-- Tabs -->
-	<div class="flex gap-1 rounded-lg bg-muted p-1">
+	<div class="flex gap-1 rounded-lg bg-muted p-1 overflow-x-auto flex-nowrap">
 		<button
-			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === 'scaffolding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'scaffolding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
 			onclick={() => activeTab = 'scaffolding'}
 		>
 			<Layers class="h-4 w-4" />
 			Scaffolding ({scaffoldingTemplates.length})
 		</button>
 		<button
-			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === 'app' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'app' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
 			onclick={() => activeTab = 'app'}
 		>
 			<FileText class="h-4 w-4" />
 			App Requirements ({appTemplates.length})
 		</button>
 		<button
-			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === 'prompt' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'prompt' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
 			onclick={() => activeTab = 'prompt'}
 		>
 			<MessageSquare class="h-4 w-4" />
@@ -326,12 +326,12 @@
 	<!-- ==================== SCAFFOLDING TAB ==================== -->
 	{#if activeTab === 'scaffolding'}
 		<div class="space-y-4">
-			<div class="flex items-center justify-between">
-				<div class="relative w-64">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="relative w-full sm:w-64">
 					<Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 					<Input bind:value={scaffoldingSearch} placeholder="Search templates…" class="pl-9 h-9" />
 				</div>
-				<Button size="sm" onclick={startCreateScaffolding}>
+				<Button size="sm" class="w-full sm:w-auto" onclick={startCreateScaffolding}>
 					<Plus class="mr-1.5 h-3.5 w-3.5" /> New Template
 				</Button>
 			</div>
@@ -358,7 +358,7 @@
 							</div>
 							<div class="space-y-1.5">
 								<Label class="text-xs">Tech Stack (JSON)</Label>
-								<textarea bind:value={scaffoldingForm.tech_stack_json} rows="3" class="flex w-full rounded-md border bg-transparent px-3 py-2 text-xs font-mono" placeholder={'{"frontend": "React", "backend": "Flask"}'}></textarea>
+								<textarea bind:value={scaffoldingForm.tech_stack_json} rows="3" class="flex w-full rounded-md border bg-transparent px-3 py-2 text-xs font-mono overflow-x-auto" placeholder={'{"frontend": "React", "backend": "Flask"}'}></textarea>
 							</div>
 							<div class="space-y-1.5">
 								<Label class="text-xs">Substitution Vars (comma-separated)</Label>
@@ -390,7 +390,7 @@
 					</Card.Content>
 				</Card.Root>
 			{:else}
-				<div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+				<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 					{#each filteredScaffolding as t}
 						<Card.Root>
 							<Card.Header class="pb-2">
@@ -434,12 +434,12 @@
 	<!-- ==================== APP REQUIREMENTS TAB ==================== -->
 	{#if activeTab === 'app'}
 		<div class="space-y-4">
-			<div class="flex items-center justify-between">
-				<div class="relative w-64">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="relative w-full sm:w-64">
 					<Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 					<Input bind:value={appSearch} placeholder="Search app templates…" class="pl-9 h-9" />
 				</div>
-				<Button size="sm" onclick={startCreateApp}>
+				<Button size="sm" class="w-full sm:w-auto" onclick={startCreateApp}>
 					<Plus class="mr-1.5 h-3.5 w-3.5" /> New Template
 				</Button>
 			</div>
@@ -522,7 +522,7 @@
 											{#if t.admin_requirements?.length}<span>Admin: {t.admin_requirements.length} reqs</span>{/if}
 										</div>
 									</div>
-									<div class="flex gap-1 ml-2 shrink-0">
+									<div class="flex gap-1 ml-2 shrink-0 flex-wrap">
 										<Button variant="outline" size="sm" class="h-7 text-xs" onclick={() => startEditApp(t)}>
 											<Pencil class="mr-1 h-3 w-3" /> Edit
 										</Button>
@@ -544,15 +544,15 @@
 	<!-- ==================== PROMPT TAB ==================== -->
 	{#if activeTab === 'prompt'}
 		<div class="space-y-4">
-			<div class="flex items-center justify-between">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div class="flex gap-2">
-					<select bind:value={promptStageFilter} class="h-9 rounded-md border bg-transparent px-2 text-sm">
+					<select bind:value={promptStageFilter} class="h-9 w-full sm:w-auto rounded-md border bg-transparent px-2 text-sm">
 						<option value="">All stages</option>
 						<option value="backend">Backend</option>
 						<option value="frontend">Frontend</option>
 					</select>
 				</div>
-				<Button size="sm" onclick={startCreatePrompt}>
+				<Button size="sm" class="w-full sm:w-auto" onclick={startCreatePrompt}>
 					<Plus class="mr-1.5 h-3.5 w-3.5" /> New Prompt
 				</Button>
 			</div>
@@ -589,7 +589,7 @@
 							</div>
 							<div class="space-y-1.5 md:col-span-2">
 								<Label class="text-xs">Content (Jinja2 template)</Label>
-								<textarea bind:value={promptForm.content} rows="12" class="flex w-full rounded-md border bg-transparent px-3 py-2 text-xs font-mono leading-relaxed" placeholder="You are a senior developer..."></textarea>
+								<textarea bind:value={promptForm.content} rows="12" class="flex w-full rounded-md border bg-transparent px-3 py-2 text-xs font-mono leading-relaxed overflow-x-auto" placeholder="You are a senior developer..."></textarea>
 								<p class="text-[10px] text-muted-foreground">
 									Available Jinja2 variables: name, description, backend_requirements, frontend_requirements, admin_requirements, api_endpoints, data_model, backend_api_context
 								</p>

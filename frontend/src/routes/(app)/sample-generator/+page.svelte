@@ -371,23 +371,23 @@
 	</div>
 
 	<!-- Tabs -->
-	<div class="flex gap-1 rounded-lg bg-muted p-1">
+	<div class="flex gap-1 rounded-lg bg-muted p-1 overflow-x-auto flex-nowrap">
 		<button
-			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === 'custom' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'custom' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
 			onclick={() => activeTab = 'custom'}
 		>
 			<Code class="h-4 w-4" />
 			Custom
 		</button>
 		<button
-			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === 'scaffolding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'scaffolding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
 			onclick={() => activeTab = 'scaffolding'}
 		>
 			<Layers class="h-4 w-4" />
 			Scaffolding
 		</button>
 		<button
-			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === 'copilot' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+			class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'copilot' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
 			onclick={() => activeTab = 'copilot'}
 		>
 			<Bot class="h-4 w-4" />
@@ -426,7 +426,7 @@
 								></textarea>
 							</div>
 
-							<div class="grid gap-4 md:grid-cols-3">
+							<div class="grid gap-4 grid-cols-1 sm:grid-cols-3">
 								<div class="space-y-2">
 									<Label>Model</Label>
 									{#if modelsLoading}
@@ -545,7 +545,7 @@
 								<Card.Title class="text-sm">Result</Card.Title>
 							</Card.Header>
 							<Card.Content class="p-0">
-								<pre class="max-h-[500px] overflow-auto rounded-b-xl bg-muted/50 p-4 text-xs font-mono leading-relaxed">{customJob.result_data.content}</pre>
+								<pre class="max-h-[500px] overflow-x-auto overflow-y-auto rounded-b-xl bg-muted/50 p-4 text-xs font-mono leading-relaxed">{customJob.result_data.content}</pre>
 							</Card.Content>
 						</Card.Root>
 					{/if}
@@ -579,7 +579,7 @@
 									<LoaderCircle class="h-3.5 w-3.5 animate-spin" /> Loading templates…
 								</div>
 							{:else}
-								<div class="grid gap-3 md:grid-cols-3">
+								<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 									{#each scaffoldingTemplates as tpl}
 										<button
 											class="rounded-lg border p-4 text-left transition-colors {selectedScaffoldId === tpl.id ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'}"
@@ -707,7 +707,7 @@
 						<Separator />
 
 						<!-- Controls row -->
-						<div class="flex flex-wrap items-end gap-4">
+						<div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
 							<div class="space-y-2">
 								<Label>Temperature: {scaffoldingTemperature.toFixed(1)}</Label>
 								<input
@@ -791,7 +791,7 @@
 							></textarea>
 						</div>
 
-						<div class="grid gap-4 md:grid-cols-2">
+						<div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
 							<div class="space-y-2">
 								<Label>Model (optional)</Label>
 								{#if modelsLoading}
@@ -948,12 +948,12 @@
 
 	<Card.Root>
 		<Card.Header>
-			<div class="flex items-center justify-between">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<Card.Title>Generation History</Card.Title>
 					<Card.Description>Past generation jobs and their results.</Card.Description>
 				</div>
-				<div class="flex items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<select
 						bind:value={historyModeFilter}
 						onchange={() => { historyPage = 1; loadHistory(); }}
@@ -988,6 +988,7 @@
 					<LoaderCircle class="mr-2 h-4 w-4 animate-spin" /> Loading history…
 				</div>
 			{:else if historyData && historyData.items.length > 0}
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -1032,7 +1033,7 @@
 											</div>
 										{:else if expandedJob}
 											<div class="space-y-3">
-												<div class="grid gap-4 md:grid-cols-3 text-sm">
+												<div class="grid gap-4 grid-cols-1 sm:grid-cols-3 text-sm">
 													<div>
 														<span class="text-muted-foreground">Job ID:</span>
 														<span class="ml-1 font-mono text-xs">{expandedJob.id}</span>
@@ -1161,6 +1162,7 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 
 				<!-- Pagination -->
 				{#if historyData.pages > 1}

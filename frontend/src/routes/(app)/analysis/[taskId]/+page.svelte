@@ -171,13 +171,13 @@
 	<!-- Header Card -->
 	<Card.Root class="border-border/60">
 		<Card.Content class="p-6">
-			<div class="flex items-start justify-between">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="flex items-center gap-4">
 					<div class="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
 						<Microscope class="h-6 w-6 text-muted-foreground" />
 					</div>
 					<div>
-						<div class="flex items-center gap-3">
+						<div class="flex flex-wrap items-center gap-2 sm:gap-3">
 							<h1 class="text-xl font-semibold">{result.type}</h1>
 							<Badge variant="outline" class="{statusColors[result.status] ?? ''}">{result.status}</Badge>
 							<Badge variant="outline">{result.model}</Badge>
@@ -186,7 +186,7 @@
 						<p class="mt-1 text-sm text-muted-foreground">{result.taskId} • {result.duration} • {result.totalFindings} findings</p>
 					</div>
 				</div>
-				<div class="flex items-center gap-3 text-sm text-muted-foreground">
+				<div class="hidden sm:flex items-center gap-3 text-sm text-muted-foreground">
 					<div class="text-center">
 						<div class="text-2xl font-bold text-foreground">{result.totalFindings}</div>
 						<div class="text-xs">Findings</div>
@@ -198,7 +198,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="mt-3 flex items-center gap-2">
+			<div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
 				<Button variant="outline" size="sm" disabled><Download class="mr-1.5 h-3.5 w-3.5" /> Download</Button>
 				<Button variant="ghost" size="sm" disabled><RefreshCw class="mr-1.5 h-3.5 w-3.5" /> Refresh</Button>
 			</div>
@@ -207,7 +207,7 @@
 
 	<!-- Section Nav -->
 	<div class="sticky top-0 z-40 -mx-4 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-		<nav class="flex gap-1 overflow-x-auto border-b py-2">
+		<nav class="flex gap-1 overflow-x-auto flex-nowrap border-b py-2">
 			{#each sections as section}
 				<button
 					class="rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap {activeSection === section.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}"
@@ -223,7 +223,7 @@
 	<div id="summary" class="scroll-mt-16 space-y-4">
 		<h2 class="text-lg font-semibold">Summary</h2>
 		<!-- Service Dashboard -->
-		<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
 			{#each [
 				{ icon: Shield, label: 'Static', status: result.services.static.status, metric: `${result.services.static.totalIssues} issues`, color: 'text-blue-400' },
 				{ icon: Zap, label: 'Dynamic', status: result.services.dynamic.status, metric: `${result.services.dynamic.securityAlerts} alerts`, color: 'text-emerald-500' },
@@ -246,7 +246,7 @@
 		<!-- Timing -->
 		<Card.Root>
 			<Card.Content class="p-4">
-				<div class="flex flex-wrap items-center gap-6 text-sm">
+				<div class="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
 					<div><span class="text-muted-foreground">Duration:</span> <span class="font-mono font-medium">{result.duration}</span></div>
 					<div><span class="text-muted-foreground">Queue:</span> <span class="font-mono">{result.queueTime}</span></div>
 					<div><span class="text-muted-foreground">Started:</span> <span class="font-mono">{result.startedAt}</span></div>
@@ -318,6 +318,7 @@
 					<Card.Title class="text-sm">{lang.language}</Card.Title>
 				</Card.Header>
 				<Card.Content class="p-0">
+					<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
 							<tr class="border-b bg-muted/30">
@@ -344,6 +345,7 @@
 							{/each}
 						</tbody>
 					</table>
+					</div>
 				</Card.Content>
 			</Card.Root>
 		{/each}
@@ -362,6 +364,7 @@
 		<Card.Root>
 			<Card.Header><Card.Title class="text-sm">Connectivity Tests</Card.Title></Card.Header>
 			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -388,6 +391,7 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 			</Card.Content>
 		</Card.Root>
 
@@ -395,6 +399,7 @@
 		<Card.Root>
 			<Card.Header><Card.Title class="text-sm">Security Alerts (ZAP)</Card.Title></Card.Header>
 			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -415,6 +420,7 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 			</Card.Content>
 		</Card.Root>
 
@@ -442,7 +448,7 @@
 		</div>
 
 		<!-- Grades -->
-		<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:grid-cols-4">
 			{#each Object.entries(result.services.performance.grades) as [metric, grade]}
 				<Card.Root>
 					<Card.Content class="p-4 text-center">
@@ -457,6 +463,7 @@
 		<Card.Root>
 			<Card.Header><Card.Title class="text-sm">Test Results</Card.Title></Card.Header>
 			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -483,6 +490,7 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 			</Card.Content>
 		</Card.Root>
 	</div>
@@ -492,7 +500,7 @@
 		<h2 class="text-lg font-semibold">AI Review</h2>
 
 		<!-- Overall -->
-		<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:grid-cols-4">
 			<Card.Root>
 				<Card.Content class="p-4 text-center">
 					<div class="text-2xl font-bold">{result.services.ai.compliance}%</div>
@@ -523,6 +531,7 @@
 		<Card.Root>
 			<Card.Header><Card.Title class="text-sm">Backend Requirements</Card.Title></Card.Header>
 			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -551,12 +560,14 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 			</Card.Content>
 		</Card.Root>
 
 		<Card.Root>
 			<Card.Header><Card.Title class="text-sm">Frontend Requirements</Card.Title></Card.Header>
 			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -585,6 +596,7 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 			</Card.Content>
 		</Card.Root>
 
@@ -592,6 +604,7 @@
 		<Card.Root>
 			<Card.Header><Card.Title class="text-sm">Quality Metrics</Card.Title></Card.Header>
 			<Card.Content class="p-0">
+				<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -619,6 +632,7 @@
 						{/each}
 					</tbody>
 				</table>
+				</div>
 			</Card.Content>
 		</Card.Root>
 

@@ -267,7 +267,7 @@
 	<h1 class="text-3xl font-bold tracking-tight">Settings</h1>
 
 	<!-- Tab Navigation -->
-	<div class="flex gap-6 border-b border-border">
+	<div class="flex gap-6 border-b border-border overflow-x-auto flex-nowrap whitespace-nowrap">
 		{#each TABS as tab}
 			<button
 				type="button"
@@ -294,7 +294,7 @@
 					<!-- Theme -->
 					<div class="space-y-2">
 						<Label>Theme</Label>
-						<div class="flex gap-3">
+						<div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
 							{#each [
 								{ value: 'light', label: 'Light', Icon: Sun },
 								{ value: 'dark', label: 'Dark', Icon: Moon },
@@ -479,17 +479,17 @@
 					<Card.Description>Export, import, or reset your settings.</Card.Description>
 				</Card.Header>
 				<Card.Content class="space-y-4">
-					<div class="flex flex-wrap gap-3">
-						<Button variant="outline" onclick={handleExport}>
+					<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+						<Button variant="outline" class="w-full sm:w-auto" onclick={handleExport}>
 							<Download class="h-4 w-4" />
 							Export Settings
 						</Button>
-						<Button variant="outline" onclick={() => (showImportSection = !showImportSection)}>
+						<Button variant="outline" class="w-full sm:w-auto" onclick={() => (showImportSection = !showImportSection)}>
 							<Upload class="h-4 w-4" />
 							Import Settings
 						</Button>
 						{#if !showResetConfirm}
-							<Button variant="destructive" onclick={() => (showResetConfirm = true)}>
+							<Button variant="destructive" class="w-full sm:w-auto" onclick={() => (showResetConfirm = true)}>
 								<RotateCcw class="h-4 w-4" />
 								Reset to Defaults
 							</Button>
@@ -525,9 +525,9 @@
 						<Alert variant="destructive">
 							<AlertTriangle class="h-4 w-4" />
 							<AlertDescription>
-								<div class="flex items-center justify-between">
+								<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 									<span>Are you sure? This will reset all preferences to defaults.</span>
-									<div class="flex gap-2 ml-4">
+									<div class="flex gap-2 sm:ml-4">
 										<Button size="sm" variant="destructive" onclick={handleReset}>Reset</Button>
 										<Button size="sm" variant="ghost" onclick={() => (showResetConfirm = false)}>Cancel</Button>
 									</div>
@@ -672,7 +672,7 @@
 							Revoke Token
 						</Button>
 					{:else if tokenInfo}
-						<div class="flex items-center justify-between rounded-lg border border-border p-3">
+						<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border p-3">
 							<div>
 								<p class="text-sm font-medium">Active Token</p>
 								<p class="text-xs text-muted-foreground font-mono">...{tokenInfo.key_preview}</p>
@@ -706,7 +706,7 @@
 				<Card.Content class="space-y-4">
 					<div class="space-y-2">
 						<Label>Example Request</Label>
-						<pre class="overflow-x-auto rounded-lg border border-border bg-muted/50 p-3 text-sm font-mono">curl -H "Authorization: Bearer YOUR_TOKEN" \
+						<pre class="overflow-x-auto rounded-lg border border-border bg-muted/50 p-3 text-xs sm:text-sm font-mono">curl -H "Authorization: Bearer YOUR_TOKEN" \
   https://your-domain.com/api/models/</pre>
 					</div>
 
@@ -758,7 +758,7 @@
 					<Card.Description>Choose the color for your user avatar.</Card.Description>
 				</Card.Header>
 				<Card.Content class="space-y-4">
-					<div class="flex items-center gap-6">
+					<div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
 						<div
 							class="flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold text-white {avatarColorMap[prefs.avatarColor]}"
 						>

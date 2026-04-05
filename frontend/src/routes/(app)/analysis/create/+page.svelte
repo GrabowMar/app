@@ -132,11 +132,11 @@
 	</div>
 
 	<!-- Layout: steps left, sidebar right -->
-	<div class="grid gap-6 lg:grid-cols-4">
+	<div class="grid gap-4 sm:gap-6 lg:grid-cols-4">
 		<!-- Main Content (3/4) -->
 		<div class="space-y-6 lg:col-span-3">
 			<!-- Step Progress -->
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-2 overflow-x-auto">
 				{#each stepLabels as label, i}
 					<button
 						class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors {step === i + 1 ? 'bg-primary/10 text-primary font-medium' : i + 1 < step ? 'text-emerald-500' : 'text-muted-foreground'}"
@@ -176,7 +176,7 @@
 								/>
 							</div>
 						</div>
-						<div class="overflow-x-auto">
+						<div class="overflow-x-auto table-scroll-wrapper">
 							<table class="w-full text-sm">
 								<thead>
 									<tr class="border-b bg-muted/30">
@@ -224,7 +224,7 @@
 						<Card.Description>Select the application to analyze from {selectedModelData?.name ?? 'the selected model'}.</Card.Description>
 					</Card.Header>
 					<Card.Content>
-						<div class="overflow-x-auto">
+						<div class="overflow-x-auto table-scroll-wrapper">
 							<table class="w-full text-sm">
 								<thead>
 									<tr class="border-b bg-muted/30">
@@ -277,7 +277,7 @@
 			{#if step === 3}
 				<div class="space-y-4">
 					<!-- Tool Selection Header -->
-					<div class="flex items-center justify-between">
+					<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<div class="flex items-center gap-2">
 							<Button variant="outline" size="sm" onclick={selectAllTools}>Select All</Button>
 							<Button variant="outline" size="sm" onclick={clearAllTools}>Clear All</Button>
@@ -289,7 +289,7 @@
 					</div>
 
 					<!-- Analyzer Cards -->
-					<div class="grid gap-4 md:grid-cols-2">
+					<div class="grid gap-4 grid-cols-1 md:grid-cols-2">
 						{#each analyzers as analyzer}
 							<Card.Root class="border {analyzer.color.split(' ').filter(c => c.startsWith('border-')).join(' ')}">
 								<Card.Header>
@@ -332,7 +332,7 @@
 							</div>
 						</Card.Header>
 						<Card.Content>
-							<div class="grid gap-4 md:grid-cols-3">
+							<div class="grid gap-4 grid-cols-1 sm:grid-cols-3">
 								<div>
 									<label class="text-sm font-medium">Priority</label>
 									<select class="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm" bind:value={priority}>
@@ -363,7 +363,7 @@
 						<Card.Description>Review your configuration before launching the analysis.</Card.Description>
 					</Card.Header>
 					<Card.Content>
-						<div class="overflow-x-auto">
+						<div class="overflow-x-auto table-scroll-wrapper">
 							<table class="w-full text-sm">
 								<tbody class="divide-y">
 									<tr>
@@ -417,7 +417,7 @@
 					<div class="h-1.5 rounded-full bg-muted overflow-hidden mb-4">
 						<div class="h-full rounded-full bg-primary transition-all" style="width: {(step / stepLabels.length) * 100}%"></div>
 					</div>
-					<div class="flex justify-between">
+					<div class="flex flex-col gap-2 sm:flex-row sm:justify-between">
 						<Button variant="outline" size="sm" disabled={step === 1} onclick={() => step--}>
 							<ArrowLeft class="mr-1.5 h-3.5 w-3.5" /> Back
 						</Button>

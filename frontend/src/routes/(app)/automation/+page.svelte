@@ -182,14 +182,14 @@
 		</div>
 	</div>
 
-	<div class="grid gap-6 lg:grid-cols-[1fr_340px]">
+	<div class="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_340px]">
 		<!-- Left Column: Wizard -->
 		<div class="space-y-6">
 			<!-- Step Indicator -->
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-2 overflow-x-auto flex-nowrap">
 				{#each [{ n: 1, label: 'Generate' }, { n: 2, label: 'Analyze' }, { n: 3, label: 'Execute' }] as s}
 					<button
-						class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors {step === s.n ? 'bg-primary text-primary-foreground font-medium' : step > s.n ? 'bg-emerald-500/15 text-emerald-500' : 'bg-muted text-muted-foreground'}"
+						class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors whitespace-nowrap {step === s.n ? 'bg-primary text-primary-foreground font-medium' : step > s.n ? 'bg-emerald-500/15 text-emerald-500' : 'bg-muted text-muted-foreground'}"
 						onclick={() => { if (s.n <= step) step = s.n; }}
 					>
 						{#if step > s.n}<Check class="h-3.5 w-3.5" />{:else}<span class="font-mono text-xs">{s.n}</span>{/if}
@@ -208,7 +208,7 @@
 								<Card.Title>Sample Generation</Card.Title>
 								<Card.Description>Select templates and models or use existing applications.</Card.Description>
 							</div>
-							<div class="flex gap-1 rounded-lg bg-muted p-1">
+							<div class="flex gap-1 rounded-lg bg-muted p-1 overflow-x-auto flex-nowrap">
 								<button class="rounded-md px-3 py-1 text-xs transition-colors {genMode === 'new' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'}" onclick={() => genMode = 'new'}>Generate New</button>
 								<button class="rounded-md px-3 py-1 text-xs transition-colors {genMode === 'existing' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'}" onclick={() => genMode = 'existing'}>Use Existing</button>
 							</div>
@@ -216,7 +216,7 @@
 					</Card.Header>
 					<Card.Content>
 						{#if genMode === 'new'}
-							<div class="grid gap-4 md:grid-cols-2">
+							<div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
 								<!-- Templates -->
 								<div class="space-y-3">
 									<div class="flex items-center justify-between">
@@ -303,7 +303,7 @@
 						{:else}
 							<!-- Existing Apps -->
 							<div class="space-y-3">
-								<div class="flex gap-2">
+								<div class="flex flex-col gap-2 sm:flex-row sm:gap-2">
 									<div class="relative flex-1">
 										<Search class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
 										<Input bind:value={existingSearch} placeholder="Search..." class="h-8 pl-8 text-xs" />
@@ -321,6 +321,7 @@
 										<option value="pending">Pending</option>
 									</select>
 								</div>
+								<div class="overflow-x-auto">
 								<table class="w-full text-sm">
 									<thead>
 										<tr class="border-b bg-muted/30">
@@ -350,6 +351,7 @@
 										{/each}
 									</tbody>
 								</table>
+								</div>
 								<div class="text-sm text-muted-foreground">{selectedExisting.size} selected</div>
 							</div>
 						{/if}
@@ -365,7 +367,7 @@
 						<Card.Description>Select analysis tools and configure execution options.</Card.Description>
 					</Card.Header>
 					<Card.Content class="space-y-4">
-						<div class="grid gap-4 md:grid-cols-2">
+						<div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
 							{#each Object.entries(analysisTools) as [cat, tools]}
 								{@const meta = toolCategoryIcons[cat]}
 								<Card.Root>
@@ -399,7 +401,7 @@
 						</div>
 
 						<!-- Options -->
-						<div class="flex flex-wrap items-center gap-4 rounded-lg bg-muted/50 px-4 py-3 text-sm">
+						<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 rounded-lg bg-muted/50 px-4 py-3 text-sm">
 							<label class="flex items-center gap-1.5">
 								<input type="checkbox" bind:checked={analysisParallel} class="rounded" />
 								Parallel execution
@@ -425,7 +427,7 @@
 			<!-- Step 3: Review & Execute -->
 			{#if step === 3}
 				<div class="space-y-4">
-					<div class="grid gap-4 md:grid-cols-2">
+					<div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
 						<Card.Root>
 							<Card.Header><Card.Title class="text-sm">Generation Summary</Card.Title></Card.Header>
 							<Card.Content class="space-y-2 text-sm">
@@ -475,6 +477,7 @@
 						<Card.Root>
 							<Card.Header><Card.Title class="text-sm">Job Queue Preview</Card.Title></Card.Header>
 							<Card.Content class="p-0">
+								<div class="overflow-x-auto">
 								<table class="w-full text-sm">
 									<thead>
 										<tr class="border-b bg-muted/30">
@@ -500,6 +503,7 @@
 										{/if}
 									</tbody>
 								</table>
+								</div>
 							</Card.Content>
 						</Card.Root>
 					{/if}

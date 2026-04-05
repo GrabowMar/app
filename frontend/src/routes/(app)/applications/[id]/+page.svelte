@@ -517,7 +517,7 @@ View Details
 <!-- Header Card -->
 <Card.Root>
 <Card.Content class="p-5">
-<div class="flex items-start justify-between gap-4">
+<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 <div class="flex items-start gap-4">
 <div class="flex h-12 w-12 items-center justify-center rounded-xl {modeColors[job.mode] ?? 'bg-zinc-500/15'}">
 {#if modeIcons[job.mode]}
@@ -550,7 +550,7 @@ View Details
 </div>
 </div>
 <!-- Action buttons -->
-<div class="flex items-center gap-2 shrink-0">
+<div class="flex flex-wrap items-center gap-2 sm:shrink-0">
 <Button variant="outline" size="sm" onclick={() => copyText(job!.id, 'Copied Job ID')} title="Copy Job ID">
 <Copy class="h-3.5 w-3.5 mr-1.5" />ID
 </Button>
@@ -617,7 +617,7 @@ onclick={() => scrollToSection(sec.id)}
       <h2 class="text-lg font-semibold flex items-center gap-2"><Eye class="h-5 w-5" /> Overview</h2>
 
       <!-- 4-Card Grid -->
-      <div class="grid md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <!-- Card 1: Identity -->
         <Card.Root>
           <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Identity</Card.Title></Card.Header>
@@ -726,13 +726,13 @@ onclick={() => scrollToSection(sec.id)}
       <Card.Root>
         <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Generation Details</Card.Title></Card.Header>
         <Card.Content>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><span class="text-xs text-muted-foreground block mb-0.5">Backend</span><span class="font-medium">{frameworkInfo.backend}</span></div>
             <div><span class="text-xs text-muted-foreground block mb-0.5">Frontend</span><span class="font-medium">{frameworkInfo.frontend}</span></div>
             <div><span class="text-xs text-muted-foreground block mb-0.5">Database</span><span class="font-medium">{frameworkInfo.database}</span></div>
             <div><span class="text-xs text-muted-foreground block mb-0.5">Duration</span><span class="font-medium">{fmtDur(job.duration_seconds)}</span></div>
           </div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-3 pt-3 border-t">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-3 pt-3 border-t">
             <div><span class="text-xs text-muted-foreground block mb-0.5">Template</span><span class="font-medium">{job.template_name ?? '—'}</span></div>
             <div><span class="text-xs text-muted-foreground block mb-0.5">Tokens</span><span class="font-medium">{fmt(costData.totalTokens, 0)}</span></div>
             <div><span class="text-xs text-muted-foreground block mb-0.5">Updated</span><span class="font-medium">{fmtDateCompact(job.updated_at)}</span></div>
@@ -765,9 +765,9 @@ onclick={() => scrollToSection(sec.id)}
       {:else}
         <Card.Root>
           <Card.Content class="p-0">
-            <div class="flex" style="height: 450px;">
+            <div class="flex flex-col sm:flex-row" style="min-height: 300px; height: auto; max-height: 600px;">
               <!-- Left: Prompt Tree -->
-              <div class="w-2/5 border-r overflow-y-auto bg-muted/20">
+              <div class="w-full sm:w-2/5 border-b sm:border-b-0 sm:border-r overflow-y-auto bg-muted/20 max-h-48 sm:max-h-none">
                 <div class="p-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b px-3 py-2">
                   Prompt Exchange ({promptEntries.length})
                 </div>
@@ -787,7 +787,7 @@ onclick={() => scrollToSection(sec.id)}
                 {/each}
               </div>
               <!-- Right: Content Preview with Color-Coded Sections -->
-              <div class="w-3/5 flex flex-col">
+              <div class="w-full sm:w-3/5 flex flex-col min-h-[200px]">
                 <div class="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
                   <span class="text-sm font-medium">{promptEntries[selectedPromptIdx]?.label ?? ''}</span>
                   <Button variant="ghost" size="sm" class="h-7" onclick={() => copyText(promptEntries[selectedPromptIdx]?.content ?? '', 'Copied')}>
@@ -864,9 +864,9 @@ onclick={() => scrollToSection(sec.id)}
         <!-- File Explorer -->
         <Card.Root>
           <Card.Content class="p-0">
-            <div class="flex" style="height: 500px;">
+            <div class="flex flex-col sm:flex-row" style="min-height: 300px; height: auto; max-height: 650px;">
               <!-- Left: File Tree -->
-              <div class="w-1/3 border-r overflow-y-auto bg-muted/20">
+              <div class="w-full sm:w-1/3 border-b sm:border-b-0 sm:border-r overflow-y-auto bg-muted/20 max-h-48 sm:max-h-none">
                 <div class="p-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b px-3 py-2">
                   Files ({virtualFiles.length})
                 </div>
@@ -884,7 +884,7 @@ onclick={() => scrollToSection(sec.id)}
                 {/each}
               </div>
               <!-- Right: File Preview -->
-              <div class="w-2/3 flex flex-col">
+              <div class="w-full sm:w-2/3 flex flex-col min-h-[200px]">
                 <div class="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
                   <span class="text-sm font-medium font-mono">{virtualFiles[selectedFileIdx]?.name ?? ''}</span>
                   <div class="flex items-center gap-1">
@@ -908,6 +908,7 @@ onclick={() => scrollToSection(sec.id)}
           <Card.Root>
             <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">By Extension</Card.Title></Card.Header>
             <Card.Content class="p-0">
+              <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b bg-muted/30">
@@ -935,6 +936,7 @@ onclick={() => scrollToSection(sec.id)}
                   {/each}
                 </tbody>
               </table>
+              </div>
             </Card.Content>
           </Card.Root>
         {/if}
@@ -945,7 +947,7 @@ onclick={() => scrollToSection(sec.id)}
 {#if backendScan}
 <section id="scan" class="space-y-4">
 <h2 class="text-lg font-semibold flex items-center gap-2"><Shield class="h-5 w-5" /> API Scan</h2>
-<div class="grid md:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 <!-- Endpoints -->
 <Card.Root>
 <Card.Header class="pb-3">
@@ -1031,6 +1033,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 </Card.Title>
 </Card.Header>
 <Card.Content class="p-0">
+<div class="overflow-x-auto">
 <table class="w-full text-sm">
 <thead>
 <tr class="border-b bg-muted/30">
@@ -1048,6 +1051,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 {/each}
 </tbody>
 </table>
+</div>
 </Card.Content>
 </Card.Root>
 {:else}
@@ -1073,6 +1077,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 {:else}
 <Card.Root>
 <Card.Content class="p-0">
+<div class="overflow-x-auto">
 <table class="w-full text-sm">
 <thead>
 <tr class="border-b bg-muted/30">
@@ -1152,6 +1157,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 {/each}
 </tbody>
 </table>
+</div>
 </Card.Content>
 </Card.Root>
 {/if}
@@ -1201,13 +1207,13 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 {#if it.fix_applied}
 <div>
 <div class="text-xs font-medium text-muted-foreground mb-1">Fix Applied</div>
-<pre class="text-xs font-mono bg-zinc-950 rounded-md p-3 max-h-32 overflow-auto text-zinc-300">{it.fix_applied}</pre>
+<pre class="text-xs font-mono bg-zinc-950 rounded-md p-3 max-h-32 overflow-x-auto overflow-y-auto text-zinc-300">{it.fix_applied}</pre>
 </div>
 {/if}
 {#if it.build_output}
 <div>
 <div class="text-xs font-medium text-muted-foreground mb-1">Build Output</div>
-<pre class="text-xs font-mono bg-zinc-950 rounded-md p-3 max-h-32 overflow-auto text-zinc-300">{it.build_output}</pre>
+<pre class="text-xs font-mono bg-zinc-950 rounded-md p-3 max-h-32 overflow-x-auto overflow-y-auto text-zinc-300">{it.build_output}</pre>
 </div>
 {/if}
 </Card.Content>
@@ -1222,7 +1228,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 <section id="metrics" class="space-y-4">
 <h2 class="text-lg font-semibold flex items-center gap-2"><ChartBar class="h-5 w-5" /> Cost & Metrics</h2>
 
-<div class="grid md:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 <!-- Cost Card -->
 <Card.Root>
 <Card.Header class="pb-3"><Card.Title class="text-sm font-medium flex items-center gap-2"><DollarSign class="h-4 w-4" /> Cost</Card.Title></Card.Header>
