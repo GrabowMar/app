@@ -83,5 +83,9 @@ services:
       - /app/frontend/node_modules
     environment:
       - API_TARGET=http://django:8000
+      - ORIGIN=https://grabowmar.ovh
+      - PORT=8080
+      - HOST=0.0.0.0
     ports:
       - '8080:8080'
+    command: ["node", "build/index.js"]
