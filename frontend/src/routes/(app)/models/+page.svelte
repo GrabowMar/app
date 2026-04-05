@@ -335,8 +335,8 @@ onclick={() => applyQuickFilter('efficient')}
 </div>
 
 <!-- Search + Provider + Actions Row -->
-<div class="flex flex-wrap items-center gap-3">
-<div class="relative flex-1 max-w-sm">
+<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+<div class="relative w-full sm:flex-1 sm:max-w-sm">
 <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 <Input
 placeholder="Search models..."
@@ -346,7 +346,7 @@ oninput={debouncedLoad}
 />
 </div>
 <select
-class="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+class="h-9 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
 bind:value={selectedProvider}
 onchange={() => applyFilterAndReload()}
 >
@@ -355,7 +355,7 @@ onchange={() => applyFilterAndReload()}
 <option value={p}>{p}</option>
 {/each}
 </select>
-<div class="ml-auto flex items-center gap-2">
+<div class="flex items-center gap-2 sm:ml-auto">
 <Button variant="outline" size="sm" onclick={handleSync} disabled={syncing}>
 {#if syncing}
 <LoaderCircle class="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -473,7 +473,7 @@ onchange={() => { currentPage = 1; load(); }}
 <LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
 </div>
 {:else if data && data.items.length > 0}
-<div class="overflow-x-auto">
+<div class="hidden md:block overflow-x-auto">
 <table class="w-full">
 <thead>
 <tr class="border-b bg-muted/40 sticky top-0 z-10">
@@ -570,6 +570,99 @@ onclick={() => toggleSort(col.sortField)}
 </tbody>
 </table>
 </div>
+<!-- Mobile card view -->
+<div class="md:hidden">
+<div class="flex items-center gap-2 border-b px-3 py-2.5">
+<span class="text-xs font-medium text-muted-foreground shrink-0">Sort:</span>
+<select
+class="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+bind:value={sortBy}
+onchange={() => { currentPage = 1; load(); }}
+>
+<option value="">Default</option>
+{#each sortableColumns as col}
+<option value={col.sortField}>{col.label}</option>
+{/each}
+</select>
+<button
+class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background transition-colors hover:bg-muted"
+onclick={() => { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; currentPage = 1; load(); }}
+aria-label="Toggle sort direction"
+>
+{#if sortDir === 'asc'}
+<ArrowUp class="h-3.5 w-3.5" />
+{:else}
+<ArrowDown class="h-3.5 w-3.5" />
+{/if}
+</button>
+</div>
+<div class="space-y-3 p-3">
+{#each data.items as model (model.canonical_slug)}
+<a href="/models/{model.canonical_slug}" class="block rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 active:bg-muted/70 {model.is_free ? 'border-emerald-500/30' : ''}">
+<!-- Header: Name + Provider -->
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2 min-w-0 flex-1">
+<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+<Cpu class="h-4 w-4 text-muted-foreground" />
+</div>
+<div class="min-w-0">
+<span class="text-sm font-medium block truncate">{model.model_name}</span>
+{#if model.description}
+<span class="text-[11px] text-muted-foreground block truncate">{model.description}</span>
+{/if}
+</div>
+</div>
+<div class="flex items-center gap-1.5 shrink-0">
+{#if model.is_free}
+<Badge variant="secondary" class="text-[10px] text-emerald-600 dark:text-emerald-400">FREE</Badge>
+{/if}
+<Badge variant="outline" class="text-[10px] font-normal">{model.provider}</Badge>
+</div>
+</div>
+<!-- Stats: 2-col grid -->
+<div class="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5 text-xs">
+<div class="flex justify-between">
+<span class="text-muted-foreground">Context</span>
+<span class="font-mono tabular-nums">{model.context_window_display}</span>
+</div>
+<div class="flex justify-between">
+<span class="text-muted-foreground">Max Out</span>
+<span class="font-mono tabular-nums text-muted-foreground">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : '—'}</span>
+</div>
+<div class="flex justify-between">
+<span class="text-muted-foreground">In $/1M</span>
+<span class="font-mono tabular-nums {model.input_price_per_million === 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}">{formatPrice(model.input_price_per_million)}</span>
+</div>
+<div class="flex justify-between">
+<span class="text-muted-foreground">Out $/1M</span>
+<span class="font-mono tabular-nums {model.output_price_per_million === 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}">{formatPrice(model.output_price_per_million)}</span>
+</div>
+</div>
+<!-- Capabilities + Efficiency -->
+<div class="flex items-center justify-between mt-2.5 pt-2 border-t border-border/50">
+<div class="flex flex-wrap gap-1">
+{#each model.capabilities as cap}
+{#if capIconMap[cap]}
+{@const ci = capIconMap[cap]}
+<span class="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] {ci.color} bg-muted/60">
+<ci.icon class="h-2.5 w-2.5" />
+{ci.label}
+</span>
+{/if}
+{/each}
+{#if model.capabilities.length === 0}
+<span class="text-[10px] text-muted-foreground">—</span>
+{/if}
+</div>
+{#if model.cost_efficiency > 0}
+{@const eff = efficiencyGrade(model.cost_efficiency)}
+<span class="inline-flex items-center justify-center h-6 w-8 rounded text-[10px] font-bold {eff.color} {eff.bg}">{eff.grade}</span>
+{/if}
+</div>
+</a>
+{/each}
+</div>
+</div>
 {:else}
 <div class="flex flex-col items-center justify-center py-20 gap-3">
 {#if activeFilters().length > 0}
@@ -587,11 +680,11 @@ onclick={() => toggleSort(col.sortField)}
 
 <!-- Pagination -->
 {#if data && data.pages > 1}
-<div class="flex items-center justify-center gap-1">
-<Button variant="outline" size="icon" class="h-8 w-8" disabled={data.page <= 1} onclick={() => goToPage(1)}>
+<div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-1">
+<Button variant="outline" size="icon" class="h-11 w-11 sm:h-8 sm:w-8" disabled={data.page <= 1} onclick={() => goToPage(1)}>
 <ChevronsLeft class="h-4 w-4" />
 </Button>
-<Button variant="outline" size="icon" class="h-8 w-8" disabled={data.page <= 1} onclick={() => goToPage(data!.page - 1)}>
+<Button variant="outline" size="icon" class="h-11 w-11 sm:h-8 sm:w-8" disabled={data.page <= 1} onclick={() => goToPage(data!.page - 1)}>
 <ChevronLeft class="h-4 w-4" />
 </Button>
 {#each Array.from({length: Math.min(data.pages, 7)}, (_, i) => {
@@ -603,16 +696,16 @@ return data!.page - 3 + i;
 <Button
 variant={p === data.page ? 'default' : 'outline'}
 size="sm"
-class="h-8 min-w-8"
+class="h-11 min-w-11 sm:h-8 sm:min-w-8"
 onclick={() => goToPage(p)}
 >
 {p}
 </Button>
 {/each}
-<Button variant="outline" size="icon" class="h-8 w-8" disabled={data.page >= data.pages} onclick={() => goToPage(data!.page + 1)}>
+<Button variant="outline" size="icon" class="h-11 w-11 sm:h-8 sm:w-8" disabled={data.page >= data.pages} onclick={() => goToPage(data!.page + 1)}>
 <ChevronRight class="h-4 w-4" />
 </Button>
-<Button variant="outline" size="icon" class="h-8 w-8" disabled={data.page >= data.pages} onclick={() => goToPage(data!.pages)}>
+<Button variant="outline" size="icon" class="h-11 w-11 sm:h-8 sm:w-8" disabled={data.page >= data.pages} onclick={() => goToPage(data!.pages)}>
 <ChevronsRight class="h-4 w-4" />
 </Button>
 </div>

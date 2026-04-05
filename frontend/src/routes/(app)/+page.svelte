@@ -132,7 +132,7 @@
 	<title>Dashboard - LLM Lab</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6 sm:space-y-8">
 	<div class="page-header">
 		<h1>Dashboard</h1>
 		<p>
@@ -145,20 +145,20 @@
 	</div>
 
 	<!-- Summary Cards -->
-	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 		{#each summaryCards as card (card.title)}
 			<a href={card.href} class="group block">
 				<Card.Root class="relative overflow-hidden hover:border-primary/30">
-					<Card.Header class="flex flex-row items-center justify-between space-y-0 pb-2">
-						<Card.Title class="text-sm font-medium text-muted-foreground">{card.title}</Card.Title>
-						<div class="flex h-8 w-8 items-center justify-center rounded-lg {card.color}">
-							<card.icon class="h-4 w-4" />
+					<Card.Header class="flex flex-row items-center justify-between space-y-0 px-3 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-6">
+						<Card.Title class="text-xs sm:text-sm font-medium text-muted-foreground">{card.title}</Card.Title>
+						<div class="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg {card.color}">
+							<card.icon class="h-3 w-3 sm:h-4 sm:w-4" />
 						</div>
 					</Card.Header>
-					<Card.Content>
-						<div class="text-2xl font-bold">{card.value}</div>
-						<p class="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
-						<p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2">{card.change}</p>
+					<Card.Content class="px-3 pb-3 sm:px-6 sm:pb-6">
+						<div class="text-xl sm:text-2xl font-bold">{card.value}</div>
+						<p class="text-[11px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{card.subtitle}</p>
+						<p class="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 mt-1 sm:mt-2">{card.change}</p>
 					</Card.Content>
 					<div class="absolute bottom-3 right-4 opacity-0 transition-opacity group-hover:opacity-100">
 						<ArrowRight class="h-4 w-4 text-muted-foreground" />
@@ -187,18 +187,18 @@
 				</Card.Header>
 				<Card.Content class="p-0">
 					<div class="overflow-x-auto">
-						<table class="w-full">
+						<table class="table-card-mobile w-full">
 							<thead>
 								<tr class="border-b bg-muted/30">
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Service</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
-									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Port</th>
+									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hide-mobile">Port</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
 								{#each services as svc, i (svc.name)}
 									<tr class="transition-colors hover:bg-muted/30">
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Service">
 											<div class="flex items-center gap-2.5">
 												{#if svc.status === 'online'}
 													<CircleCheck class="h-4 w-4 text-emerald-500" />
@@ -210,12 +210,12 @@
 												<span class="text-sm font-medium">{svc.name}</span>
 											</div>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Status">
 											<Badge variant={svc.status === 'online' ? 'secondary' : 'outline'} class="text-xs capitalize">
 												{svc.status}
 											</Badge>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5 hide-mobile" data-label="Port">
 											<span class="text-xs text-muted-foreground font-mono">
 												{['5000', '—', '2001', '2002', '2003', '2004'][i]}
 											</span>
@@ -247,11 +247,11 @@
 				</Card.Header>
 				<Card.Content class="p-0">
 					<div class="overflow-x-auto">
-						<table class="w-full">
+						<table class="table-card-mobile w-full">
 							<thead>
 								<tr class="border-b bg-muted/30">
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Task</th>
-									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Target</th>
+									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hide-mobile">Target</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Time</th>
 								</tr>
@@ -259,18 +259,18 @@
 							<tbody class="divide-y">
 								{#each recentAnalyses as analysis (analysis.name + analysis.model)}
 									<tr class="transition-colors hover:bg-muted/30">
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Task">
 											<span class="text-sm font-medium">{analysis.name}</span>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5 hide-mobile" data-label="Target">
 											<span class="text-sm text-muted-foreground">{analysis.model}</span>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Status">
 											<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusColors[analysis.status]}">
 												{analysis.status}
 											</span>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Time">
 											<span class="text-xs text-muted-foreground">{analysis.time}</span>
 										</td>
 									</tr>
@@ -300,11 +300,11 @@
 				</Card.Header>
 				<Card.Content class="p-0">
 					<div class="overflow-x-auto">
-						<table class="w-full">
+						<table class="table-card-mobile w-full">
 							<thead>
 								<tr class="border-b bg-muted/30">
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Application</th>
-									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Model</th>
+									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hide-mobile">Model</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
 									<th class="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Created</th>
 								</tr>
@@ -312,18 +312,18 @@
 							<tbody class="divide-y">
 								{#each recentApps as app (app.name)}
 									<tr class="transition-colors hover:bg-muted/30">
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Application">
 											<span class="text-sm font-medium">{app.name}</span>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5 hide-mobile" data-label="Model">
 											<span class="text-sm text-muted-foreground">{app.model}</span>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Status">
 											<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusColors[app.status]}">
 												{app.status}
 											</span>
 										</td>
-										<td class="px-4 py-2.5">
+										<td class="px-4 py-2.5" data-label="Created">
 											<span class="text-xs text-muted-foreground">{app.created}</span>
 										</td>
 									</tr>
@@ -383,7 +383,7 @@
 									<event.icon class="h-3.5 w-3.5 {event.color}" />
 								</div>
 								<div class="flex-1 min-w-0">
-									<p class="text-xs leading-relaxed">{event.text}</p>
+									<p class="text-xs leading-relaxed break-words">{event.text}</p>
 									<p class="text-[11px] text-muted-foreground mt-0.5">{event.time}</p>
 								</div>
 							</div>

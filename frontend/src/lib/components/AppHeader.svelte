@@ -8,14 +8,75 @@
 	import Settings from '@lucide/svelte/icons/settings';
 	import Key from '@lucide/svelte/icons/key';
 	import LogOut from '@lucide/svelte/icons/log-out';
+	import Boxes from '@lucide/svelte/icons/boxes';
+	import AppWindow from '@lucide/svelte/icons/app-window';
+	import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
+	import Trophy from '@lucide/svelte/icons/trophy';
+	import ChartColumn from '@lucide/svelte/icons/chart-column';
+	import BookOpen from '@lucide/svelte/icons/book-open';
+	import Zap from '@lucide/svelte/icons/zap';
+	import Layers from '@lucide/svelte/icons/layers';
+	import Circle from '@lucide/svelte/icons/circle';
+	import X from '@lucide/svelte/icons/x';
 	import { Separator } from '$lib/components/ui/separator';
+	import * as Sheet from '$lib/components/ui/sheet';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { getAuth } from '$lib/stores/auth.svelte';
 	import { getPreferences } from '$lib/stores/preferences.svelte';
+	import { cn } from '$lib/utils';
+	import type { Component } from 'svelte';
 
 	interface AuthState {
 		isAuthenticated: boolean;
 		user: { id: number; email: string; display?: string; name?: string } | null;
+	}
+
+	interface NavItem {
+		label: string;
+		href: string;
+		icon: Component;
+	}
+
+	interface NavSection {
+		title: string;
+		items: NavItem[];
+	}
+
+	const navSections: NavSection[] = [
+		{
+			title: 'Platform',
+			items: [
+				{ label: 'Dashboard', href: '/', icon: FlaskConical },
+				{ label: 'Models', href: '/models', icon: Boxes },
+				{ label: 'Applications', href: '/applications', icon: AppWindow },
+				{ label: 'Analysis', href: '/analysis', icon: BarChart3 },
+			],
+		},
+		{
+			title: 'Tools',
+			items: [
+				{ label: 'Automation', href: '/automation', icon: Zap },
+				{ label: 'Sample Generator', href: '/sample-generator', icon: WandSparkles },
+				{ label: 'Templates', href: '/sample-generator/templates', icon: Layers },
+				{ label: 'Reports', href: '/reports', icon: FileText },
+			],
+		},
+		{
+			title: 'Insights',
+			items: [
+				{ label: 'Rankings', href: '/rankings', icon: Trophy },
+				{ label: 'Statistics', href: '/statistics', icon: ChartColumn },
+				{ label: 'Docs', href: '/docs', icon: BookOpen },
+			],
+		},
+	];
+
+	function isActive(href: string): boolean {
+		const pathname = page.url?.pathname ?? '/';
+		if (href === '/') return pathname === '/';
+		return pathname === href || pathname.startsWith(href + '/');
 	}
 
 	let { auth }: { auth: AuthState } = $props();
@@ -134,15 +195,76 @@
 <svelte:window onclick={handleWindowClick} onkeydown={handleKeydown} />
 
 <header
-	class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6"
+	class="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4 md:gap-4 md:px-6"
 >
-	<button
-		class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden"
-		onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-	>
-		<PanelLeft class="h-5 w-5" />
-		<span class="sr-only">Toggle menu</span>
-	</button>
+	<!-- Mobile sidebar trigger -->
+	<Sheet.Root bind:open={mobileMenuOpen}>
+		<Sheet.Trigger
+			class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden"
+		>
+			<PanelLeft class="h-5 w-5" />
+			<span class="sr-only">Toggle menu</span>
+		</Sheet.Trigger>
+		<Sheet.Content side="left" class="w-72 p-0" showClose={false}>
+			<!-- Mobile nav header -->
+			<div class="flex h-14 items-center justify-between border-b px-4">
+				<a href="/" class="flex items-center gap-2" onclick={() => (mobileMenuOpen = false)}>
+					<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+						<FlaskConical class="h-4 w-4" />
+					</div>
+					<span class="font-semibold">LLM Lab</span>
+				</a>
+				<button
+					class="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+					onclick={() => (mobileMenuOpen = false)}
+				>
+					<X class="h-4 w-4" />
+				</button>
+			</div>
+
+			<!-- Mobile nav sections -->
+			<nav class="flex-1 overflow-y-auto py-3">
+				{#each navSections as section (section.title)}
+					<div class="px-4 pt-4 pb-1.5">
+						<span class="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/60">
+							{section.title}
+						</span>
+					</div>
+					<div class="flex flex-col gap-0.5 px-3">
+						{#each section.items as item (item.href)}
+							<a
+								href={item.href}
+								class={cn(
+									'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+									isActive(item.href)
+										? 'bg-accent text-accent-foreground font-medium'
+										: 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+								)}
+								onclick={() => (mobileMenuOpen = false)}
+							>
+								<item.icon class="h-4 w-4 shrink-0" />
+								{item.label}
+							</a>
+						{/each}
+					</div>
+				{/each}
+			</nav>
+
+			<!-- Mobile nav footer -->
+			<div class="border-t px-4 py-3">
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2.5">
+						<div class="relative flex h-2 w-2 shrink-0">
+							<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+							<span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+						</div>
+						<span class="text-xs text-muted-foreground">System Online</span>
+					</div>
+					<ThemeToggle />
+				</div>
+			</div>
+		</Sheet.Content>
+	</Sheet.Root>
 
 	<a href="/" class="flex items-center gap-2 font-semibold">
 		<FlaskConical class="h-5 w-5 text-primary" />

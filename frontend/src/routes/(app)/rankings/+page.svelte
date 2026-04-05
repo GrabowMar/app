@@ -84,10 +84,10 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight">Model Rankings</h1>
-			<p class="mt-1 text-sm text-muted-foreground">Compare model performance using the Model Scoring System (MSS).</p>
+			<p class="mt-1 text-xs sm:text-sm text-muted-foreground">Compare model performance using the Model Scoring System (MSS).</p>
 		</div>
 		<div class="flex gap-2">
 			<Button variant="outline" size="sm" disabled>
@@ -133,12 +133,12 @@
 	</Card.Root>
 
 	<!-- Filters -->
-	<div class="flex flex-wrap items-center gap-3">
-		<div class="relative flex-1 max-w-sm">
+	<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+		<div class="relative w-full sm:flex-1 sm:max-w-sm">
 			<Search class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
 			<Input bind:value={searchQuery} placeholder="Search models..." class="h-9 pl-8 text-sm" />
 		</div>
-		<select bind:value={providerFilter} class="h-9 rounded-md border bg-background px-3 text-sm">
+		<select bind:value={providerFilter} class="h-9 w-full sm:w-auto rounded-md border bg-background px-3 text-sm">
 			<option value="all">All Providers</option>
 			{#each providers as p}
 				<option value={p}>{p}</option>
@@ -158,7 +158,8 @@
 			</div>
 		</Card.Header>
 		<Card.Content class="p-0 pt-4">
-			<div class="overflow-x-auto">
+			<!-- Desktop table (768px+) -->
+			<div class="hidden md:block overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b bg-muted/30">
@@ -218,6 +219,69 @@
 						{/each}
 					</tbody>
 				</table>
+			</div>
+
+			<!-- Mobile card view (below 768px) -->
+			<div class="md:hidden space-y-3 px-4 pb-4">
+				{#each filteredModels() as model, i}
+					<div class="bg-card border rounded-lg p-4 {i < 3 ? 'border-amber-500/30' : ''} {selectedModels.has(model.slug) ? 'ring-1 ring-inset ring-primary/40' : ''}">
+						<!-- Card header: rank, model, provider -->
+						<div class="flex items-center gap-3">
+							<input type="checkbox" checked={selectedModels.has(model.slug)} onchange={() => toggleSelect(model.slug)} class="rounded shrink-0" />
+							<div class="flex items-center gap-1.5 shrink-0">
+								{#if i < 3}
+									<Medal class="h-5 w-5 {i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : 'text-amber-700'}" />
+								{:else}
+									<span class="flex h-5 w-5 items-center justify-center text-xs font-bold text-muted-foreground">#{i + 1}</span>
+								{/if}
+							</div>
+							<div class="min-w-0 flex-1">
+								<a href="/models/{model.slug}" class="font-medium text-sm hover:underline truncate block">{model.name}</a>
+								<Badge variant="outline" class="mt-0.5 text-[10px]">{model.provider}</Badge>
+							</div>
+							<div class="text-right shrink-0">
+								<div class="text-[10px] font-medium text-muted-foreground">MSS</div>
+								<div class="text-lg font-bold font-mono {scoreColor(model.mss, 100)}">{model.mss.toFixed(1)}</div>
+							</div>
+						</div>
+
+						<!-- Card body: score grid -->
+						<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">Security</span>
+								<span class="text-xs font-mono font-medium {scoreColor(model.security)}">{model.security.toFixed(1)}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">Performance</span>
+								<span class="text-xs font-mono font-medium {scoreColor(model.performance, 100)}">{model.performance}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">Quality</span>
+								<span class="text-xs font-mono font-medium {scoreColor(model.quality)}">{model.quality.toFixed(1)}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">AI Review</span>
+								<span class="text-xs font-mono font-medium {scoreColor(model.ai)}">{model.ai.toFixed(1)}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">HumanEval</span>
+								<span class="text-xs font-mono font-medium">{model.humaneval?.toFixed(1) ?? '—'}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">MBPP+</span>
+								<span class="text-xs font-mono font-medium">{model.mbpp?.toFixed(1) ?? '—'}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">SWE-bench</span>
+								<span class="text-xs font-mono font-medium">{model.swebench?.toFixed(1) ?? '—'}</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground">Apps</span>
+								<span class="text-xs font-mono font-medium text-muted-foreground">{model.apps}</span>
+							</div>
+						</div>
+					</div>
+				{/each}
 			</div>
 		</Card.Content>
 	</Card.Root>
