@@ -54,6 +54,9 @@
 	let rawJsonOpen = $state(false);
 	let calcInputTokens = $state(1000);
 	let calcOutputTokens = $state(1000);
+	let metaOpenRouter = $state(false);
+	let metaEnriched = $state(false);
+	let capMatrixExpanded = $state(false);
 	let relatedModels = $state<LLMModelSummary[]>([]);
 	let relatedScrollEl = $state<HTMLDivElement | null>(null);
 
@@ -380,15 +383,15 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<Button variant="outline" size="sm" href="https://openrouter.ai/models/{model.model_id}" target="_blank" rel="noopener noreferrer" class="gap-1.5">
 							<Globe class="h-3.5 w-3.5" />
-							OpenRouter
+							<span class="hidden sm:inline">OpenRouter</span>
 						</Button>
 						<Button variant="outline" size="sm" disabled>
-							<Sparkles class="mr-2 h-3.5 w-3.5" />
-							Generate App
+							<Sparkles class="h-3.5 w-3.5" />
+							<span class="hidden sm:inline ml-1">Generate App</span>
 						</Button>
 						<Button variant="outline" size="sm" href="/models/compare?models={slug}">
-							<GitCompareArrows class="mr-2 h-3.5 w-3.5" />
-							Compare
+							<GitCompareArrows class="h-3.5 w-3.5" />
+							<span class="hidden sm:inline ml-1">Compare</span>
 						</Button>
 						<Button variant="ghost" size="icon" class="h-8 w-8" onclick={load}>
 							<RefreshCw class="h-3.5 w-3.5" />
@@ -441,7 +444,7 @@
 			<div class="flex flex-nowrap px-4 md:px-6 overflow-x-auto scrollbar-none">
 				{#each sections as section}
 					<button
-						class="relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors
+						class="relative flex items-center gap-2 px-3 py-3 text-xs sm:text-sm sm:px-4 font-medium whitespace-nowrap transition-colors
 							{activeSection === section.id
 								? `${section.color}`
 								: 'text-muted-foreground hover:text-foreground'}"
@@ -468,7 +471,7 @@
 							<Info class="h-4 w-4 text-primary" />
 							<span class="text-xs font-bold uppercase text-muted-foreground">Identity</span>
 						</div>
-						<div class="grid grid-cols-2 gap-3">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div>
 								<div class="text-xs text-muted-foreground">Display Name</div>
 								<div class="text-sm font-medium truncate" title={model.model_name}>{model.model_name}</div>
@@ -676,18 +679,29 @@
 
 						<!-- Capability Matrix -->
 						{#if Object.keys(capMatrix).length}
+							{@const sortedEntries = Object.entries(capMatrix).sort(([a], [b]) => a.localeCompare(b))}
+							{@const visibleEntries = capMatrixExpanded ? sortedEntries : sortedEntries.slice(0, 8)}
 							<div class="md:col-span-2">
 								<div class="flex items-center gap-2 mb-2">
 									<CircleCheck class="h-3.5 w-3.5 text-emerald-500" />
 									<span class="text-xs font-bold uppercase text-muted-foreground">Capability Matrix</span>
 								</div>
 								<div class="flex flex-wrap gap-1">
-									{#each Object.entries(capMatrix).sort(([a], [b]) => a.localeCompare(b)) as [key, value]}
+									{#each visibleEntries as [key, value]}
 										<Badge variant="outline" class="{value ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'opacity-40'} text-xs gap-1">
 											{#if value}<Check class="h-2.5 w-2.5" />{:else}<X class="h-2.5 w-2.5" />{/if}
 											{key.replace(/_/g, ' ')}
 										</Badge>
 									{/each}
+									{#if !capMatrixExpanded && sortedEntries.length > 8}
+										<button class="text-xs text-primary hover:underline ml-1" onclick={() => capMatrixExpanded = true}>
+											Show {sortedEntries.length - 8} more
+										</button>
+									{:else if capMatrixExpanded && sortedEntries.length > 8}
+										<button class="text-xs text-primary hover:underline ml-1" onclick={() => capMatrixExpanded = false}>
+											Show less
+										</button>
+									{/if}
 								</div>
 							</div>
 						{/if}
@@ -878,24 +892,24 @@
 			<!-- Quick Reference Bar -->
 			<Card.Root class="border-l-4 border-l-purple-500">
 				<Card.Content class="p-3">
-					<div class="flex flex-wrap items-center gap-3 text-sm">
+					<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
 						<div class="flex items-center gap-1">
-							<span class="text-xs text-muted-foreground">Model ID:</span>
-							<code class="text-xs">{model.model_id}</code>
+							<span class="text-xs text-muted-foreground">ID:</span>
+							<code class="text-xs truncate max-w-[180px] sm:max-w-none">{model.model_id}</code>
 						</div>
-						<Separator orientation="vertical" class="h-4" />
-						<div class="flex items-center gap-1">
+						<Separator orientation="vertical" class="h-4 hidden sm:block" />
+						<div class="hidden sm:flex items-center gap-1">
 							<span class="text-xs text-muted-foreground">DB:</span>
 							<span class="text-xs font-bold">#{model.id}</span>
 						</div>
-						<Separator orientation="vertical" class="h-4" />
-						<div class="flex items-center gap-1">
+						<Separator orientation="vertical" class="h-4 hidden sm:block" />
+						<div class="hidden sm:flex items-center gap-1">
 							<span class="text-xs text-muted-foreground">Provider:</span>
 							<Badge variant="secondary" class="text-xs">{model.provider}</Badge>
 						</div>
 						{#if model.canonical_slug}
-							<Separator orientation="vertical" class="h-4" />
-							<div class="flex items-center gap-1">
+							<Separator orientation="vertical" class="h-4 hidden sm:block" />
+							<div class="hidden sm:flex items-center gap-1">
 								<span class="text-xs text-muted-foreground">Slug:</span>
 								<code class="text-xs">{model.canonical_slug}</code>
 							</div>
@@ -920,13 +934,14 @@
 				{#if Object.keys(caps).length}
 					<Card.Root>
 						<Card.Header class="py-3 px-4">
-							<div class="flex items-center gap-2">
+							<button class="flex w-full items-center gap-2 text-left md:cursor-default" onclick={() => metaOpenRouter = !metaOpenRouter}>
 								<Code class="h-4 w-4 text-purple-500" />
 								<span class="text-sm font-bold">OpenRouter Metadata</span>
 								<Badge variant="outline" class="text-xs">{Object.keys(caps).length} keys</Badge>
-							</div>
+								<ChevronDown class="h-4 w-4 text-muted-foreground ml-auto transition-transform md:hidden {metaOpenRouter ? 'rotate-180' : ''}" />
+							</button>
 						</Card.Header>
-						<Card.Content class="p-0">
+						<Card.Content class="p-0 hidden md:block">
 							<div class="max-h-[300px] overflow-y-auto">
 								<table class="w-full">
 									<tbody class="divide-y">
@@ -940,6 +955,22 @@
 								</table>
 							</div>
 						</Card.Content>
+						{#if metaOpenRouter}
+							<Card.Content class="p-0 md:hidden">
+								<div class="max-h-[300px] overflow-y-auto">
+									<table class="w-full">
+										<tbody class="divide-y">
+											{#each Object.entries(caps).filter(([, v]) => v !== null && v !== '') as [key, value]}
+												<tr class="hover:bg-muted/30">
+													<td class="px-3 py-1.5 text-xs text-muted-foreground w-2/5"><code>{key}</code></td>
+													<td class="px-3 py-1.5 text-xs">{formatMetaValue(value)}</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+							</Card.Content>
+						{/if}
 					</Card.Root>
 				{/if}
 
@@ -947,13 +978,14 @@
 				{#if Object.keys(meta).length}
 					<Card.Root>
 						<Card.Header class="py-3 px-4">
-							<div class="flex items-center gap-2">
+							<button class="flex w-full items-center gap-2 text-left md:cursor-default" onclick={() => metaEnriched = !metaEnriched}>
 								<Layers class="h-4 w-4 text-emerald-500" />
 								<span class="text-sm font-bold">Enriched Dataset</span>
 								<Badge variant="outline" class="text-xs">{Object.keys(meta).length} keys</Badge>
-							</div>
+								<ChevronDown class="h-4 w-4 text-muted-foreground ml-auto transition-transform md:hidden {metaEnriched ? 'rotate-180' : ''}" />
+							</button>
 						</Card.Header>
-						<Card.Content class="p-0">
+						<Card.Content class="p-0 hidden md:block">
 							<div class="max-h-[300px] overflow-y-auto">
 								<table class="w-full">
 									<tbody class="divide-y">
@@ -967,6 +999,22 @@
 								</table>
 							</div>
 						</Card.Content>
+						{#if metaEnriched}
+							<Card.Content class="p-0 md:hidden">
+								<div class="max-h-[300px] overflow-y-auto">
+									<table class="w-full">
+										<tbody class="divide-y">
+											{#each Object.entries(meta).filter(([, v]) => v !== null && v !== '') as [key, value]}
+												<tr class="hover:bg-muted/30">
+													<td class="px-3 py-1.5 text-xs text-muted-foreground w-2/5"><code>{key}</code></td>
+													<td class="px-3 py-1.5 text-xs">{formatMetaValue(value)}</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+							</Card.Content>
+						{/if}
 					</Card.Root>
 				{/if}
 			</div>
