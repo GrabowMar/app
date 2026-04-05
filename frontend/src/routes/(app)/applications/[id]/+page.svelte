@@ -533,35 +533,35 @@ View Details
 {#if job.status === 'running'}<span class="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse inline-block"></span>{/if}
 {job.status}
 </Badge>
-<Badge variant="outline" class="text-xs">{provider}</Badge>
+<Badge variant="outline" class="text-xs hidden sm:inline-flex">{provider}</Badge>
 {#if job.template_name}
-<Badge variant="outline" class="text-xs">{job.template_name}</Badge>
+<Badge variant="outline" class="text-xs hidden sm:inline-flex">{job.template_name}</Badge>
 {/if}
 {#if job.scaffolding_name}
-<Badge variant="outline" class="text-xs bg-purple-500/10 text-purple-400 border-purple-500/30">{job.scaffolding_name}</Badge>
+<Badge variant="outline" class="text-xs hidden sm:inline-flex bg-purple-500/10 text-purple-400 border-purple-500/30">{job.scaffolding_name}</Badge>
 {/if}
 {#if job.batch_name}
-<Badge variant="outline" class="text-xs">
+<Badge variant="outline" class="text-xs hidden sm:inline-flex">
 <GitBranch class="h-3 w-3 mr-1" />{job.batch_name}
 </Badge>
 {/if}
 </div>
-<p class="text-xs text-muted-foreground mt-1 font-mono">{job.model_id_str} · {job.id.substring(0, 8)}</p>
+<p class="text-xs text-muted-foreground mt-1 font-mono truncate max-w-full">{job.model_id_str} · {job.id.substring(0, 8)}</p>
 </div>
 </div>
 <!-- Action buttons -->
 <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
 <Button variant="outline" size="sm" onclick={() => copyText(job!.id, 'Copied Job ID')} title="Copy Job ID">
-<Copy class="h-3.5 w-3.5 mr-1.5" />ID
+<Copy class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">ID</span>
 </Button>
 <Button variant="outline" size="sm" onclick={handleExport} title="Export as JSON">
-<Download class="h-3.5 w-3.5 mr-1.5" />Export
+<Download class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Export</span>
 </Button>
 <Button variant="outline" size="sm" onclick={downloadCode} title="Download generated code">
-<FileCode class="h-3.5 w-3.5 mr-1.5" />Code
+<FileCode class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Code</span>
 </Button>
 <Button size="sm" href="/sample-generator" title="Generate with same settings">
-<RefreshCw class="h-3.5 w-3.5 mr-1.5" />Re-generate
+<RefreshCw class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Re-generate</span>
 </Button>
 </div>
 </div>
@@ -569,30 +569,30 @@ View Details
 </Card.Root>
 
 <!-- KPI Row -->
-<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-<div class="rounded-lg border bg-card p-3 text-center">
-<div class="text-xs text-muted-foreground mb-1">Duration</div>
-<div class="text-lg font-semibold">{fmtDur(job.duration_seconds)}</div>
+<div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
+<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Duration</div>
+<div class="text-sm sm:text-lg font-semibold">{fmtDur(job.duration_seconds)}</div>
 </div>
-<div class="rounded-lg border bg-card p-3 text-center">
-<div class="text-xs text-muted-foreground mb-1">Tokens</div>
-<div class="text-lg font-semibold">{fmt(costData.totalTokens, 0)}</div>
+<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Tokens</div>
+<div class="text-sm sm:text-lg font-semibold">{fmt(costData.totalTokens, 0)}</div>
 </div>
-<div class="rounded-lg border bg-card p-3 text-center">
-<div class="text-xs text-muted-foreground mb-1">Cost</div>
-<div class="text-lg font-semibold">{fmtCost(costData.totalCost)}</div>
+<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Cost</div>
+<div class="text-sm sm:text-lg font-semibold">{fmtCost(costData.totalCost)}</div>
 </div>
-<div class="rounded-lg border bg-card p-3 text-center">
-<div class="text-xs text-muted-foreground mb-1">Temperature</div>
-<div class="text-lg font-semibold">{job.temperature}</div>
+<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Temperature</div>
+<div class="text-sm sm:text-lg font-semibold">{job.temperature}</div>
 </div>
-<div class="rounded-lg border bg-card p-3 text-center">
-<div class="text-xs text-muted-foreground mb-1">Max Tokens</div>
-<div class="text-lg font-semibold">{fmt(job.max_tokens, 0)}</div>
+<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Max Tokens</div>
+<div class="text-sm sm:text-lg font-semibold">{fmt(job.max_tokens, 0)}</div>
 </div>
-<div class="rounded-lg border bg-card p-3 text-center">
-<div class="text-xs text-muted-foreground mb-1">Lines of Code</div>
-<div class="text-lg font-semibold">{fmt(codeFootprint?.totalLines ?? 0, 0)}</div>
+<div class="rounded-lg border bg-card p-2 sm:p-3 text-center">
+<div class="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Lines of Code</div>
+<div class="text-sm sm:text-lg font-semibold">{fmt(codeFootprint?.totalLines ?? 0, 0)}</div>
 </div>
 </div>
 
@@ -602,7 +602,7 @@ View Details
 {#each sections as sec}
 {@const SecIcon = sec.icon}
 <button
-class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {activeSection === sec.id ? 'bg-primary/10 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
+class="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {activeSection === sec.id ? 'bg-primary/10 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
 onclick={() => scrollToSection(sec.id)}
 >
 <SecIcon class="h-3.5 w-3.5" />
@@ -617,7 +617,7 @@ onclick={() => scrollToSection(sec.id)}
       <h2 class="text-lg font-semibold flex items-center gap-2"><Eye class="h-5 w-5" /> Overview</h2>
 
       <!-- 4-Card Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <!-- Card 1: Identity -->
         <Card.Root>
           <Card.Header class="pb-2"><Card.Title class="text-sm font-medium">Identity</Card.Title></Card.Header>
@@ -805,10 +805,10 @@ onclick={() => scrollToSection(sec.id)}
                   {#each parsePromptSegments(promptEntries[selectedPromptIdx]?.content ?? '') as segment}
                     {#if segment.type !== 'default'}
                       <div class="border-l-2 pl-3 mb-1.5 py-0.5 rounded-r {segmentBorderColors[segment.type] ?? ''}">
-                        <pre class="text-xs font-mono whitespace-pre-wrap break-words text-foreground/90">{segment.content}</pre>
+                        <pre class="text-xs font-mono whitespace-pre-wrap break-all overflow-x-auto text-foreground/90">{segment.content}</pre>
                       </div>
                     {:else}
-                      <pre class="text-xs font-mono whitespace-pre-wrap break-words text-foreground/90 mb-1.5">{segment.content}</pre>
+                      <pre class="text-xs font-mono whitespace-pre-wrap break-all overflow-x-auto text-foreground/90 mb-1.5">{segment.content}</pre>
                     {/if}
                   {/each}
                 </div>
@@ -894,8 +894,8 @@ onclick={() => scrollToSection(sec.id)}
                     </Button>
                   </div>
                 </div>
-                <div class="flex-1 overflow-auto bg-zinc-950">
-                  <pre class="p-4 text-xs font-mono text-zinc-300 leading-relaxed">{#each (virtualFiles[selectedFileIdx]?.code ?? '').split('\n') as line, ln}<span class="inline-block w-10 text-right mr-4 text-zinc-600 select-none">{ln + 1}</span>{line}
+                <div class="flex-1 overflow-auto bg-zinc-950 max-w-full">
+                  <pre class="p-4 text-xs font-mono text-zinc-300 leading-relaxed overflow-x-auto">{#each (virtualFiles[selectedFileIdx]?.code ?? '').split('\n') as line, ln}<span class="inline-block w-10 text-right mr-4 text-zinc-600 select-none">{ln + 1}</span>{line}
 {/each}</pre>
                 </div>
               </div>
@@ -1134,7 +1134,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 <Badge variant="outline" class="text-[10px] {msg.role === 'system' ? 'bg-blue-500/20 text-blue-400' : msg.role === 'user' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-purple-500/20 text-purple-400'}">{msg.role}</Badge>
 <span class="text-xs text-muted-foreground">{(msg.content?.length ?? 0)} chars</span>
 </div>
-<pre class="p-3 text-xs font-mono whitespace-pre-wrap max-h-48 overflow-auto">{msg.content ?? ''}</pre>
+<pre class="p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto">{msg.content ?? ''}</pre>
 </div>
 {/each}
 </div>
@@ -1147,7 +1147,7 @@ Admin: {backendScan.has_admin ? 'Detected' : 'None'}
 <Badge variant="outline" class="text-[10px] bg-purple-500/20 text-purple-400">assistant</Badge>
 <span class="text-xs text-muted-foreground">finish: {art.response_payload.choices[0]?.finish_reason ?? '—'}</span>
 </div>
-<pre class="p-3 text-xs font-mono whitespace-pre-wrap max-h-48 overflow-auto">{art.response_payload.choices[0]?.message?.content ?? '(empty)'}</pre>
+<pre class="p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto">{art.response_payload.choices[0]?.message?.content ?? '(empty)'}</pre>
 </div>
 </div>
 {/if}
