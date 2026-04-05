@@ -200,7 +200,7 @@
 	<!-- Mobile sidebar trigger -->
 	<Sheet.Root bind:open={mobileMenuOpen}>
 		<Sheet.Trigger
-			class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden"
+			class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden touch-mobile-show"
 		>
 			<PanelLeft class="h-5 w-5" />
 			<span class="sr-only">Toggle menu</span>
@@ -268,11 +268,11 @@
 
 	<a href="/" class="flex items-center gap-2 font-semibold">
 		<FlaskConical class="h-5 w-5 text-primary" />
-		<span class="hidden md:inline">LLM Lab</span>
+		<span class="hidden md:inline touch-mobile-hide-text">LLM Lab</span>
 	</a>
 
 	{#if breadcrumbSegments.length > 0}
-		<nav aria-label="Breadcrumb" class="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
+		<nav aria-label="Breadcrumb" class="hidden items-center gap-1 text-sm text-muted-foreground md:flex touch-mobile-hide-nav">
 			<ChevronRight class="h-4 w-4" />
 			{#each breadcrumbSegments as segment, i}
 				{#if i > 0}

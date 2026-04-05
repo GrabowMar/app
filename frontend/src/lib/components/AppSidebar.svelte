@@ -71,7 +71,7 @@
 
 <aside
 	class={cn(
-		'hidden shrink-0 border-r bg-sidebar md:flex md:flex-col transition-all duration-200',
+		'hidden shrink-0 border-r bg-sidebar md:flex md:flex-col transition-all duration-200 touch-mobile-hide',
 		prefs.sidebarCollapsed ? 'w-16' : 'w-64'
 	)}
 >

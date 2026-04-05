@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @source "./lib";
+@source "./routes";
 
 @import "tw-animate-css";
 
@@ -406,6 +407,31 @@
   }
   @media (min-width: 768px) {
     .show-mobile-only {
+      display: none !important;
+    }
+  }
+
+  /* ── Touch-device overrides ────────────────────────────────────
+     When a phone uses Chrome's "Request Desktop Site", the viewport
+     jumps to ~980 px, activating md: breakpoints and showing the
+     desktop sidebar.  These rules detect touch-primary devices and
+     force the mobile layout regardless of reported viewport width.
+     ──────────────────────────────────────────────────────────────── */
+  @media (hover: none) and (pointer: coarse) {
+    /* Force-hide the desktop sidebar */
+    .touch-mobile-hide {
+      display: none !important;
+    }
+    /* Force-show the mobile hamburger trigger */
+    .touch-mobile-show {
+      display: inline-flex !important;
+    }
+    /* Force-hide desktop-only breadcrumbs */
+    .touch-mobile-hide-nav {
+      display: none !important;
+    }
+    /* Force-show the "LLM Lab" text next to the flask icon on mobile */
+    .touch-mobile-hide-text {
       display: none !important;
     }
   }
