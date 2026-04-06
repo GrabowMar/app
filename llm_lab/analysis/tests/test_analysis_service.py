@@ -65,7 +65,7 @@ def _mock_analyzer(name: str, analyzer_type: str, output: AnalyzerOutput):
 
 class TestAnalysisService:
     @patch(
-        "llm_lab.analysis.services.analysis_service.AnalyzerRegistry.get_instance",
+        "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
     @patch(
         "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
@@ -102,7 +102,7 @@ class TestAnalysisService:
         assert findings.first().title == "Security issue"
 
     @patch(
-        "llm_lab.analysis.services.analysis_service.AnalyzerRegistry.get_instance",
+        "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
     @patch(
         "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
@@ -130,7 +130,7 @@ class TestAnalysisService:
         assert results.filter(status=AnalysisResult.Status.FAILED).count() == 1
 
     @patch(
-        "llm_lab.analysis.services.analysis_service.AnalyzerRegistry.get_instance",
+        "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
     @patch(
         "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
@@ -175,7 +175,7 @@ class TestAnalysisService:
         assert "No analyzers" in task.error_message
 
     @patch(
-        "llm_lab.analysis.services.analysis_service.AnalyzerRegistry.get_instance",
+        "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
     @patch(
         "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
@@ -210,7 +210,7 @@ class TestAnalysisService:
         assert skipped.first().analyzer_name == "unknown_tool"
 
     @patch(
-        "llm_lab.analysis.services.analysis_service.AnalyzerRegistry.get_instance",
+        "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
     @patch(
         "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
