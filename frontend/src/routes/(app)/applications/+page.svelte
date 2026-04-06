@@ -4,6 +4,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import {
 		getGenerationJobs,
+		cancelGenerationJob,
+		deleteGenerationJob,
+		retryGenerationJob,
 		type GenerationJobList,
 		type PaginatedJobs,
 	} from '$lib/api/client';
@@ -29,6 +32,10 @@
 	import Copy from '@lucide/svelte/icons/copy';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
+	import Ban from '@lucide/svelte/icons/ban';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+	import { goto } from '$app/navigation';
 
 	let loading = $state(true);
 	let refreshing = $state(false);
@@ -124,6 +131,45 @@
 	function copyId(id: string) {
 		navigator.clipboard.writeText(id);
 		toast.success('Copied job ID');
+	}
+
+	async function handleCancel(id: string) {
+		try {
+			const result = await cancelGenerationJob(id);
+			if (result.success) {
+				toast.success('Job cancelled');
+				await fetchJobs();
+			} else {
+				toast.error('Cannot cancel this job');
+			}
+		} catch {
+			toast.error('Failed to cancel job');
+		}
+	}
+
+	async function handleDelete(id: string) {
+		if (!confirm('Are you sure you want to delete this job? This cannot be undone.')) return;
+		try {
+			const result = await deleteGenerationJob(id);
+			if (result.success) {
+				toast.success('Job deleted');
+				await fetchJobs();
+			} else {
+				toast.error('Cannot delete this job');
+			}
+		} catch {
+			toast.error('Failed to delete job');
+		}
+	}
+
+	async function handleRetry(id: string) {
+		try {
+			const newJob = await retryGenerationJob(id);
+			toast.success('Job retried — new job created');
+			goto(`/applications/${newJob.id}`);
+		} catch {
+			toast.error('Failed to retry job');
+		}
 	}
 
 	const filteredItems = $derived(
@@ -370,14 +416,29 @@
 												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
 													<Eye class="h-3.5 w-3.5" />
 												</Button>
+												{#if job.status === 'failed' || job.status === 'cancelled'}
+													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Retry" onclick={() => handleRetry(job.id)}>
+														<RotateCcw class="h-3.5 w-3.5 text-blue-400" />
+													</Button>
+												{/if}
 												{#if job.status === 'failed'}
 													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
 														<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
 													</Button>
 												{/if}
+												{#if job.status === 'pending' || job.status === 'running'}
+													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Cancel" onclick={() => handleCancel(job.id)}>
+														<Ban class="h-3.5 w-3.5 text-amber-400" />
+													</Button>
+												{/if}
 												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Copy ID" onclick={() => copyId(job.id)}>
 													<Copy class="h-3.5 w-3.5" />
 												</Button>
+												{#if job.status !== 'running'}
+													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Delete" onclick={() => handleDelete(job.id)}>
+														<Trash2 class="h-3.5 w-3.5 text-red-400" />
+													</Button>
+												{/if}
 											</div>
 										</td>
 									</tr>
@@ -452,14 +513,29 @@
 							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
 								<Eye class="h-3.5 w-3.5" />
 							</Button>
+							{#if job.status === 'failed' || job.status === 'cancelled'}
+								<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Retry" onclick={() => handleRetry(job.id)}>
+									<RotateCcw class="h-3.5 w-3.5 text-blue-400" />
+								</Button>
+							{/if}
 							{#if job.status === 'failed'}
 								<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
 									<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
 								</Button>
 							{/if}
+							{#if job.status === 'pending' || job.status === 'running'}
+								<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Cancel" onclick={() => handleCancel(job.id)}>
+									<Ban class="h-3.5 w-3.5 text-amber-400" />
+								</Button>
+							{/if}
 							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Copy ID" onclick={() => copyId(job.id)}>
 								<Copy class="h-3.5 w-3.5" />
 							</Button>
+							{#if job.status !== 'running'}
+								<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Delete" onclick={() => handleDelete(job.id)}>
+									<Trash2 class="h-3.5 w-3.5 text-red-400" />
+								</Button>
+							{/if}
 						</div>
 					</div>
 				</div>

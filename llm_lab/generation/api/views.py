@@ -354,6 +354,60 @@ def cancel_job(request, job_id: str):
     }
 
 
+@router.delete("/jobs/{job_id}/")
+def delete_job(request, job_id: str):
+    """Delete a job that is not currently running."""
+    job = get_object_or_404(GenerationJob, id=job_id, created_by=request.auth)
+    if job.status == "running":
+        return {"success": False, "message": "Cannot delete a running job. Cancel it first."}
+    job.delete()
+    return {"success": True}
+
+
+@router.post("/jobs/{job_id}/retry/", response=GenerationJobSchema)
+def retry_job(request, job_id: str):
+    """Re-create a failed/cancelled job with the same parameters."""
+    original = get_object_or_404(
+        GenerationJob.objects.select_related(
+            "model",
+            "app_requirement",
+            "scaffolding_template",
+            "backend_prompt_template",
+            "frontend_prompt_template",
+        ),
+        id=job_id,
+        created_by=request.auth,
+    )
+    if original.status not in ("failed", "cancelled"):
+        return router.create_response(
+            request,
+            {"message": "Only failed or cancelled jobs can be retried"},
+            status=400,
+        )
+    new_job = GenerationJob.objects.create(
+        mode=original.mode,
+        created_by=request.auth,
+        model=original.model,
+        scaffolding_template=original.scaffolding_template,
+        app_requirement=original.app_requirement,
+        backend_prompt_template=original.backend_prompt_template,
+        frontend_prompt_template=original.frontend_prompt_template,
+        custom_system_prompt=original.custom_system_prompt,
+        custom_user_prompt=original.custom_user_prompt,
+        temperature=original.temperature,
+        max_tokens=original.max_tokens,
+        copilot_description=original.copilot_description,
+        copilot_max_iterations=original.copilot_max_iterations,
+        copilot_use_open_source=original.copilot_use_open_source,
+    )
+    _dispatch_job(new_job)
+    return GenerationJobSchema.from_orm(
+        GenerationJob.objects.select_related("model", "app_requirement", "scaffolding_template").get(
+            id=new_job.id
+        )
+    )
+
+
 @router.get("/jobs/{job_id}/artifacts/", response=list[GenerationArtifactSchema])
 def get_job_artifacts(request, job_id: str):
     job = get_object_or_404(GenerationJob, id=job_id, created_by=request.auth)

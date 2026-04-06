@@ -1,5 +1,6 @@
 <script lang="ts">
 import { page } from '$app/stores';
+import { goto } from '$app/navigation';
 import * as Card from '$lib/components/ui/card';
 import { Badge } from '$lib/components/ui/badge';
 import { Button } from '$lib/components/ui/button';
@@ -8,6 +9,9 @@ getGenerationJob,
 getJobArtifacts,
 getCopilotIterations,
 exportGenerationJob,
+cancelGenerationJob,
+deleteGenerationJob,
+retryGenerationJob,
 type GenerationJob,
 type GenerationArtifact,
 type CopilotIteration,
@@ -49,6 +53,9 @@ import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 import Zap from '@lucide/svelte/icons/zap';
 import Wrench from '@lucide/svelte/icons/wrench';
 import FileText from '@lucide/svelte/icons/file-text';
+import Ban from '@lucide/svelte/icons/ban';
+import Trash2 from '@lucide/svelte/icons/trash-2';
+import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 
 const jobId = $derived($page.params.id);
 let loading = $state(true);
@@ -418,6 +425,48 @@ URL.revokeObjectURL(url);
 toast.success('Downloaded code files');
 }
 
+async function handleCancel() {
+if (!job) return;
+try {
+const result = await cancelGenerationJob(job.id);
+if (result.success) {
+toast.success('Job cancelled');
+job = { ...job, status: 'cancelled' };
+} else {
+toast.error('Cannot cancel this job');
+}
+} catch {
+toast.error('Failed to cancel job');
+}
+}
+
+async function handleDelete() {
+if (!job) return;
+if (!confirm('Are you sure you want to delete this job? This cannot be undone.')) return;
+try {
+const result = await deleteGenerationJob(job.id);
+if (result.success) {
+toast.success('Job deleted');
+goto('/applications');
+} else {
+toast.error('Cannot delete this job');
+}
+} catch {
+toast.error('Failed to delete job');
+}
+}
+
+async function handleRetry() {
+if (!job) return;
+try {
+const newJob = await retryGenerationJob(job.id);
+toast.success('Job retried — new job created');
+goto(`/applications/${newJob.id}`);
+} catch {
+toast.error('Failed to retry job');
+}
+}
+
 function toggleArtifact(id: number) {
 const next = new Set(expandedArtifacts);
 if (next.has(id)) next.delete(id);
@@ -551,6 +600,16 @@ View Details
 </div>
 <!-- Action buttons -->
 <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
+{#if job.status === 'pending' || job.status === 'running'}
+<Button variant="outline" size="sm" onclick={handleCancel} title="Cancel job" class="border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
+<Ban class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Cancel</span>
+</Button>
+{/if}
+{#if job.status === 'failed' || job.status === 'cancelled'}
+<Button variant="outline" size="sm" onclick={handleRetry} title="Retry job" class="border-blue-500/30 text-blue-400 hover:bg-blue-500/10">
+<RotateCcw class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Retry</span>
+</Button>
+{/if}
 <Button variant="outline" size="sm" onclick={() => copyText(job!.id, 'Copied Job ID')} title="Copy Job ID">
 <Copy class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">ID</span>
 </Button>
@@ -563,6 +622,11 @@ View Details
 <Button size="sm" href="/sample-generator" title="Generate with same settings">
 <RefreshCw class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Re-generate</span>
 </Button>
+{#if job.status !== 'running'}
+<Button variant="outline" size="sm" onclick={handleDelete} title="Delete job" class="border-red-500/30 text-red-400 hover:bg-red-500/10">
+<Trash2 class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Delete</span>
+</Button>
+{/if}
 </div>
 </div>
 </Card.Content>

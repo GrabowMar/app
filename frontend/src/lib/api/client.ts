@@ -529,6 +529,16 @@ export async function cancelGenerationJob(id: string): Promise<{ success: boolea
 	return res.json();
 }
 
+export async function deleteGenerationJob(id: string): Promise<{ success: boolean }> {
+	const res = await apiFetch(`/generation/jobs/${id}/`, { method: 'DELETE' });
+	return res.json();
+}
+
+export async function retryGenerationJob(id: string): Promise<GenerationJob> {
+	const res = await apiFetch(`/generation/jobs/${id}/retry/`, { method: 'POST' });
+	return res.json();
+}
+
 export async function getJobArtifacts(id: string): Promise<GenerationArtifact[]> {
 	const res = await apiFetch(`/generation/jobs/${id}/artifacts/`);
 	return res.json();
