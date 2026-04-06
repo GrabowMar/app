@@ -240,6 +240,37 @@ class TestListFindings:
 # ── List Analyzers ────────────────────────────────────────────────────
 
 
+class TestGetSingleResult:
+    def test_get_single_result(self, api_client, analysis_task):
+        result = AnalysisResultFactory(task=analysis_task, analyzer_name="bandit")
+        resp = api_client.get(
+            f"/api/analysis/tasks/{analysis_task.id}/results/{result.id}/",
+        )
+        assert resp.status_code == HTTPStatus.OK
+        data = resp.json()
+        assert data["analyzer_name"] == "bandit"
+
+
+class TestCreateTaskUnknownAnalyzer:
+    @patch("llm_lab.analysis.api.views._dispatch_task")
+    def test_create_task_unknown_analyzer(self, mock_dispatch, api_client):
+        payload = {
+            "name": "Bad Analysis",
+            "source_code": {"backend": "print('hi')"},
+            "analyzers": ["totally_fake_analyzer"],
+            "auto_start": False,
+        }
+        resp = api_client.post(
+            "/api/analysis/tasks/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+        data = resp.json()
+        assert "Unknown analyzers" in data["detail"]
+        mock_dispatch.assert_not_called()
+
+
 class TestListAnalyzers:
     def test_list_analyzers(self, api_client):
         resp = api_client.get("/api/analysis/analyzers/")
