@@ -15,6 +15,7 @@ from typing import ClassVar
 from .base import AnalyzerOutput
 from .base import BaseAnalyzer
 from .base import FindingData
+from .base import validate_target_url
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,10 @@ class LighthouseAnalyzer(BaseAnalyzer):
     # ------------------------------------------------------------------
 
     def _analyze_live(self, target_url: str) -> AnalyzerOutput:
+        valid, err = validate_target_url(target_url)
+        if not valid:
+            return AnalyzerOutput(error=f"Invalid target URL: {err}")
+
         has_npx = shutil.which("npx") is not None
         has_docker = shutil.which("docker") is not None
 

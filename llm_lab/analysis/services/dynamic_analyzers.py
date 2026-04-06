@@ -15,6 +15,7 @@ from typing import ClassVar
 from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
+from llm_lab.analysis.services.base import validate_target_url
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,10 @@ class ZAPAnalyzer(BaseAnalyzer):
         if not available:
             return AnalyzerOutput(error=f"ZAP unavailable: {msg}")
 
+        valid, err = validate_target_url(target_url)
+        if not valid:
+            return AnalyzerOutput(error=f"Invalid target URL: {err}")
+
         cmd = [
             "docker",
             "run",
@@ -403,6 +408,15 @@ class PortScanAnalyzer(BaseAnalyzer):
         ports: list[int] = config.get("ports", DEFAULT_SCAN_PORTS)
 
         if target_host:
+            blocked = (
+                "localhost",
+                "127.0.0.1",
+                "0.0.0.0",  # noqa: S104
+                "::1",
+                "169.254.169.254",
+            )
+            if target_host.lower() in blocked:
+                return AnalyzerOutput(error=f"Blocked host: {target_host}")
             return self._scan_host(target_host, ports)
         return self._analyze_static(code)
 
