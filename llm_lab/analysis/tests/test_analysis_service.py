@@ -67,10 +67,7 @@ class TestAnalysisService:
     @patch(
         "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
-    @patch(
-        "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
-    )
-    def test_execute_success(self, mock_ensure, mock_get_instance, task):
+    def test_execute_success(self, mock_get_instance, task):
         finding = _make_finding(severity="high", title="Security issue")
         bandit_output = _make_success_output([finding])
         eslint_output = _make_success_output()
@@ -104,10 +101,7 @@ class TestAnalysisService:
     @patch(
         "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
-    @patch(
-        "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
-    )
-    def test_execute_partial_failure(self, mock_ensure, mock_get_instance, task):
+    def test_execute_partial_failure(self, mock_get_instance, task):
         bandit_output = _make_success_output()
         eslint_output = _make_error_output("ESLint crashed")
 
@@ -132,10 +126,7 @@ class TestAnalysisService:
     @patch(
         "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
-    @patch(
-        "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
-    )
-    def test_execute_all_fail(self, mock_ensure, mock_get_instance, task):
+    def test_execute_all_fail(self, mock_get_instance, task):
         def side_effect(name):
             return {
                 "bandit": _mock_analyzer(
@@ -158,10 +149,7 @@ class TestAnalysisService:
         task.refresh_from_db()
         assert task.status == AnalysisTask.Status.FAILED
 
-    @patch(
-        "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
-    )
-    def test_execute_no_analyzers(self, mock_ensure):
+    def test_execute_no_analyzers(self):
         task = AnalysisTaskFactory(
             source_code={"backend": "print('hi')", "frontend": ""},
             configuration={"analyzers": [], "settings": {}},
@@ -177,10 +165,7 @@ class TestAnalysisService:
     @patch(
         "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
-    @patch(
-        "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
-    )
-    def test_execute_unknown_analyzer(self, mock_ensure, mock_get_instance):
+    def test_execute_unknown_analyzer(self, mock_get_instance):
         task = AnalysisTaskFactory(
             source_code={"backend": "print('hi')", "frontend": ""},
             configuration={
@@ -212,10 +197,7 @@ class TestAnalysisService:
     @patch(
         "llm_lab.analysis.services.result_service.AnalyzerRegistry.get_instance",
     )
-    @patch(
-        "llm_lab.analysis.services.analysis_service._ensure_analyzers_registered",
-    )
-    def test_aggregate_results(self, mock_ensure, mock_get_instance, task):
+    def test_aggregate_results(self, mock_get_instance, task):
         findings = [
             _make_finding(severity="critical", title="Critical bug"),
             _make_finding(severity="high", title="High issue"),

@@ -15,6 +15,8 @@ from typing import ClassVar
 from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
+from llm_lab.analysis.services.base import _safe_int
+from llm_lab.analysis.services.base import build_severity_counts
 from llm_lab.analysis.services.base import validate_target_url
 
 logger = logging.getLogger(__name__)
@@ -374,9 +376,7 @@ class ZAPAnalyzer(BaseAnalyzer):
                             ),
                         )
 
-        counts = _empty_severity_counts()
-        for f in findings:
-            counts[f.severity] = counts.get(f.severity, 0) + 1
+        counts = build_severity_counts(findings)
 
         summary: dict[str, Any] = {
             "mode": "static",
@@ -522,9 +522,7 @@ class PortScanAnalyzer(BaseAnalyzer):
                             ),
                         )
 
-        counts = _empty_severity_counts()
-        for f in findings:
-            counts[f.severity] = counts.get(f.severity, 0) + 1
+        counts = build_severity_counts(findings)
 
         summary: dict[str, Any] = {
             "mode": "static",
@@ -538,24 +536,6 @@ class PortScanAnalyzer(BaseAnalyzer):
             summary=summary,
             raw_output={"mode": "static"},
         )
-
-
-def _safe_int(value: Any, default: int = 0) -> int:
-    """Convert *value* to int, returning *default* on failure."""
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return default
-
-
-def _empty_severity_counts() -> dict[str, int]:
-    return {
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0,
-        "info": 0,
-    }
 
 
 def _zap_confidence(level: int) -> str:

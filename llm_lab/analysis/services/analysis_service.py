@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 from typing import Any
 
@@ -14,22 +13,6 @@ from llm_lab.analysis.services.executor_service import ExecutorService
 from llm_lab.analysis.services.result_service import ResultService
 
 logger = logging.getLogger(__name__)
-
-_ANALYZER_MODULES = [
-    "llm_lab.analysis.services.static_analyzers",
-    "llm_lab.analysis.services.dynamic_analyzers",
-    "llm_lab.analysis.services.performance_analyzers",
-    "llm_lab.analysis.services.ai_analyzers",
-]
-
-
-def _ensure_analyzers_registered() -> None:
-    """Import analyzer modules so subclasses register via __init_subclass__."""
-    for mod in _ANALYZER_MODULES:
-        try:
-            importlib.import_module(mod)
-        except ModuleNotFoundError:
-            logger.debug("Analyzer module %s not found, skipping", mod)
 
 
 def _set_task_failed(
@@ -61,7 +44,6 @@ class AnalysisService:
 
     def execute(self, task: AnalysisTask) -> None:
         """Run all configured analyzers for the given task."""
-        _ensure_analyzers_registered()
         try:
             self._execute_inner(task)
         except Exception:

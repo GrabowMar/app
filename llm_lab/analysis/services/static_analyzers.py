@@ -13,30 +13,13 @@ from typing import ClassVar
 from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
+from llm_lab.analysis.services.base import _extract_code
+from llm_lab.analysis.services.base import build_severity_counts
 
 logger = logging.getLogger(__name__)
 
 PYTHON_EXTENSIONS = {".py", ".pyw"}
 JS_TS_EXTENSIONS = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
-
-
-def _extract_code(code: dict[str, str], key: str, extensions: set[str]) -> str:
-    """Extract code from a code dict that may use semantic keys or filenames.
-
-    Tries the semantic key first (e.g. "backend", "frontend"), then falls back
-    to concatenating all values whose keys look like files with matching extensions.
-    """
-    if key in code and code[key].strip():
-        return code[key]
-    # Fall back: collect all entries whose key ends with a matching extension
-    parts: list[str] = []
-    for filename, content in code.items():
-        if not content or not content.strip():
-            continue
-        ext = Path(filename).suffix.lower() if "." in filename else ""
-        if ext in extensions:
-            parts.append(f"# --- {filename} ---\n{content}")
-    return "\n\n".join(parts)
 
 
 BANDIT_SEVERITY_MAP: dict[str, str] = {
@@ -186,11 +169,9 @@ class BanditAnalyzer(BaseAnalyzer):
                 ),
             )
 
-        severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+        severity_counts = build_severity_counts(findings)
         confidence_counts = {"high": 0, "medium": 0, "low": 0}
         for f in findings:
-            if f.severity in severity_counts:
-                severity_counts[f.severity] += 1
             if f.confidence in confidence_counts:
                 confidence_counts[f.confidence] += 1
 
@@ -348,10 +329,7 @@ class ESLintAnalyzer(BaseAnalyzer):
                     ),
                 )
 
-        severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-        for f in findings:
-            if f.severity in severity_counts:
-                severity_counts[f.severity] += 1
+        severity_counts = build_severity_counts(findings)
 
         return AnalyzerOutput(
             findings=findings,
@@ -486,11 +464,9 @@ class PylintAnalyzer(BaseAnalyzer):
                 ),
             )
 
-        severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+        severity_counts = build_severity_counts(findings)
         category_counts: dict[str, int] = {}
         for f in findings:
-            if f.severity in severity_counts:
-                severity_counts[f.severity] += 1
             category_counts[f.category] = category_counts.get(f.category, 0) + 1
 
         return AnalyzerOutput(

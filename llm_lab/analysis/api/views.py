@@ -20,6 +20,8 @@ from llm_lab.analysis.api.schema import PaginatedFindingsSchema
 from llm_lab.analysis.models import AnalysisResult
 from llm_lab.analysis.models import AnalysisTask
 from llm_lab.analysis.models import Finding
+from llm_lab.analysis.services.base import AnalyzerRegistry
+from llm_lab.common.pagination import paginate_queryset
 from llm_lab.generation.models import GenerationJob
 
 router = Router(tags=["analysis"])
@@ -63,12 +65,7 @@ def _dispatch_task(task: AnalysisTask) -> None:
 @router.post("/tasks/", response=AnalysisTaskSchema)
 def create_task(request, payload: AnalysisTaskCreateSchema):
     """Create an analysis task."""
-    import llm_lab.analysis.services.ai_analyzers  # noqa: PLC0415
-    import llm_lab.analysis.services.dynamic_analyzers  # noqa: PLC0415
-    import llm_lab.analysis.services.performance_analyzers  # noqa: PLC0415
-    import llm_lab.analysis.services.static_analyzers  # noqa: F401, PLC0415
     from config.api import api  # noqa: PLC0415
-    from llm_lab.analysis.services.base import AnalyzerRegistry  # noqa: PLC0415
 
     known = {a["name"] for a in AnalyzerRegistry.list_available()}
     unknown = set(payload.analyzers) - known
@@ -129,10 +126,7 @@ def list_tasks(
     if search:
         qs = qs.filter(name__icontains=search)
 
-    total = qs.count()
-    pages = max(1, (total + per_page - 1) // per_page)
-    page = min(page, pages)
-    offset = (page - 1) * per_page
+    page_qs, total, page, pages = paginate_queryset(qs, page, per_page)
 
     items = [
         AnalysisTaskListSchema(
@@ -150,7 +144,7 @@ def list_tasks(
             completed_at=task.completed_at,
             duration_seconds=task.duration_seconds,
         )
-        for task in qs[offset : offset + per_page]
+        for task in page_qs
     ]
 
     return PaginatedAnalysisTasksSchema(
@@ -246,12 +240,9 @@ def list_findings(  # noqa: PLR0913
     if analyzer:
         qs = qs.filter(result__analyzer_name=analyzer)
 
-    total = qs.count()
-    pages = max(1, (total + per_page - 1) // per_page)
-    page = min(page, pages)
-    offset = (page - 1) * per_page
+    page_qs, total, page, pages = paginate_queryset(qs, page, per_page)
 
-    items = list(qs[offset : offset + per_page])
+    items = list(page_qs)
 
     return PaginatedFindingsSchema(
         items=items,
@@ -268,10 +259,6 @@ def list_findings(  # noqa: PLR0913
 @router.get("/analyzers/", response=list[AnalyzerInfoSchema])
 def list_analyzers(request):
     """List all available analyzers."""
-    import llm_lab.analysis.services.ai_analyzers  # noqa: PLC0415
-    import llm_lab.analysis.services.static_analyzers  # noqa: F401, PLC0415
-    from llm_lab.analysis.services.base import AnalyzerRegistry  # noqa: PLC0415
-
     return AnalyzerRegistry.list_available()
 
 

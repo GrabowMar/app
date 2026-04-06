@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+import threading
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 from typing import Any
 from typing import ClassVar
 
@@ -51,6 +53,48 @@ def validate_target_url(url: str) -> tuple[bool, str]:
         ):
             return False, f"Internal network address not allowed: {hostname}"
     return True, ""
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    """Convert *value* to int, returning *default* on failure."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def _extract_code(code: dict[str, str], key: str, extensions: set[str]) -> str:
+    """Extract code from a code dict that may use semantic keys or filenames.
+
+    Tries the semantic key first (e.g. "backend", "frontend"), then falls back
+    to concatenating all values whose keys look like files with matching extensions.
+    """
+    if key in code and code[key].strip():
+        return code[key]
+    # Fall back: collect all entries whose key ends with a matching extension
+    parts: list[str] = []
+    for filename, content in code.items():
+        if not content or not content.strip():
+            continue
+        ext = Path(filename).suffix.lower() if "." in filename else ""
+        if ext in extensions:
+            parts.append(f"# --- {filename} ---\n{content}")
+    return "\n\n".join(parts)
+
+
+def build_severity_counts(findings: list[FindingData]) -> dict[str, int]:
+    """Return a severity→count dict from a list of findings."""
+    counts: dict[str, int] = {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0,
+    }
+    for f in findings:
+        if f.severity in counts:
+            counts[f.severity] += 1
+    return counts
 
 
 @dataclass
@@ -164,13 +208,15 @@ class AnalyzerRegistry:
     """Singleton registry for all analyzer classes."""
 
     _analyzers: ClassVar[dict[str, type[BaseAnalyzer]]] = {}
+    _lock: ClassVar[threading.Lock] = threading.Lock()
 
     @classmethod
     def register(cls, analyzer_cls: type[BaseAnalyzer]) -> None:
         name = analyzer_cls.name
-        if name in cls._analyzers:
-            logger.debug("Overriding analyzer registration: %s", name)
-        cls._analyzers[name] = analyzer_cls
+        with cls._lock:
+            if name in cls._analyzers:
+                logger.debug("Overriding analyzer registration: %s", name)
+            cls._analyzers[name] = analyzer_cls
         logger.debug("Registered analyzer: %s (%s)", name, analyzer_cls.analyzer_type)
 
     @classmethod

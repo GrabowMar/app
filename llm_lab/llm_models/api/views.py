@@ -1,11 +1,14 @@
 """Django Ninja API views for LLM models."""
 
+from __future__ import annotations
+
 from django.db.models import Avg
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from ninja import Query
 from ninja import Router
 
+from llm_lab.common.pagination import paginate_queryset
 from llm_lab.llm_models.api.schema import LLMModelListSchema
 from llm_lab.llm_models.api.schema import LLMModelSchema
 from llm_lab.llm_models.api.schema import PaginatedModelsSchema
@@ -130,12 +133,9 @@ def list_models(  # noqa: PLR0913
 
     qs = _apply_sorting(qs, sort_by, sort_dir)
 
-    total = qs.count()
-    pages = max(1, (total + per_page - 1) // per_page)
-    page = min(page, pages)
-    offset = (page - 1) * per_page
+    page_qs, total, page, pages = paginate_queryset(qs, page, per_page)
 
-    items = [LLMModelListSchema.from_model(m) for m in qs[offset : offset + per_page]]
+    items = [LLMModelListSchema.from_model(m) for m in page_qs]
     return PaginatedModelsSchema(
         items=items,
         total=total,

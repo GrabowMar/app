@@ -1,9 +1,12 @@
 """Django Ninja API views for generation."""
 
+from __future__ import annotations
+
 from django.shortcuts import get_object_or_404
 from ninja import Query
 from ninja import Router
 
+from llm_lab.common.pagination import paginate_queryset
 from llm_lab.generation.api.schema import AppRequirementCreateSchema
 from llm_lab.generation.api.schema import AppRequirementTemplateSchema
 from llm_lab.generation.api.schema import BatchCreateResponseSchema
@@ -34,7 +37,7 @@ def _dispatch_job(job: GenerationJob) -> None:
     """Run a generation job — sync in-process (Celery worker not required)."""
     import threading  # noqa: PLC0415
 
-    from llm_lab.generation.services.generation_service import GenerationService  # noqa: PLC0415
+    from llm_lab.generation.services.generation_service import GenerationService
 
     def _run() -> None:
         service = GenerationService()
@@ -201,7 +204,8 @@ def create_custom_job(request, payload: CustomJobCreateSchema):
 def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
     """Create scaffolding mode jobs (templates x models)."""
     scaffolding = get_object_or_404(
-        ScaffoldingTemplate, id=payload.scaffolding_template_id,
+        ScaffoldingTemplate,
+        id=payload.scaffolding_template_id,
     )
     app_reqs = AppRequirementTemplate.objects.filter(
         id__in=payload.app_requirement_ids,
@@ -235,7 +239,9 @@ def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
         _dispatch_job(pending_job)
 
     return BatchCreateResponseSchema(
-        batch_id=batch.id, job_count=job_count, status="pending",
+        batch_id=batch.id,
+        job_count=job_count,
+        status="pending",
     )
 
 
@@ -248,7 +254,8 @@ def create_copilot_job(request, payload: CopilotJobCreateSchema):
     scaffolding = None
     if payload.scaffolding_template_id:
         scaffolding = get_object_or_404(
-            ScaffoldingTemplate, id=payload.scaffolding_template_id,
+            ScaffoldingTemplate,
+            id=payload.scaffolding_template_id,
         )
 
     job = GenerationJob.objects.create(
@@ -273,20 +280,21 @@ def list_jobs(
     status: str = Query(""),
 ):
     """List generation jobs with pagination and filters."""
-    qs = GenerationJob.objects.filter(created_by=request.auth).select_related(
-        "model",
-        "app_requirement",
-        "scaffolding_template",
-    ).order_by("-created_at")
+    qs = (
+        GenerationJob.objects.filter(created_by=request.auth)
+        .select_related(
+            "model",
+            "app_requirement",
+            "scaffolding_template",
+        )
+        .order_by("-created_at")
+    )
     if mode:
         qs = qs.filter(mode=mode)
     if status:
         qs = qs.filter(status=status)
 
-    total = qs.count()
-    pages = max(1, (total + per_page - 1) // per_page)
-    page = min(page, pages)
-    offset = (page - 1) * per_page
+    page_qs, total, page, pages = paginate_queryset(qs, page, per_page)
 
     items = [
         GenerationJobListSchema(
@@ -305,7 +313,7 @@ def list_jobs(
             error_message=job.error_message,
             created_at=job.created_at,
         )
-        for job in qs[offset : offset + per_page]
+        for job in page_qs
     ]
 
     return PaginatedJobsSchema(
@@ -366,19 +374,41 @@ def export_job(request, job_id: str):
     """Export full job data as JSON (job + artifacts + iterations)."""
     job = get_object_or_404(
         GenerationJob.objects.select_related(
-            "model", "app_requirement", "scaffolding_template", "batch", "created_by",
+            "model",
+            "app_requirement",
+            "scaffolding_template",
+            "batch",
+            "created_by",
         ),
         id=job_id,
         created_by=request.auth,
     )
-    artifacts = list(job.artifacts.values(
-        "id", "stage", "request_payload", "response_payload",
-        "prompt_tokens", "completion_tokens", "total_cost", "created_at",
-    ))
-    iterations = list(job.copilot_iterations.values(
-        "id", "iteration_number", "action", "llm_request", "llm_response",
-        "build_output", "build_success", "errors_detected", "fix_applied", "created_at",
-    ))
+    artifacts = list(
+        job.artifacts.values(
+            "id",
+            "stage",
+            "request_payload",
+            "response_payload",
+            "prompt_tokens",
+            "completion_tokens",
+            "total_cost",
+            "created_at",
+        ),
+    )
+    iterations = list(
+        job.copilot_iterations.values(
+            "id",
+            "iteration_number",
+            "action",
+            "llm_request",
+            "llm_response",
+            "build_output",
+            "build_success",
+            "errors_detected",
+            "fix_applied",
+            "created_at",
+        ),
+    )
     return {
         "job": GenerationJobSchema.from_orm(job).dict(),
         "artifacts": artifacts,

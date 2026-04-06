@@ -13,6 +13,7 @@ from django.conf import settings
 from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
+from llm_lab.analysis.services.base import _safe_int
 from llm_lab.generation.services.openrouter_client import OpenRouterClient
 from llm_lab.generation.services.openrouter_client import OpenRouterError
 
@@ -69,14 +70,6 @@ CATEGORY_RULE_PREFIX: dict[str, str] = {
 VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
 VALID_CATEGORIES = {"security", "quality", "performance", "style", "best_practice"}
 VALID_CONFIDENCES = {"high", "medium", "low"}
-
-
-def _safe_int(value: Any, default: int = 0) -> int:
-    """Convert *value* to int, returning *default* on failure."""
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return default
 
 
 def _extract_json(text: str) -> dict[str, Any] | None:
