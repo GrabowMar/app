@@ -186,6 +186,15 @@ class PaginatedFindingsSchema(Schema):
     pages: int
 
 
+# ── Action response schema ────────────────────────────────────────────
+
+
+class ActionResponseSchema(Schema):
+    success: bool
+    message: str = ""
+    status: str = ""
+
+
 # ── Analyzer info schemas ─────────────────────────────────────────────
 
 

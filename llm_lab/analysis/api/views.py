@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Query
 from ninja import Router
 
+from llm_lab.analysis.api.schema import ActionResponseSchema
 from llm_lab.analysis.api.schema import AnalysisResultSchema
 from llm_lab.analysis.api.schema import AnalysisStatsSchema
 from llm_lab.analysis.api.schema import AnalysisTaskCreateSchema
@@ -62,6 +63,22 @@ def _dispatch_task(task: AnalysisTask) -> None:
 @router.post("/tasks/", response=AnalysisTaskSchema)
 def create_task(request, payload: AnalysisTaskCreateSchema):
     """Create an analysis task."""
+    import llm_lab.analysis.services.ai_analyzers  # noqa: PLC0415
+    import llm_lab.analysis.services.dynamic_analyzers  # noqa: PLC0415
+    import llm_lab.analysis.services.performance_analyzers  # noqa: PLC0415
+    import llm_lab.analysis.services.static_analyzers  # noqa: F401, PLC0415
+    from config.api import api  # noqa: PLC0415
+    from llm_lab.analysis.services.base import AnalyzerRegistry  # noqa: PLC0415
+
+    known = {a["name"] for a in AnalyzerRegistry.list_available()}
+    unknown = set(payload.analyzers) - known
+    if unknown:
+        return api.create_response(
+            request,
+            {"detail": f"Unknown analyzers: {', '.join(sorted(unknown))}"},
+            status=400,
+        )
+
     generation_job = None
     if payload.generation_job_id:
         generation_job = get_object_or_404(
@@ -158,7 +175,7 @@ def get_task(request, task_id: str):
     )
 
 
-@router.post("/tasks/{task_id}/cancel/")
+@router.post("/tasks/{task_id}/cancel/", response=ActionResponseSchema)
 def cancel_task(request, task_id: str):
     """Cancel a pending or running analysis task."""
     task = get_object_or_404(AnalysisTask, id=task_id, created_by=request.auth)
@@ -173,7 +190,7 @@ def cancel_task(request, task_id: str):
     }
 
 
-@router.delete("/tasks/{task_id}/")
+@router.delete("/tasks/{task_id}/", response=ActionResponseSchema)
 def delete_task(request, task_id: str):
     """Delete an analysis task and all related data."""
     task = get_object_or_404(AnalysisTask, id=task_id, created_by=request.auth)
