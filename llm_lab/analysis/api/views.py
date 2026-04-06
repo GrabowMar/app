@@ -26,20 +26,31 @@ router = Router(tags=["analysis"])
 
 def _dispatch_task(task: AnalysisTask) -> None:
     """Run an analysis task in a background thread."""
+    import logging  # noqa: PLC0415
     import threading  # noqa: PLC0415
 
     from llm_lab.analysis.services.analysis_service import (  # noqa: PLC0415
         AnalysisService,
     )
 
+    _logger = logging.getLogger(__name__)
+
     def _run() -> None:
-        service = AnalysisService()
-        service.execute(
-            AnalysisTask.objects.select_related(
-                "generation_job",
-                "created_by",
-            ).get(id=task.id),
-        )
+        try:
+            service = AnalysisService()
+            service.execute(
+                AnalysisTask.objects.select_related(
+                    "generation_job",
+                    "created_by",
+                ).get(id=task.id),
+            )
+        except AnalysisTask.DoesNotExist:
+            _logger.warning("Analysis task %s no longer exists", task.id)
+        except Exception:
+            _logger.exception(
+                "Unhandled error dispatching analysis task %s",
+                task.id,
+            )
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
@@ -88,9 +99,13 @@ def list_tasks(
     search: str = Query(""),
 ):
     """List analysis tasks with pagination and filters."""
-    qs = AnalysisTask.objects.filter(
-        created_by=request.auth,
-    ).select_related("created_by").order_by("-created_at")
+    qs = (
+        AnalysisTask.objects.filter(
+            created_by=request.auth,
+        )
+        .select_related("created_by")
+        .order_by("-created_at")
+    )
 
     if status:
         qs = qs.filter(status=status)
@@ -272,9 +287,7 @@ def get_stats(request):
     )
 
     most_common = list(
-        findings.values("title")
-        .annotate(count=Count("id"))
-        .order_by("-count")[:10],
+        findings.values("title").annotate(count=Count("id")).order_by("-count")[:10],
     )
 
     return AnalysisStatsSchema(

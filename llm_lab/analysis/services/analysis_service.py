@@ -95,9 +95,18 @@ class AnalysisService:
             )
 
     def _execute_inner(self, task: AnalysisTask) -> None:
-        task.status = AnalysisTask.Status.RUNNING
-        task.started_at = timezone.now()
-        task.save(update_fields=["status", "started_at"])
+        with transaction.atomic():
+            task = AnalysisTask.objects.select_for_update().get(id=task.id)
+            if task.status != AnalysisTask.Status.PENDING:
+                logger.warning(
+                    "Task %s is already %s, skipping execution",
+                    task.id,
+                    task.status,
+                )
+                return
+            task.status = AnalysisTask.Status.RUNNING
+            task.started_at = timezone.now()
+            task.save(update_fields=["status", "started_at"])
 
         code = task.get_code_for_analysis()
         if not code:
@@ -199,6 +208,22 @@ class AnalysisService:
                         result_obj.analyzer_name,
                         exc,
                     )
+                    result_obj.status = AnalysisResult.Status.FAILED
+                    result_obj.error_message = str(exc)
+                    result_obj.completed_at = timezone.now()
+                    if result_obj.started_at:
+                        result_obj.duration_seconds = _compute_duration(
+                            result_obj.started_at,
+                            result_obj.completed_at,
+                        )
+                    result_obj.save(
+                        update_fields=[
+                            "status",
+                            "error_message",
+                            "completed_at",
+                            "duration_seconds",
+                        ],
+                    )
 
     def _finalize_task(self, task: AnalysisTask) -> None:
         task.results_summary = self._aggregate_results(task)
@@ -219,10 +244,11 @@ class AnalysisService:
             task.status = AnalysisTask.Status.PARTIAL
 
         task.completed_at = timezone.now()
-        task.duration_seconds = _compute_duration(
-            task.started_at,
-            task.completed_at,
-        )
+        if task.started_at:
+            task.duration_seconds = _compute_duration(
+                task.started_at,
+                task.completed_at,
+            )
         task.save(
             update_fields=[
                 "status",

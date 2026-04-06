@@ -344,6 +344,9 @@
 									<tr
 										class="transition-colors hover:bg-muted/30 cursor-pointer"
 										onclick={() => window.location.href = `/analysis/${task.id}`}
+										onkeydown={(e) => { if (e.key === 'Enter') window.location.href = `/analysis/${task.id}`; }}
+										tabindex="0"
+										role="link"
 									>
 										<td class="px-4 py-3">
 											<div class="flex flex-col gap-0.5">

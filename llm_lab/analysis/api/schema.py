@@ -60,8 +60,8 @@ class AnalysisTaskSchema(ModelSchema):
 
     @staticmethod
     def resolve_generation_job_name(obj: AnalysisTask) -> str | None:
-        if obj.generation_job_id:
-            return str(obj.generation_job_id)
+        if obj.generation_job:
+            return str(obj.generation_job)
         return None
 
     @staticmethod
@@ -105,6 +105,7 @@ class PaginatedAnalysisTasksSchema(Schema):
 
 
 class AnalysisResultSchema(ModelSchema):
+    task_id: str = ""
     findings_count: int = 0
     finding_summary: dict = {}
 
@@ -125,6 +126,10 @@ class AnalysisResultSchema(ModelSchema):
         ]
 
     @staticmethod
+    def resolve_task_id(obj: AnalysisResult) -> str:
+        return str(obj.task_id)
+
+    @staticmethod
     def resolve_findings_count(obj: AnalysisResult) -> int:
         return obj.findings.count()
 
@@ -143,6 +148,7 @@ class AnalysisResultSchema(ModelSchema):
 
 class FindingSchema(ModelSchema):
     analyzer_name: str = ""
+    result_id: int = 0
 
     class Meta:
         model = Finding
@@ -166,6 +172,10 @@ class FindingSchema(ModelSchema):
     @staticmethod
     def resolve_analyzer_name(obj: Finding) -> str:
         return obj.result.analyzer_name
+
+    @staticmethod
+    def resolve_result_id(obj: Finding) -> int:
+        return obj.result_id
 
 
 class PaginatedFindingsSchema(Schema):

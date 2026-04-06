@@ -33,7 +33,7 @@
 	let loading = $state(true);
 	let error = $state('');
 	let cancelling = $state(false);
-	let pollTimer = $state<ReturnType<typeof setInterval> | null>(null);
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	// Per-result findings state keyed by result id
 	let findingsMap = $state<Record<number, AnalysisFinding[]>>({});
@@ -461,6 +461,9 @@
 												<tr
 													class="hover:bg-muted/30 cursor-pointer"
 													onclick={() => toggleFindingExpand(finding.id)}
+													onkeydown={(e) => { if (e.key === 'Enter') toggleFindingExpand(finding.id); }}
+													tabindex="0"
+													role="button"
 												>
 													<td class="px-4 py-2">
 														{#if expandedFindings[finding.id]}

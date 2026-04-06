@@ -101,12 +101,20 @@
 	let autoStart = $state(true);
 	let analyzerSettings = $state<Record<string, string>>({});
 
+	let settingsErrors = $state<Record<string, string>>({});
+
 	function getSettingsJson(analyzerName: string): Record<string, any> {
 		const raw = analyzerSettings[analyzerName];
-		if (!raw || !raw.trim()) return {};
+		if (!raw || !raw.trim()) {
+			delete settingsErrors[analyzerName];
+			return {};
+		}
 		try {
-			return JSON.parse(raw);
-		} catch {
+			const parsed = JSON.parse(raw);
+			delete settingsErrors[analyzerName];
+			return parsed;
+		} catch (e: any) {
+			settingsErrors[analyzerName] = e.message || 'Invalid JSON';
 			return {};
 		}
 	}
@@ -122,6 +130,12 @@
 	async function handleLaunch() {
 		launching = true;
 		launchError = '';
+		const hasErrors = Object.keys(settingsErrors).some(k => settingsErrors[k]);
+		if (hasErrors) {
+			launchError = 'Please fix JSON configuration errors before launching.';
+			launching = false;
+			return;
+		}
 		try {
 			const settingsMap: Record<string, any> = {};
 			for (const a of selectedAnalyzersList) {
@@ -593,6 +607,9 @@
 												placeholder={JSON.stringify(analyzer.default_config, null, 2) || '{}'}
 												bind:value={analyzerSettings[analyzer.name]}
 											></textarea>
+											{#if settingsErrors[analyzer.name]}
+												<p class="text-xs text-red-500 mt-1">{settingsErrors[analyzer.name]}</p>
+											{/if}
 										</div>
 									{/each}
 								</div>
