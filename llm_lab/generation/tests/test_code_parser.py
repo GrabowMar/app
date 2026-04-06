@@ -1,7 +1,5 @@
 """Tests for code parser service."""
 
-import pytest
-
 from llm_lab.generation.services.code_parser import extract_code_blocks
 from llm_lab.generation.services.code_parser import extract_frontend_code
 from llm_lab.generation.services.code_parser import extract_python_code
@@ -13,7 +11,9 @@ class TestExtractCodeBlocks:
     """Tests for extract_code_blocks()."""
 
     def test_python_annotated(self) -> None:
-        content = "```python:app.py\nfrom flask import Flask\napp = Flask(__name__)\n```"
+        content = (
+            "```python:app.py\nfrom flask import Flask\napp = Flask(__name__)\n```"
+        )
         blocks = extract_code_blocks(content)
         assert len(blocks) == 1
         assert blocks[0]["language"] == "python"
@@ -48,7 +48,9 @@ class TestExtractPythonCode:
     """Tests for extract_python_code()."""
 
     def test_single_block(self) -> None:
-        content = "```python:app.py\nfrom flask import Flask\napp = Flask(__name__)\n```"
+        content = (
+            "```python:app.py\nfrom flask import Flask\napp = Flask(__name__)\n```"
+        )
         code = extract_python_code(content)
         assert "Flask" in code
 
@@ -149,7 +151,9 @@ class TestParseResultToStructured:
     """Tests for parse_result_to_structured()."""
 
     def test_backend_only(self) -> None:
-        backend = "```python:app.py\nfrom flask import Flask\napp = Flask(__name__)\n```"
+        backend = (
+            "```python:app.py\nfrom flask import Flask\napp = Flask(__name__)\n```"
+        )
         result = parse_result_to_structured(backend)
         assert "backend_code" in result
         assert "Flask" in result["backend_code"]

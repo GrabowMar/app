@@ -1,9 +1,6 @@
 """Tests for GenerationService — validates copilot iteration and scaffolding flow."""
 
 from unittest.mock import MagicMock
-from unittest.mock import patch
-
-import pytest
 
 from llm_lab.generation.services.generation_service import GenerationService
 
@@ -12,9 +9,20 @@ class TestValidatePythonCode:
     """Tests for _validate_python_code static method."""
 
     def test_valid_code(self) -> None:
-        lines = ["from flask import Flask, request, jsonify", "app = Flask(__name__)", ""]
+        lines = [
+            "from flask import Flask, request, jsonify",
+            "app = Flask(__name__)",
+            "",
+        ]
         for i in range(30):
-            lines.extend([f"@app.route('/item{i}')", f"def item_{i}():", f"    return jsonify(ok={i})", ""])
+            lines.extend(
+                [
+                    f"@app.route('/item{i}')",
+                    f"def item_{i}():",
+                    f"    return jsonify(ok={i})",
+                    "",
+                ],
+            )
         code = "\n".join(lines)
         errors = GenerationService._validate_python_code(code)
         assert len(errors) == 0
@@ -35,19 +43,21 @@ class TestValidatePythonCode:
         assert any("too short" in e.lower() for e in errors)
 
     def test_stub_functions(self) -> None:
-        code = "\n".join([
-            "def f1(x):",
-            "    pass",
-            "",
-            "def f2(x):",
-            "    pass",
-            "",
-            "def f3(x):",
-            "    pass",
-            "",
-            "def f4(x):",
-            "    pass",
-        ])
+        code = "\n".join(
+            [
+                "def f1(x):",
+                "    pass",
+                "",
+                "def f2(x):",
+                "    pass",
+                "",
+                "def f3(x):",
+                "    pass",
+                "",
+                "def f4(x):",
+                "    pass",
+            ],
+        )
         errors = GenerationService._validate_python_code(code)
         assert any("stub" in e.lower() for e in errors)
 
@@ -74,12 +84,14 @@ class TestValidatePythonCode:
         ]
         # Pad to 100+ lines with routes
         for i in range(20):
-            lines.extend([
-                f"@app.route('/api/item{i}', methods=['GET'])",
-                f"def get_item_{i}():",
-                f"    return jsonify({{'item': {i}}})",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"@app.route('/api/item{i}', methods=['GET'])",
+                    f"def get_item_{i}():",
+                    f"    return jsonify({{'item': {i}}})",
+                    "",
+                ],
+            )
         code = "\n".join(lines)
         assert len(code.splitlines()) > 30
         errors = GenerationService._validate_python_code(code)

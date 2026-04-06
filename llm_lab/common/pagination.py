@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
-from django.db.models import QuerySet
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
 
 
 def paginate_queryset(

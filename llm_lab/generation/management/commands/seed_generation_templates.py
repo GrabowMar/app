@@ -145,9 +145,12 @@ class Command(BaseCommand):
     @staticmethod
     def _read_old_prompt(relative_path: str) -> str:
         """Read a prompt template from ThesisAppRework."""
-        prompt_path = Path(
-            "/home/ubuntu/ThesisAppRework/misc/prompts/v2",
-        ) / relative_path
+        prompt_path = (
+            Path(
+                "/home/ubuntu/ThesisAppRework/misc/prompts/v2",
+            )
+            / relative_path
+        )
         if prompt_path.exists():
             return prompt_path.read_text()
         logger.warning("Old prompt not found: %s", prompt_path)

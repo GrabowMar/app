@@ -1,7 +1,5 @@
 """Tests for backend scanner service."""
 
-import pytest
-
 from llm_lab.generation.services.backend_scanner import BackendScanner
 from llm_lab.generation.services.backend_scanner import scan_backend_code
 from llm_lab.generation.services.backend_scanner import scan_backend_response
@@ -80,7 +78,9 @@ def admin_stats():
         scanner = BackendScanner()
         result = scanner.scan(self.SAMPLE_FLASK_CODE)
 
-        assert len(result.endpoints) >= 7  # register, login, 2×tasks, 3×task_detail, admin
+        assert (
+            len(result.endpoints) >= 7
+        )  # register, login, 2×tasks, 3×task_detail, admin
         paths = [e.path for e in result.endpoints]
         assert any("/api/auth/register" in p for p in paths)
         assert any("/api/auth/login" in p for p in paths)

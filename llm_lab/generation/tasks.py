@@ -16,13 +16,16 @@ logger = logging.getLogger(__name__)
 def run_generation_job(self, job_id: str) -> dict:
     """Execute a single generation job (any mode)."""
     from llm_lab.generation.models import GenerationJob  # noqa: PLC0415
-    from llm_lab.generation.services.generation_service import GenerationService  # noqa: PLC0415
+    from llm_lab.generation.services.generation_service import GenerationService
 
     logger.info("Starting generation job %s", job_id)
     try:
         job = GenerationJob.objects.select_related(
-            "model", "app_requirement", "scaffolding_template",
-            "backend_prompt_template", "frontend_prompt_template",
+            "model",
+            "app_requirement",
+            "scaffolding_template",
+            "backend_prompt_template",
+            "frontend_prompt_template",
             "batch",
         ).get(id=job_id)
     except GenerationJob.DoesNotExist:

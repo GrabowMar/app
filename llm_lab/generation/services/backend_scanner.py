@@ -117,9 +117,7 @@ class BackendScanner:
 
         result.models = self._extract_models(all_code)
         result.endpoints = self._extract_endpoints(all_code)
-        result.has_auth = any(
-            e.path.startswith("/api/auth") for e in result.endpoints
-        )
+        result.has_auth = any(e.path.startswith("/api/auth") for e in result.endpoints)
         result.has_admin = any(
             e.path.startswith("/api/admin") for e in result.endpoints
         )
@@ -190,9 +188,7 @@ class BackendScanner:
                 blueprint = "user"
 
             if methods_str:
-                methods = [
-                    m.strip().strip("'\"") for m in methods_str.split(",")
-                ]
+                methods = [m.strip().strip("'\"") for m in methods_str.split(",")]
             else:
                 methods = ["GET"]
 
@@ -203,13 +199,14 @@ class BackendScanner:
                 re.search(r"@token_required|@login_required", context),
             )
             requires_admin = (
-                bool(re.search(r"@admin_required", context))
-                or blueprint == "admin"
+                bool(re.search(r"@admin_required", context)) or blueprint == "admin"
             )
 
             if not path.startswith("/api"):
-                prefix = "/api/admin" if blueprint == "admin" else (
-                    "/api/auth" if blueprint == "auth" else "/api"
+                prefix = (
+                    "/api/admin"
+                    if blueprint == "admin"
+                    else ("/api/auth" if blueprint == "auth" else "/api")
                 )
                 path = f"{prefix}{path}" if path.startswith("/") else f"{prefix}/{path}"
 

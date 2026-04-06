@@ -118,7 +118,10 @@ class GenerationService:
         )
         start = time.time()
         backend_resp = self._call_llm(
-            job, model_id, backend_messages, stage="backend",
+            job,
+            model_id,
+            backend_messages,
+            stage="backend",
         )
         backend_elapsed = time.time() - start
         backend_content = OpenRouterClient.extract_content(backend_resp)
@@ -145,7 +148,10 @@ class GenerationService:
         )
         start2 = time.time()
         frontend_resp = self._call_llm(
-            job, model_id, frontend_messages, stage="frontend",
+            job,
+            model_id,
+            frontend_messages,
+            stage="frontend",
         )
         frontend_elapsed = time.time() - start2
         frontend_content = OpenRouterClient.extract_content(frontend_resp)
@@ -246,7 +252,10 @@ class GenerationService:
 
             logger.info(
                 "Copilot iter %d/%d: %d errors, %.1fs",
-                iteration, max_iters, len(errors), iter_elapsed,
+                iteration,
+                max_iters,
+                len(errors),
+                iter_elapsed,
             )
 
             # Success or last iteration — save and exit
@@ -272,7 +281,10 @@ class GenerationService:
             # Build fix prompt for next iteration
             last_errors = errors
             messages = self._build_copilot_fix_messages(
-                job, current_code, errors, iteration,
+                job,
+                current_code,
+                errors,
+                iteration,
             )
 
     # ── Copilot helpers ───────────────────────────────────────────────

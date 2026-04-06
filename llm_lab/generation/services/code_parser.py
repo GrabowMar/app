@@ -12,18 +12,72 @@ import re
 logger = logging.getLogger(__name__)
 
 # Standard library modules that shouldn't be in requirements.txt
-PYTHON_STDLIB = frozenset({
-    "abc", "argparse", "asyncio", "base64", "bisect", "calendar",
-    "collections", "contextlib", "copy", "csv", "dataclasses", "datetime",
-    "decimal", "difflib", "email", "enum", "functools", "glob", "hashlib",
-    "heapq", "hmac", "html", "http", "importlib", "inspect", "io",
-    "itertools", "json", "logging", "math", "mimetypes", "operator", "os",
-    "pathlib", "pickle", "platform", "pprint", "queue", "random", "re",
-    "secrets", "shutil", "signal", "socket", "sqlite3", "statistics",
-    "string", "struct", "subprocess", "sys", "tempfile", "textwrap",
-    "threading", "time", "traceback", "typing", "unittest", "urllib",
-    "uuid", "warnings", "xml", "zipfile",
-})
+PYTHON_STDLIB = frozenset(
+    {
+        "abc",
+        "argparse",
+        "asyncio",
+        "base64",
+        "bisect",
+        "calendar",
+        "collections",
+        "contextlib",
+        "copy",
+        "csv",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "difflib",
+        "email",
+        "enum",
+        "functools",
+        "glob",
+        "hashlib",
+        "heapq",
+        "hmac",
+        "html",
+        "http",
+        "importlib",
+        "inspect",
+        "io",
+        "itertools",
+        "json",
+        "logging",
+        "math",
+        "mimetypes",
+        "operator",
+        "os",
+        "pathlib",
+        "pickle",
+        "platform",
+        "pprint",
+        "queue",
+        "random",
+        "re",
+        "secrets",
+        "shutil",
+        "signal",
+        "socket",
+        "sqlite3",
+        "statistics",
+        "string",
+        "struct",
+        "subprocess",
+        "sys",
+        "tempfile",
+        "textwrap",
+        "threading",
+        "time",
+        "traceback",
+        "typing",
+        "unittest",
+        "urllib",
+        "uuid",
+        "warnings",
+        "xml",
+        "zipfile",
+    },
+)
 
 # Common import → PyPI package mapping
 IMPORT_TO_PACKAGE = {
@@ -125,11 +179,12 @@ def extract_frontend_code(raw_content: str) -> str:
     frontend_blocks = []
     for block in blocks:
         lang = block["language"]
-        if lang in ("jsx", "tsx", "javascript", "js", "html", "css", "svelte"):
-            frontend_blocks.append(block)
-        elif block["filename"] and any(
-            block["filename"].lower().endswith(ext)
-            for ext in (".jsx", ".tsx", ".js", ".html", ".css", ".svelte")
+        if lang in ("jsx", "tsx", "javascript", "js", "html", "css", "svelte") or (
+            block["filename"]
+            and any(
+                block["filename"].lower().endswith(ext)
+                for ext in (".jsx", ".tsx", ".js", ".html", ".css", ".svelte")
+            )
         ):
             frontend_blocks.append(block)
 
@@ -280,7 +335,9 @@ def _regex_infer_deps(code: str) -> list[str]:
     """Fallback regex-based dependency inference."""
     packages: set[str] = set()
     for match in re.finditer(
-        r"^\s*(?:from|import)\s+(\w+)", code, re.MULTILINE,
+        r"^\s*(?:from|import)\s+(\w+)",
+        code,
+        re.MULTILINE,
     ):
         _map_import(match.group(1), packages)
     return sorted(packages)

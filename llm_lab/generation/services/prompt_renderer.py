@@ -187,10 +187,16 @@ class PromptRenderer:
         context = self._build_context(app_requirement)
 
         system_content = self._get_template_content(
-            prompt_template_system, "backend", "system", DEFAULT_BACKEND_SYSTEM,
+            prompt_template_system,
+            "backend",
+            "system",
+            DEFAULT_BACKEND_SYSTEM,
         )
         user_content = self._get_template_content(
-            prompt_template_user, "backend", "user", DEFAULT_BACKEND_USER,
+            prompt_template_user,
+            "backend",
+            "user",
+            DEFAULT_BACKEND_USER,
         )
 
         system_rendered = self.render_template(system_content, context)
@@ -217,10 +223,16 @@ class PromptRenderer:
         )
 
         system_content = self._get_template_content(
-            prompt_template_system, "frontend", "system", DEFAULT_FRONTEND_SYSTEM,
+            prompt_template_system,
+            "frontend",
+            "system",
+            DEFAULT_FRONTEND_SYSTEM,
         )
         user_content = self._get_template_content(
-            prompt_template_user, "frontend", "user", DEFAULT_FRONTEND_USER,
+            prompt_template_user,
+            "frontend",
+            "user",
+            DEFAULT_FRONTEND_USER,
         )
 
         system_rendered = self.render_template(system_content, context)
@@ -243,7 +255,9 @@ class PromptRenderer:
             return prompt_template.content
         # Try to find a default in DB
         db_default = PromptTemplate.objects.filter(
-            stage=stage, role=role, is_default=True,
+            stage=stage,
+            role=role,
+            is_default=True,
         ).first()
         if db_default:
             return db_default.content

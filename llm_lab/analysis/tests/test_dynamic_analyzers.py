@@ -121,7 +121,17 @@ class TestZAPAnalyzerStatic:
 
 
 class TestZAPAnalyzerLive:
-    def test_zap_live_rejects_blocked_url(self):
+    @patch("shutil.which", return_value="/usr/bin/docker")
+    @patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=["docker", "info"],
+            returncode=0,
+            stdout="",
+            stderr="",
+        ),
+    )
+    def test_zap_live_rejects_blocked_url(self, mock_run, mock_which):
         analyzer = ZAPAnalyzer()
         output = analyzer.analyze(
             {},
@@ -133,7 +143,17 @@ class TestZAPAnalyzerLive:
             "Blocked hostname" in output.error or "Invalid target URL" in output.error
         )
 
-    def test_zap_live_rejects_invalid_url(self):
+    @patch("shutil.which", return_value="/usr/bin/docker")
+    @patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=["docker", "info"],
+            returncode=0,
+            stdout="",
+            stderr="",
+        ),
+    )
+    def test_zap_live_rejects_invalid_url(self, mock_run, mock_which):
         analyzer = ZAPAnalyzer()
         output = analyzer.analyze(
             {},

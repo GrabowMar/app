@@ -66,6 +66,10 @@ class AnalysisTask(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_by", "-created_at"]),
+            models.Index(fields=["status"]),
+        ]
 
     def __str__(self) -> str:
         source = self.name or (
@@ -139,6 +143,10 @@ class AnalysisResult(models.Model):
     class Meta:
         ordering = ["analyzer_type", "analyzer_name"]
         unique_together = [("task", "analyzer_name")]
+        indexes = [
+            models.Index(fields=["task", "status"]),
+            models.Index(fields=["task", "analyzer_name"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.analyzer_name} ({self.status}) → Task {self.task_id}"
