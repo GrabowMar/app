@@ -11,6 +11,8 @@
 
 	onMount(() => {
 		auth.checkSession();
+		// Signal to the hydration watchdog that JS loaded successfully
+		(window as any).__sveltekit_hydrated = true;
 	});
 </script>
 

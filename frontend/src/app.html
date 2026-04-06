@@ -13,6 +13,22 @@
 
 <body data-sveltekit-preload-data="hover">
 	<div style="display: contents">%sveltekit.body%</div>
+	<script>
+		// Hydration watchdog: if the page is still showing a loading spinner
+		// after 6 seconds (e.g. due to stale cached JS), force a clean reload.
+		setTimeout(function() {
+			var spinner = document.querySelector('.animate-spin');
+			if (spinner && !window.__sveltekit_hydrated) {
+				// Add cache-busting param to force fresh resources
+				var url = new URL(window.location.href);
+				var prev = parseInt(url.searchParams.get('_r') || '0', 10);
+				if (prev < 2) {
+					url.searchParams.set('_r', String(prev + 1));
+					window.location.replace(url.toString());
+				}
+			}
+		}, 6000);
+	</script>
 </body>
 
 </html>
