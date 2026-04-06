@@ -32,9 +32,13 @@ function createAuth() {
 	async function checkSession() {
 		isLoading = true;
 		try {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 10000);
 			const res = await fetch(`${ALLAUTH_BASE}/auth/session`, {
 				credentials: 'include',
+				signal: controller.signal,
 			});
+			clearTimeout(timeoutId);
 			const body = await res.json();
 			if (res.ok && body.data?.user) {
 				isAuthenticated = true;

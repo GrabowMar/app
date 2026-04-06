@@ -6,9 +6,24 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import AppFooter from '$lib/components/AppFooter.svelte';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import { onMount } from 'svelte';
 
 	let { children } = $props();
 	const auth = getAuth();
+	let loadingTooLong = $state(false);
+
+	onMount(() => {
+		const timer = setTimeout(() => {
+			if (auth.isLoading) {
+				loadingTooLong = true;
+			}
+		}, 8000);
+		return () => clearTimeout(timer);
+	});
+
+	function forceReload() {
+		window.location.reload();
+	}
 
 	$effect(() => {
 		if (!auth.isLoading && !auth.isAuthenticated) {
@@ -19,7 +34,19 @@
 
 {#if auth.isLoading}
 	<div class="flex min-h-screen items-center justify-center">
-		<LoaderCircle class="size-8 animate-spin text-muted-foreground" />
+		{#if loadingTooLong}
+			<div class="flex flex-col items-center gap-4 text-center">
+				<p class="text-muted-foreground">Loading is taking longer than expected.</p>
+				<button
+					onclick={forceReload}
+					class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+				>
+					Reload Page
+				</button>
+			</div>
+		{:else}
+			<LoaderCircle class="size-8 animate-spin text-muted-foreground" />
+		{/if}
 	</div>
 {:else if auth.isAuthenticated}
 	<Sidebar.Provider>
