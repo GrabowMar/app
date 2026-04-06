@@ -291,43 +291,50 @@ class ZAPAnalyzer(BaseAnalyzer):
 
         for site in report.get("site", []):
             for alert in site.get("alerts", []):
-                risk_code = int(alert.get("riskcode", 0))
-                severity = ZAP_RISK_TO_SEVERITY.get(
-                    risk_code,
-                    "info",
-                )
-                alert_counts[severity] += 1
+                try:
+                    risk_code = _safe_int(alert.get("riskcode", 0))
+                    severity = ZAP_RISK_TO_SEVERITY.get(
+                        risk_code,
+                        "info",
+                    )
+                    alert_counts[severity] += 1
 
-                instances = alert.get("instances", [])
-                urls = [inst.get("uri", "") for inst in instances]
+                    instances = alert.get("instances") or []
+                    urls = [inst.get("uri", "") for inst in instances]
 
-                findings.append(
-                    FindingData(
-                        severity=severity,
-                        category="security",
-                        title=alert.get("name", "ZAP Alert"),
-                        description=alert.get("desc", ""),
-                        suggestion=alert.get("solution", ""),
-                        rule_id=str(alert.get("pluginid", "")),
-                        confidence=_zap_confidence(
-                            int(alert.get("confidence", 1)),
+                    findings.append(
+                        FindingData(
+                            severity=severity,
+                            category="security",
+                            title=alert.get("name", "ZAP Alert"),
+                            description=alert.get("desc", ""),
+                            suggestion=alert.get("solution", ""),
+                            rule_id=str(alert.get("pluginid", "")),
+                            confidence=_zap_confidence(
+                                _safe_int(alert.get("confidence", 1), default=1),
+                            ),
+                            tool_specific_data={
+                                "risk_code": risk_code,
+                                "cweid": alert.get("cweid", ""),
+                                "wascid": alert.get("wascid", ""),
+                                "reference": alert.get(
+                                    "reference",
+                                    "",
+                                ),
+                                "urls": urls,
+                                "count": alert.get(
+                                    "count",
+                                    len(instances),
+                                ),
+                            },
                         ),
-                        tool_specific_data={
-                            "risk_code": risk_code,
-                            "cweid": alert.get("cweid", ""),
-                            "wascid": alert.get("wascid", ""),
-                            "reference": alert.get(
-                                "reference",
-                                "",
-                            ),
-                            "urls": urls,
-                            "count": alert.get(
-                                "count",
-                                len(instances),
-                            ),
-                        },
-                    ),
-                )
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "Skipping malformed ZAP alert: %s",
+                        alert.get("name", "<unknown>"),
+                        exc_info=True,
+                    )
 
         total_urls = sum(len(site.get("alerts", [])) for site in report.get("site", []))
 
@@ -531,6 +538,14 @@ class PortScanAnalyzer(BaseAnalyzer):
             summary=summary,
             raw_output={"mode": "static"},
         )
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    """Convert *value* to int, returning *default* on failure."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
 
 
 def _empty_severity_counts() -> dict[str, int]:

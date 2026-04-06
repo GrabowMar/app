@@ -71,6 +71,14 @@ VALID_CATEGORIES = {"security", "quality", "performance", "style", "best_practic
 VALID_CONFIDENCES = {"high", "medium", "low"}
 
 
+def _safe_int(value: Any, default: int = 0) -> int:
+    """Convert *value* to int, returning *default* on failure."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def _extract_json(text: str) -> dict[str, Any] | None:
     """Try to extract a JSON object from text that may contain markdown fences."""
     match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
@@ -101,15 +109,15 @@ def _extract_json(text: str) -> dict[str, Any] | None:
 
 def _normalize_finding(raw: dict[str, Any]) -> FindingData:
     """Map a raw finding dict from the LLM to a FindingData instance."""
-    severity = raw.get("severity", "info").lower()
+    severity = str(raw.get("severity", "info")).lower()
     if severity not in VALID_SEVERITIES:
         severity = "info"
 
-    category = raw.get("category", "quality").lower()
+    category = str(raw.get("category", "quality")).lower()
     if category not in VALID_CATEGORIES:
         category = "quality"
 
-    confidence = raw.get("confidence", "medium").lower()
+    confidence = str(raw.get("confidence", "medium")).lower()
     if confidence not in VALID_CONFIDENCES:
         confidence = "medium"
 
@@ -125,8 +133,8 @@ def _normalize_finding(raw: dict[str, Any]) -> FindingData:
         description=raw.get("description", ""),
         suggestion=raw.get("suggestion", ""),
         file_path=raw.get("file_path", ""),
-        line_number=raw.get("line_number"),
-        column_number=raw.get("column_number"),
+        line_number=_safe_int(raw.get("line_number")) or None,
+        column_number=_safe_int(raw.get("column_number")) or None,
         code_snippet=raw.get("code_snippet", ""),
         rule_id=rule_id,
         confidence=confidence,
