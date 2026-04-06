@@ -16,6 +16,29 @@ from llm_lab.analysis.services.base import FindingData
 
 logger = logging.getLogger(__name__)
 
+PYTHON_EXTENSIONS = {".py", ".pyw"}
+JS_TS_EXTENSIONS = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
+
+
+def _extract_code(code: dict[str, str], key: str, extensions: set[str]) -> str:
+    """Extract code from a code dict that may use semantic keys or filenames.
+
+    Tries the semantic key first (e.g. "backend", "frontend"), then falls back
+    to concatenating all values whose keys look like files with matching extensions.
+    """
+    if key in code and code[key].strip():
+        return code[key]
+    # Fall back: collect all entries whose key ends with a matching extension
+    parts: list[str] = []
+    for filename, content in code.items():
+        if not content or not content.strip():
+            continue
+        ext = Path(filename).suffix.lower() if "." in filename else ""
+        if ext in extensions:
+            parts.append(f"# --- {filename} ---\n{content}")
+    return "\n\n".join(parts)
+
+
 BANDIT_SEVERITY_MAP: dict[str, str] = {
     "HIGH": "high",
     "MEDIUM": "medium",
@@ -82,7 +105,7 @@ class BanditAnalyzer(BaseAnalyzer):
         code: dict[str, str],
         config: dict[str, Any] | None = None,
     ) -> AnalyzerOutput:
-        source = code.get("backend", "")
+        source = _extract_code(code, "backend", PYTHON_EXTENSIONS)
         if not source.strip():
             return AnalyzerOutput(
                 summary={"message": "No Python code to analyze"},
@@ -214,7 +237,7 @@ class ESLintAnalyzer(BaseAnalyzer):
         code: dict[str, str],
         config: dict[str, Any] | None = None,
     ) -> AnalyzerOutput:
-        source = code.get("frontend", "")
+        source = _extract_code(code, "frontend", JS_TS_EXTENSIONS)
         if not source.strip():
             return AnalyzerOutput(
                 summary={
@@ -374,7 +397,7 @@ class PylintAnalyzer(BaseAnalyzer):
         code: dict[str, str],
         config: dict[str, Any] | None = None,
     ) -> AnalyzerOutput:
-        source = code.get("backend", "")
+        source = _extract_code(code, "backend", PYTHON_EXTENSIONS)
         if not source.strip():
             return AnalyzerOutput(
                 summary={"message": "No Python code to analyze"},
