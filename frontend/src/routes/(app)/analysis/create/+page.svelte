@@ -23,6 +23,7 @@
 		type AnalyzerInfo,
 		type GenerationJobList,
 	} from '$lib/api/client';
+	import { analyzerTypeLabels } from '$lib/constants/analysis';
 
 	// -- Wizard state --
 	let step = $state(1);
@@ -70,12 +71,7 @@
 		performance: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10',
 		ai: 'text-amber-500 border-amber-500/30 bg-amber-500/10',
 	};
-	const typeLabels: Record<string, string> = {
-		static: 'Static Analysis',
-		dynamic: 'Dynamic Analysis',
-		performance: 'Performance',
-		ai: 'AI Review',
-	};
+	const typeLabels = analyzerTypeLabels;
 
 	function analyzersByType(type: string) {
 		return analyzers.filter((a) => a.type === type);

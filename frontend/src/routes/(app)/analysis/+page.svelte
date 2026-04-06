@@ -27,23 +27,8 @@
 		type AnalysisStats,
 		type PaginatedAnalysisTasks,
 	} from '$lib/api/client';
-
-	const statusColors: Record<string, string> = {
-		completed: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-		running: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-		failed: 'bg-red-500/15 text-red-400 border-red-500/30',
-		pending: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-		partial: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-		cancelled: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-	};
-
-	const severityColors: Record<string, string> = {
-		critical: 'bg-red-500/15 text-red-400 border-red-500/30',
-		high: 'bg-red-500/15 text-red-400 border-red-500/30',
-		medium: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-		low: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-		info: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-	};
+	import { statusColors, severityColors } from '$lib/constants/analysis';
+	import { formatDate, formatDuration, statusLabel } from '$lib/utils/analysis';
 
 	let loading = $state(true);
 	let error = $state('');
@@ -169,29 +154,10 @@
 		return task.name || `Analysis #${task.id.slice(0, 8)}`;
 	}
 
-	function formatDate(iso: string): string {
-		const d = new Date(iso);
-		return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) +
-			' ' +
-			d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-	}
-
-	function formatDuration(seconds: number | null): string {
-		if (seconds == null) return '—';
-		if (seconds < 60) return `${Math.round(seconds)}s`;
-		const m = Math.floor(seconds / 60);
-		const s = Math.round(seconds % 60);
-		return `${m}m ${s}s`;
-	}
-
 	function getSeverityBreakdown(task: AnalysisTaskList): [string, number][] {
 		const bySeverity = task.results_summary?.by_severity;
 		if (!bySeverity || typeof bySeverity !== 'object') return [];
 		return Object.entries(bySeverity).filter(([, v]) => (v as number) > 0) as [string, number][];
-	}
-
-	function statusLabel(status: string): string {
-		return status.charAt(0).toUpperCase() + status.slice(1);
 	}
 
 	onMount(() => {

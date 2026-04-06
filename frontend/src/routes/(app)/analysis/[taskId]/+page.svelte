@@ -25,6 +25,8 @@
 		type AnalysisFinding,
 		type PaginatedFindings,
 	} from '$lib/api/client';
+	import { statusColors, severityColors, analyzerTypeLabels } from '$lib/constants/analysis';
+	import { formatDuration, formatDate } from '$lib/utils/analysis';
 
 	const taskId = $derived($page.params.taskId ?? '');
 
@@ -43,31 +45,6 @@
 
 	let activeSection = $state('summary');
 
-	const statusColors: Record<string, string> = {
-		completed: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-		running: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-		failed: 'bg-red-500/15 text-red-400 border-red-500/30',
-		pending: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-		partial: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-		cancelled: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-		skipped: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-	};
-
-	const severityColors: Record<string, string> = {
-		critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-		high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-		medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-		low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-		info: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-	};
-
-	const analyzerTypeLabels: Record<string, string> = {
-		static: 'Static Analysis',
-		dynamic: 'Dynamic Analysis',
-		performance: 'Performance',
-		ai: 'AI Review',
-	};
-
 	const sections = $derived([
 		{ id: 'summary', label: 'Summary' },
 		...results.map((r) => ({ id: `result-${r.id}`, label: r.analyzer_name })),
@@ -76,20 +53,6 @@
 	function scrollToSection(id: string) {
 		activeSection = id;
 		document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-	}
-
-	function formatDuration(seconds: number | null): string {
-		if (seconds == null) return '—';
-		if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
-		if (seconds < 60) return `${seconds.toFixed(1)}s`;
-		const m = Math.floor(seconds / 60);
-		const s = Math.round(seconds % 60);
-		return `${m}m ${s}s`;
-	}
-
-	function formatDate(iso: string | null): string {
-		if (!iso) return '—';
-		return new Date(iso).toLocaleString();
 	}
 
 	async function fetchData() {
