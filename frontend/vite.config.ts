@@ -6,6 +6,20 @@ const apiTarget = process.env.API_TARGET ?? 'http://localhost:8000';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	build: {
+		rollupOptions: {
+			output: {
+				// Reduce chunk count to improve mobile loading reliability.
+				// Without this, each Lucide icon and each bits-ui component
+				// becomes its own chunk (~56 chunks for the dashboard page).
+				manualChunks(id) {
+					if (id.includes('@lucide/svelte')) return 'vendor-lucide';
+					if (id.includes('bits-ui')) return 'vendor-bits-ui';
+					if (id.includes('mode-watcher') || id.includes('svelte-sonner')) return 'vendor-ui-utils';
+				},
+			},
+		},
+	},
 	optimizeDeps: {
 		include: [
 			'mode-watcher',

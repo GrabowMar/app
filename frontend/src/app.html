@@ -14,8 +14,27 @@
 <body data-sveltekit-preload-data="hover">
 	<div style="display: contents">%sveltekit.body%</div>
 	<script>
+		// Fallback UI helper — used by both watchdog and error handlers
+		window.__showFallback = function() {
+			document.body.innerHTML =
+				'<div style="display:flex;min-height:100vh;align-items:center;justify-content:center">' +
+				'<div style="display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;font-family:Inter,system-ui,sans-serif">' +
+				'<p style="color:#888;font-size:15px">The application failed to load.<br>This can happen on slow connections or if your browser cache is stale.</p>' +
+				'<button onclick="location.href=location.pathname" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500">Reload Page</button>' +
+				'<a href="/auth/login" style="color:#2563eb;font-size:13px;text-decoration:underline">Go to login page</a>' +
+				'</div></div>';
+		};
+
+		// Catch dynamic import failures (the main cause of hydration breakage)
+		window.addEventListener('unhandledrejection', function(e) {
+			if (!window.__sveltekit_hydrated) {
+				e.preventDefault();
+				window.__showFallback();
+			}
+		});
+
 		// Hydration watchdog: if SvelteKit JS hasn't hydrated after 6s,
-		// auto-reload up to 2 times, then show a fallback UI.
+		// auto-reload up to 2 times, then show fallback UI.
 		setTimeout(function() {
 			if (window.__sveltekit_hydrated) return;
 
@@ -28,14 +47,7 @@
 				return;
 			}
 
-			// Retries exhausted — show fallback UI
-			document.body.innerHTML =
-				'<div style="display:flex;min-height:100vh;align-items:center;justify-content:center">' +
-				'<div style="display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;font-family:Inter,system-ui,sans-serif">' +
-				'<p style="color:#888;font-size:15px">The application failed to load.<br>This can happen on slow connections or if your browser cache is stale.</p>' +
-				'<button onclick="location.href=location.pathname" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500">Reload Page</button>' +
-				'<a href="/auth/login" style="color:#2563eb;font-size:13px;text-decoration:underline">Go to login page</a>' +
-				'</div></div>';
+			window.__showFallback();
 		}, 6000);
 	</script>
 </body>
