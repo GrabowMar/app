@@ -17,12 +17,13 @@
 			if (auth.isLoading) {
 				loadingTooLong = true;
 			}
-		}, 8000);
+		}, 5000);
 		return () => clearTimeout(timer);
 	});
 
 	function forceReload() {
-		window.location.reload();
+		// Navigate to clean URL (strips _r params) for a fresh start
+		window.location.href = window.location.pathname;
 	}
 
 	$effect(() => {

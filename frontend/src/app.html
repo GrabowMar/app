@@ -14,19 +14,28 @@
 <body data-sveltekit-preload-data="hover">
 	<div style="display: contents">%sveltekit.body%</div>
 	<script>
-		// Hydration watchdog: if the page is still showing a loading spinner
-		// after 6 seconds (e.g. due to stale cached JS), force a clean reload.
+		// Hydration watchdog: if SvelteKit JS hasn't hydrated after 6s,
+		// auto-reload up to 2 times, then show a fallback UI.
 		setTimeout(function() {
-			var spinner = document.querySelector('.animate-spin');
-			if (spinner && !window.__sveltekit_hydrated) {
-				// Add cache-busting param to force fresh resources
-				var url = new URL(window.location.href);
-				var prev = parseInt(url.searchParams.get('_r') || '0', 10);
-				if (prev < 2) {
-					url.searchParams.set('_r', String(prev + 1));
-					window.location.replace(url.toString());
-				}
+			if (window.__sveltekit_hydrated) return;
+
+			var url = new URL(window.location.href);
+			var prev = parseInt(url.searchParams.get('_r') || '0', 10);
+
+			if (prev < 2) {
+				url.searchParams.set('_r', String(prev + 1));
+				window.location.replace(url.toString());
+				return;
 			}
+
+			// Retries exhausted — show fallback UI
+			document.body.innerHTML =
+				'<div style="display:flex;min-height:100vh;align-items:center;justify-content:center">' +
+				'<div style="display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;font-family:Inter,system-ui,sans-serif">' +
+				'<p style="color:#888;font-size:15px">The application failed to load.<br>This can happen on slow connections or if your browser cache is stale.</p>' +
+				'<button onclick="location.href=location.pathname" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500">Reload Page</button>' +
+				'<a href="/auth/login" style="color:#2563eb;font-size:13px;text-decoration:underline">Go to login page</a>' +
+				'</div></div>';
 		}, 6000);
 	</script>
 </body>
