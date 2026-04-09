@@ -1,17 +1,28 @@
 """Django Ninja API views for LLM models."""
 
+import csv
+import json
+from io import StringIO
+
 from django.db.models import Avg
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from ninja import Query
 from ninja import Router
+from ninja.errors import HttpError
 
 from llm_lab.llm_models.api.schema import LLMModelListSchema
+from llm_lab.llm_models.api.schema import ModelComparisonSchema
+from llm_lab.llm_models.api.schema import ModelImportResultSchema
 from llm_lab.llm_models.api.schema import LLMModelSchema
 from llm_lab.llm_models.api.schema import PaginatedModelsSchema
 from llm_lab.llm_models.api.schema import StatsSchema
 from llm_lab.llm_models.api.schema import SyncResultSchema
 from llm_lab.llm_models.models import LLMModel
+from llm_lab.llm_models.services import import_models_from_payload
+from llm_lab.llm_models.services import normalize_model_identifier
+from llm_lab.llm_models.services import refresh_model_from_openrouter
 from llm_lab.llm_models.services import sync_models_from_openrouter
 
 router = Router(tags=["models"])
@@ -40,6 +51,98 @@ CONTEXT_RANGE_THRESHOLDS = {
     "large": (32_000, 128_000),
     "xlarge": (128_000, None),
 }
+
+EXPORT_CSV_FIELDS = [
+    "provider",
+    "model_name",
+    "model_id",
+    "canonical_slug",
+    "context_window",
+    "max_output_tokens",
+    "input_price_per_million",
+    "output_price_per_million",
+    "is_free",
+    "supports_function_calling",
+    "supports_vision",
+    "supports_streaming",
+    "supports_json_mode",
+    "cost_efficiency",
+]
+
+
+def _resolve_model_queryset(identifier: str):
+    raw = (identifier or "").strip()
+    normalized = normalize_model_identifier(raw)
+    query = Q(canonical_slug__iexact=raw) | Q(model_id__iexact=raw)
+
+    if normalized:
+        query |= Q(canonical_slug__iexact=normalized)
+
+    if raw and "/" not in raw and "_" in raw:
+        provider, model_name = raw.split("_", 1)
+        query |= Q(model_id__iexact=f"{provider}/{model_name}")
+
+    return LLMModel.objects.filter(query)
+
+
+def _get_model_by_identifier(identifier: str) -> LLMModel:
+    return get_object_or_404(_resolve_model_queryset(identifier).order_by("canonical_slug"))
+
+
+def _serialize_export_model(model: LLMModel) -> dict:
+    return {
+        "id": model.id,
+        "model_id": model.model_id,
+        "canonical_slug": model.canonical_slug,
+        "provider": model.provider,
+        "model_name": model.model_name,
+        "description": model.description,
+        "is_free": model.is_free,
+        "context_window": model.context_window,
+        "max_output_tokens": model.max_output_tokens,
+        "input_price_per_token": model.input_price_per_token,
+        "output_price_per_token": model.output_price_per_token,
+        "input_price_per_million": round(model.input_price_per_token * 1_000_000, 4),
+        "output_price_per_million": round(model.output_price_per_token * 1_000_000, 4),
+        "supports_function_calling": model.supports_function_calling,
+        "supports_vision": model.supports_vision,
+        "supports_streaming": model.supports_streaming,
+        "supports_json_mode": model.supports_json_mode,
+        "cost_efficiency": model.cost_efficiency,
+        "capabilities": model.get_capabilities_list(),
+        "capabilities_json": model.capabilities_json,
+        "metadata": model.metadata,
+        "created_at": model.created_at.isoformat(),
+        "updated_at": model.updated_at.isoformat(),
+    }
+
+
+def _build_csv_export(models: list[LLMModel]) -> HttpResponse:
+    buffer = StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=EXPORT_CSV_FIELDS)
+    writer.writeheader()
+
+    for model in models:
+        writer.writerow({
+            "provider": model.provider,
+            "model_name": model.model_name,
+            "model_id": model.model_id,
+            "canonical_slug": model.canonical_slug,
+            "context_window": model.context_window,
+            "max_output_tokens": model.max_output_tokens,
+            "input_price_per_million": round(model.input_price_per_token * 1_000_000, 4),
+            "output_price_per_million": round(model.output_price_per_token * 1_000_000, 4),
+            "is_free": model.is_free,
+            "supports_function_calling": model.supports_function_calling,
+            "supports_vision": model.supports_vision,
+            "supports_streaming": model.supports_streaming,
+            "supports_json_mode": model.supports_json_mode,
+            "cost_efficiency": round(model.cost_efficiency, 6),
+        })
+
+    response = HttpResponse(buffer.getvalue(), content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="models_export.csv"'
+    return response
 
 
 def _apply_search(qs, search: str):
@@ -180,17 +283,84 @@ def sync_models(request):
     return sync_models_from_openrouter()
 
 
+@router.post("/import/", response=ModelImportResultSchema)
+def import_models(request):
+    """Import models from exported JSON or OpenRouter payload JSON."""
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HttpError(400, "Invalid JSON payload.") from exc
+
+    result = import_models_from_payload(payload)
+    if result["count"] == 0:
+        raise HttpError(400, "No model records found in payload.")
+
+    return result
+
+
+@router.get("/export/")
+def export_models(request, format: str = Query("csv")):
+    """Export models as CSV or JSON."""
+    export_format = format.lower()
+    models = list(LLMModel.objects.all())
+
+    if export_format == "csv":
+        return _build_csv_export(models)
+    if export_format == "json":
+        return {
+            "format": "json",
+            "count": len(models),
+            "models": [_serialize_export_model(model) for model in models],
+        }
+
+    raise HttpError(400, "Unsupported export format.")
+
+
+@router.get("/comparison/", response=ModelComparisonSchema)
+def get_model_comparison(request, models: str = Query("")):
+    """Return ordered model data for side-by-side comparison."""
+    identifiers = [item.strip() for item in models.split(",") if item.strip()][:6]
+    missing: list[str] = []
+    selected_models: list[LLMModel] = []
+    seen_slugs: set[str] = set()
+
+    for identifier in identifiers:
+        match = _resolve_model_queryset(identifier).first()
+        if not match:
+            missing.append(identifier)
+            continue
+        if match.canonical_slug in seen_slugs:
+            continue
+        seen_slugs.add(match.canonical_slug)
+        selected_models.append(match)
+
+    return {
+        "items": selected_models,
+        "missing": missing,
+    }
+
+
 # Slug-based routes MUST come after all fixed-path routes
 @router.get("/detail/{slug}/", response=LLMModelSchema)
 def get_model(request, slug: str):
     """Get a single model by its canonical slug."""
-    return get_object_or_404(LLMModel, canonical_slug=slug)
+    return _get_model_by_identifier(slug)
+
+
+@router.post("/detail/{slug}/refresh/", response=LLMModelSchema)
+def refresh_model(request, slug: str):
+    """Refresh a single model from the OpenRouter model catalog."""
+    model = _get_model_by_identifier(slug)
+    if not refresh_model_from_openrouter(model):
+        raise HttpError(404, "Model not found in OpenRouter catalog.")
+    model.refresh_from_db()
+    return model
 
 
 @router.delete("/detail/{slug}/")
 def delete_model(request, slug: str):
     """Delete a model by slug."""
-    model = get_object_or_404(LLMModel, canonical_slug=slug)
+    model = _get_model_by_identifier(slug)
     model.delete()
     return {"success": True}
 
@@ -198,7 +368,7 @@ def delete_model(request, slug: str):
 @router.get("/detail/{slug}/related/", response=list[LLMModelListSchema])
 def get_related_models(request, slug: str, limit: int = Query(10, ge=1, le=20)):
     """Get models from the same provider, excluding the current model."""
-    model = get_object_or_404(LLMModel, canonical_slug=slug)
+    model = _get_model_by_identifier(slug)
     related = (
         LLMModel.objects.filter(provider=model.provider)
         .exclude(pk=model.pk)

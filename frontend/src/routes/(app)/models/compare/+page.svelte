@@ -1,49 +1,133 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { getModelComparison, type LLMModelDetail, type ModelComparisonResult } from '$lib/api/client';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
+	import { toast } from 'svelte-sonner';
+	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import Cpu from '@lucide/svelte/icons/cpu';
 	import Check from '@lucide/svelte/icons/check';
-	import X from '@lucide/svelte/icons/x';
+	import Cpu from '@lucide/svelte/icons/cpu';
 	import Link from '@lucide/svelte/icons/link';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import Settings from '@lucide/svelte/icons/settings';
+	import X from '@lucide/svelte/icons/x';
 
-	interface CompareModel {
-		slug: string;
-		name: string;
-		provider: string;
-		contextWindow: string;
-		inputPrice: number;
-		outputPrice: number;
-		appsGenerated: number;
-		avgScore: number;
-		successRate: string;
-		capabilities: Record<string, boolean>;
-	}
+	type BaselineMode = 'first' | 'average' | 'median';
 
-	const allModels: CompareModel[] = [
-		{ slug: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', contextWindow: '128K', inputPrice: 2.50, outputPrice: 10.00, appsGenerated: 24, avgScore: 78.3, successRate: '95.8%', capabilities: { 'Code': true, 'Chat': true, 'Vision': true, 'Function Calling': true, 'JSON Mode': true, 'Audio': true, 'Fine-tuning': false } },
-		{ slug: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', contextWindow: '200K', inputPrice: 3.00, outputPrice: 15.00, appsGenerated: 22, avgScore: 82.1, successRate: '93.2%', capabilities: { 'Code': true, 'Chat': true, 'Vision': true, 'Function Calling': true, 'JSON Mode': true, 'Audio': false, 'Fine-tuning': false } },
-		{ slug: 'gemini-1-5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', contextWindow: '2M', inputPrice: 1.25, outputPrice: 5.00, appsGenerated: 20, avgScore: 74.5, successRate: '90.1%', capabilities: { 'Code': true, 'Chat': true, 'Vision': true, 'Function Calling': true, 'JSON Mode': true, 'Audio': false, 'Fine-tuning': false } },
-	];
-
-	const queryModels = $derived($page.url.searchParams.get('models')?.split(',').filter(Boolean) ?? []);
-	const compareModels = $derived(
-		queryModels.length > 0
-			? allModels.filter(m => queryModels.includes(m.slug))
-			: allModels
+	const queryModels = $derived(
+		($page.url.searchParams.get('models') ?? '')
+			.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean),
 	);
 
-	let baseline = $state<'average' | 'median'>('average');
+	let comparison = $state<ModelComparisonResult | null>(null);
+	let loading = $state(true);
+	let error = $state('');
+	let baseline = $state<BaselineMode>('first');
 	let highlightSlug = $state('');
-	let normalize = $state(false);
 
-	const allCapabilities = $derived([...new Set(compareModels.flatMap(m => Object.keys(m.capabilities)))]);
-	const avgInput = $derived(compareModels.reduce((s, m) => s + m.inputPrice, 0) / compareModels.length);
-	const avgOutput = $derived(compareModels.reduce((s, m) => s + m.outputPrice, 0) / compareModels.length);
+	const comparedModels = $derived(comparison?.items ?? []);
+	const missingModels = $derived(comparison?.missing ?? []);
+	const capabilityUnion = $derived([...new Set(comparedModels.flatMap((model) => model.capabilities))]);
+	const baselineLabel = $derived(
+		baseline === 'first'
+			? (comparedModels[0]?.model_name ?? 'first selected model')
+			: baseline === 'average'
+				? 'average price'
+				: 'median price',
+	);
+	const baselineInputPrice = $derived(resolveBaseline(comparedModels.map((model) => model.input_price_per_million), baseline));
+	const baselineOutputPrice = $derived(resolveBaseline(comparedModels.map((model) => model.output_price_per_million), baseline));
+
+	function resolveBaseline(values: number[], mode: BaselineMode): number {
+		if (values.length === 0) return 0;
+		if (mode === 'average') {
+			return values.reduce((sum, value) => sum + value, 0) / values.length;
+		}
+		if (mode === 'median') {
+			const sorted = [...values].sort((left, right) => left - right);
+			const middle = Math.floor(sorted.length / 2);
+			if (sorted.length % 2 === 0) {
+				return (sorted[middle - 1] + sorted[middle]) / 2;
+			}
+			return sorted[middle];
+		}
+		return values[0] ?? 0;
+	}
+
+	function formatPrice(price: number): string {
+		if (price === 0) return 'Free';
+		if (price < 0.01) return `$${price.toFixed(4)}`;
+		return `$${price.toFixed(2)}`;
+	}
+
+	function formatDelta(value: number): string {
+		if (value === 0) return '0.00';
+		return `${value > 0 ? '+' : ''}${value.toFixed(2)}`;
+	}
+
+	function formatTokens(value: number): string {
+		if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+		if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
+		return String(value);
+	}
+
+	function efficiencyGrade(score: number): string {
+		if (score >= 0.9) return 'A+';
+		if (score >= 0.8) return 'A';
+		if (score >= 0.7) return 'A-';
+		if (score >= 0.6) return 'B+';
+		if (score >= 0.5) return 'B';
+		if (score >= 0.4) return 'B-';
+		if (score >= 0.3) return 'C+';
+		if (score >= 0.2) return 'C';
+		return 'D';
+	}
+
+	function supportsCapability(model: LLMModelDetail, capability: string): boolean {
+		return model.capabilities.includes(capability);
+	}
+
+	async function copyShareLink() {
+		await navigator.clipboard.writeText(window.location.href);
+		toast.success('Comparison link copied.');
+	}
+
+	async function loadComparison() {
+		loading = true;
+		error = '';
+		comparison = null;
+
+		if (queryModels.length === 0) {
+			loading = false;
+			return;
+		}
+
+		try {
+			comparison = await getModelComparison(queryModels);
+			if (comparison.items.length === 0) {
+				error = 'No matching models were found.';
+			}
+			if (!highlightSlug && comparison.items.length > 0) {
+				highlightSlug = comparison.items[0].canonical_slug;
+			}
+		} catch {
+			error = 'Failed to load model comparison.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	$effect(() => {
+		const nextSelection = queryModels;
+		if (nextSelection.length > 0) {
+			highlightSlug = nextSelection[0] ?? '';
+		}
+		void loadComparison();
+	});
 </script>
 
 <svelte:head>
@@ -51,256 +135,249 @@
 </svelte:head>
 
 <div class="space-y-4 sm:space-y-6">
-	<!-- Breadcrumb -->
 	<div class="flex items-center gap-2 text-sm text-muted-foreground">
 		<Button variant="ghost" size="sm" href="/models" class="gap-1.5 px-2">
 			<ArrowLeft class="h-3.5 w-3.5" />
 			Models
 		</Button>
 		<span>/</span>
-		<span class="text-foreground font-medium">Comparison</span>
+		<span class="font-medium text-foreground">Comparison</span>
 	</div>
 
 	<div class="page-header">
 		<h1>Model Comparison</h1>
-		<p>Side-by-side comparison of {compareModels.length} models.</p>
+		<p>Side-by-side comparison for the models selected in the models list or detail view.</p>
 	</div>
 
-	<!-- Settings -->
-	<Card.Root>
-		<Card.Header>
-			<div class="flex items-center gap-2">
-				<Settings class="h-4 w-4 text-muted-foreground" />
-				<Card.Title>Comparison Settings</Card.Title>
+	{#if queryModels.length === 0}
+		<Card.Root>
+			<Card.Content class="flex flex-col items-center justify-center gap-3 py-12 text-center">
+				<Cpu class="h-10 w-10 text-muted-foreground/40" />
+				<div>
+					<p class="text-sm font-medium">No models selected.</p>
+					<p class="text-sm text-muted-foreground">Choose one or more models from the models page to open a real comparison.</p>
+				</div>
+				<Button href="/models">Go to Models</Button>
+			</Card.Content>
+		</Card.Root>
+	{:else if loading}
+		<div class="flex items-center justify-center py-20">
+			<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+		</div>
+	{:else}
+		{#if error}
+			<div class="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+				{error}
 			</div>
-		</Card.Header>
-		<Card.Content>
-			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-				<div class="flex items-center gap-2">
-					<label class="text-sm font-medium">Baseline:</label>
-					<select class="h-8 rounded-md border border-input bg-background px-2 text-sm" bind:value={baseline}>
-						<option value="average">Average</option>
-						<option value="median">Median</option>
-					</select>
-				</div>
-				<div class="flex items-center gap-2">
-					<label class="text-sm font-medium">Highlight:</label>
-					<select class="h-8 rounded-md border border-input bg-background px-2 text-sm" bind:value={highlightSlug}>
-						<option value="">None</option>
-						{#each compareModels as m}
-							<option value={m.slug}>{m.name}</option>
-						{/each}
-					</select>
-				</div>
-				<div class="flex items-center gap-2">
-					<input type="checkbox" id="normalize" bind:checked={normalize} class="rounded" />
-					<label for="normalize" class="text-sm">Normalize values</label>
-				</div>
-				<div class="sm:ml-auto">
-					<Button variant="outline" size="sm" disabled>
-						<Link class="mr-2 h-3.5 w-3.5" />
-						Share Link
-					</Button>
-				</div>
-			</div>
-			<Separator class="my-3" />
-			<div class="flex flex-wrap gap-1.5">
-				{#each compareModels as m (m.slug)}
-					<Badge variant="secondary" class="gap-1.5">
-						<Cpu class="h-3 w-3" />
-						{m.name}
-					</Badge>
-				{/each}
-			</div>
-		</Card.Content>
-	</Card.Root>
+		{/if}
 
-	<!-- Core Metrics Matrix -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Core Metrics</Card.Title>
-		</Card.Header>
-		<Card.Content class="p-0">
-			<div class="hidden md:block overflow-x-auto">
-				<table class="w-full">
-					<thead>
-						<tr class="border-b bg-muted/30">
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Metric</th>
-							{#each compareModels as m (m.slug)}
-								<th class="px-4 py-3 text-left text-xs font-medium {highlightSlug === m.slug ? 'text-primary' : 'text-muted-foreground'}">{m.name}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Provider</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm">{m.provider}</td>{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Context Window</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm font-mono">{m.contextWindow}</td>{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Input $/1M tokens</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm font-mono">${m.inputPrice.toFixed(2)}</td>{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Output $/1M tokens</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm font-mono">${m.outputPrice.toFixed(2)}</td>{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Apps Generated</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm font-semibold">{m.appsGenerated}</td>{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Avg Score</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm font-semibold">{m.avgScore}</td>{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Success Rate</td>
-							{#each compareModels as m}<td class="px-4 py-2.5 text-sm">{m.successRate}</td>{/each}
-						</tr>
-					</tbody>
-				</table>
-			</div>
-			<!-- Mobile card view -->
-			<div class="md:hidden space-y-3 p-4">
-				{#each compareModels as m (m.slug)}
-					<div class="rounded-lg border p-4 {highlightSlug === m.slug ? 'border-primary' : ''}">
-						<div class="flex items-center gap-2 mb-3">
-							<Cpu class="h-4 w-4 text-primary" />
-							<span class="font-medium">{m.name}</span>
-							<Badge variant="secondary" class="text-xs">{m.provider}</Badge>
-						</div>
-						<div class="grid grid-cols-2 gap-2 text-sm">
-							<div>
-								<div class="text-xs text-muted-foreground">Context Window</div>
-								<div class="font-mono">{m.contextWindow}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Input $/1M tokens</div>
-								<div class="font-mono">${m.inputPrice.toFixed(2)}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Output $/1M tokens</div>
-								<div class="font-mono">${m.outputPrice.toFixed(2)}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Apps Generated</div>
-								<div class="font-semibold">{m.appsGenerated}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Avg Score</div>
-								<div class="font-semibold">{m.avgScore}</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground">Success Rate</div>
-								<div>{m.successRate}</div>
-							</div>
-						</div>
+		{#if missingModels.length > 0}
+			<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+				<div class="flex items-start gap-2">
+					<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+					<div>
+						<p class="font-medium">Some requested models were not found.</p>
+						<p class="mt-1">Missing: {missingModels.join(', ')}</p>
 					</div>
-				{/each}
+				</div>
 			</div>
-		</Card.Content>
-	</Card.Root>
+		{/if}
 
-	<!-- Pricing Deltas -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Pricing Deltas</Card.Title>
-			<Card.Description>Price difference compared to {compareModels[0]?.name ?? 'first model'}.</Card.Description>
-		</Card.Header>
-		<Card.Content class="p-0">
-			<div class="overflow-x-auto">
-				<table class="w-full">
-					<thead>
-						<tr class="border-b bg-muted/30">
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Type</th>
-							{#each compareModels as m (m.slug)}
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{m.name}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Input Delta</td>
-							{#each compareModels as m, i}
-								<td class="px-4 py-2.5 text-sm font-mono {i === 0 ? '' : m.inputPrice > compareModels[0].inputPrice ? 'text-red-500' : 'text-emerald-500'}">
-									{i === 0 ? '—' : (m.inputPrice - compareModels[0].inputPrice > 0 ? '+' : '') + (m.inputPrice - compareModels[0].inputPrice).toFixed(2)}
-								</td>
-							{/each}
-						</tr>
-						<tr class="hover:bg-muted/30">
-							<td class="px-4 py-2.5 text-sm font-medium">Output Delta</td>
-							{#each compareModels as m, i}
-								<td class="px-4 py-2.5 text-sm font-mono {i === 0 ? '' : m.outputPrice > compareModels[0].outputPrice ? 'text-red-500' : 'text-emerald-500'}">
-									{i === 0 ? '—' : (m.outputPrice - compareModels[0].outputPrice > 0 ? '+' : '') + (m.outputPrice - compareModels[0].outputPrice).toFixed(2)}
-								</td>
-							{/each}
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</Card.Content>
-	</Card.Root>
-
-	<!-- Capabilities Comparison -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Capabilities Comparison</Card.Title>
-		</Card.Header>
-		<Card.Content class="p-0">
-			<div class="hidden md:block overflow-x-auto">
-				<table class="w-full">
-					<thead>
-						<tr class="border-b bg-muted/30">
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Capability</th>
-							{#each compareModels as m (m.slug)}
-								<th class="px-4 py-3 text-center text-xs font-medium text-muted-foreground">{m.name}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						{#each allCapabilities as cap (cap)}
-							<tr class="hover:bg-muted/30">
-								<td class="px-4 py-2.5 text-sm font-medium">{cap}</td>
-								{#each compareModels as m}
-									<td class="px-4 py-2.5 text-center">
-										{#if m.capabilities[cap]}
-											<Check class="inline h-4 w-4 text-emerald-500" />
-										{:else}
-											<X class="inline h-4 w-4 text-muted-foreground/40" />
-										{/if}
-									</td>
+		{#if comparedModels.length > 0}
+			<Card.Root>
+				<Card.Header>
+					<div class="flex items-center gap-2">
+						<Settings class="h-4 w-4 text-muted-foreground" />
+						<Card.Title>Comparison Settings</Card.Title>
+					</div>
+				</Card.Header>
+				<Card.Content class="space-y-3">
+					<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+						<div class="flex items-center gap-2">
+							<label class="text-sm font-medium" for="baseline">Baseline:</label>
+							<select id="baseline" class="h-8 rounded-md border border-input bg-background px-2 text-sm" bind:value={baseline}>
+								<option value="first">First Selected</option>
+								<option value="average">Average</option>
+								<option value="median">Median</option>
+							</select>
+						</div>
+						<div class="flex items-center gap-2">
+							<label class="text-sm font-medium" for="highlight">Highlight:</label>
+							<select id="highlight" class="h-8 rounded-md border border-input bg-background px-2 text-sm" bind:value={highlightSlug}>
+								{#each comparedModels as model}
+									<option value={model.canonical_slug}>{model.model_name}</option>
 								{/each}
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<!-- Mobile card view -->
-			<div class="md:hidden space-y-3 p-4">
-				{#each compareModels as m (m.slug)}
-					<div class="rounded-lg border p-4">
-						<div class="flex items-center gap-2 mb-3">
-							<Cpu class="h-4 w-4 text-primary" />
-							<span class="font-medium">{m.name}</span>
+							</select>
 						</div>
-						<div class="flex flex-wrap gap-1.5">
-							{#each allCapabilities as cap (cap)}
-								<Badge variant="outline" class="text-xs gap-1 {m.capabilities[cap] ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'opacity-40'}">
-									{#if m.capabilities[cap]}
-										<Check class="h-2.5 w-2.5" />
-									{:else}
-										<X class="h-2.5 w-2.5" />
-									{/if}
-									{cap}
-								</Badge>
-							{/each}
+						<div class="sm:ml-auto">
+							<Button variant="outline" size="sm" onclick={copyShareLink}>
+								<Link class="mr-2 h-3.5 w-3.5" />
+								Share Link
+							</Button>
 						</div>
 					</div>
-				{/each}
-			</div>
-		</Card.Content>
-	</Card.Root>
+					<div class="flex flex-wrap gap-1.5">
+						{#each comparedModels as model (model.canonical_slug)}
+							<Badge variant="secondary" class="gap-1.5 {highlightSlug === model.canonical_slug ? 'border border-primary/30 bg-primary/10 text-primary' : ''}">
+								<Cpu class="h-3 w-3" />
+								{model.model_name}
+							</Badge>
+						{/each}
+					</div>
+				</Card.Content>
+			</Card.Root>
+
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Core Metrics</Card.Title>
+				</Card.Header>
+				<Card.Content class="p-0">
+					<div class="overflow-x-auto">
+						<table class="w-full min-w-[720px]">
+							<thead>
+								<tr class="border-b bg-muted/30">
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Metric</th>
+									{#each comparedModels as model (model.canonical_slug)}
+										<th class="px-4 py-3 text-left text-xs font-medium {highlightSlug === model.canonical_slug ? 'text-primary' : 'text-muted-foreground'}">{model.model_name}</th>
+									{/each}
+								</tr>
+							</thead>
+							<tbody class="divide-y">
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Provider</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm">{model.provider}</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Context Window</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm font-mono">{model.context_window_display}</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Max Output</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm font-mono">{model.max_output_tokens ? formatTokens(model.max_output_tokens) : '—'}</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Input $/1M Tokens</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm font-mono">{formatPrice(model.input_price_per_million)}</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Output $/1M Tokens</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm font-mono">{formatPrice(model.output_price_per_million)}</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Cost Efficiency</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm">
+											<div class="flex items-center gap-2">
+												<span class="font-semibold">{efficiencyGrade(model.cost_efficiency)}</span>
+												<span class="font-mono text-xs text-muted-foreground">{model.cost_efficiency.toFixed(3)}</span>
+											</div>
+										</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Free Tier</td>
+									{#each comparedModels as model}
+										<td class="px-4 py-2.5 text-sm">
+											{#if model.is_free}
+												<Check class="h-4 w-4 text-emerald-500" />
+											{:else}
+												<X class="h-4 w-4 text-muted-foreground/40" />
+											{/if}
+										</td>
+									{/each}
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</Card.Content>
+			</Card.Root>
+
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Pricing Deltas</Card.Title>
+					<Card.Description>Difference compared to {baselineLabel}.</Card.Description>
+				</Card.Header>
+				<Card.Content class="p-0">
+					<div class="overflow-x-auto">
+						<table class="w-full min-w-[720px]">
+							<thead>
+								<tr class="border-b bg-muted/30">
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Type</th>
+									{#each comparedModels as model (model.canonical_slug)}
+										<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{model.model_name}</th>
+									{/each}
+								</tr>
+							</thead>
+							<tbody class="divide-y">
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Input Delta</td>
+									{#each comparedModels as model}
+										{@const delta = model.input_price_per_million - baselineInputPrice}
+										<td class="px-4 py-2.5 text-sm font-mono {delta > 0 ? 'text-red-500' : delta < 0 ? 'text-emerald-500' : 'text-muted-foreground'}">
+											{formatDelta(delta)}
+										</td>
+									{/each}
+								</tr>
+								<tr class="hover:bg-muted/30">
+									<td class="px-4 py-2.5 text-sm font-medium">Output Delta</td>
+									{#each comparedModels as model}
+										{@const delta = model.output_price_per_million - baselineOutputPrice}
+										<td class="px-4 py-2.5 text-sm font-mono {delta > 0 ? 'text-red-500' : delta < 0 ? 'text-emerald-500' : 'text-muted-foreground'}">
+											{formatDelta(delta)}
+										</td>
+									{/each}
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</Card.Content>
+			</Card.Root>
+
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Capabilities Comparison</Card.Title>
+				</Card.Header>
+				<Card.Content class="p-0">
+					<div class="overflow-x-auto">
+						<table class="w-full min-w-[720px]">
+							<thead>
+								<tr class="border-b bg-muted/30">
+									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Capability</th>
+									{#each comparedModels as model (model.canonical_slug)}
+										<th class="px-4 py-3 text-center text-xs font-medium text-muted-foreground">{model.model_name}</th>
+									{/each}
+								</tr>
+							</thead>
+							<tbody class="divide-y">
+								{#each capabilityUnion as capability (capability)}
+									<tr class="hover:bg-muted/30">
+										<td class="px-4 py-2.5 text-sm font-medium">{capability}</td>
+										{#each comparedModels as model}
+											<td class="px-4 py-2.5 text-center">
+												{#if supportsCapability(model, capability)}
+													<Check class="inline h-4 w-4 text-emerald-500" />
+												{:else}
+													<X class="inline h-4 w-4 text-muted-foreground/40" />
+												{/if}
+											</td>
+										{/each}
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+	{/if}
 </div>

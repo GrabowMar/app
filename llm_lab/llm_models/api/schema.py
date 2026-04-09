@@ -149,3 +149,13 @@ class PaginatedModelsSchema(Schema):
     page: int
     per_page: int
     pages: int
+
+
+class ModelImportResultSchema(Schema):
+    count: int
+    imported: int
+
+
+class ModelComparisonSchema(Schema):
+    items: list[LLMModelSchema]
+    missing: list[str]

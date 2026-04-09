@@ -2,6 +2,7 @@
 
 import logging
 import time
+from typing import Any
 
 import requests
 from django.conf import settings
@@ -10,6 +11,67 @@ from django.db import IntegrityError
 from llm_lab.llm_models.models import LLMModel
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_model_identifier(value: str) -> str:
+    """Normalize a model identifier into the canonical slug format."""
+    return value.strip().lower().replace("/", "_").replace(":", "_").replace(" ", "_")
+
+
+def _build_canonical_slug(model_id: str, raw_slug: str = "") -> str:
+    candidate = raw_slug.strip() or model_id
+    return normalize_model_identifier(candidate)
+
+
+def _coerce_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _coerce_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value in (None, ""):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_int(value: Any, default: int = 0) -> int:
+    try:
+        if value in (None, ""):
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _update_or_create_model(
+    model_id: str,
+    canonical_slug: str,
+    defaults: dict[str, Any],
+) -> bool:
+    try:
+        LLMModel.objects.update_or_create(
+            model_id=model_id,
+            defaults={**defaults, "canonical_slug": canonical_slug},
+        )
+        return True
+    except IntegrityError:
+        try:
+            LLMModel.objects.update_or_create(
+                canonical_slug=canonical_slug,
+                defaults={**defaults, "model_id": model_id},
+            )
+            return True
+        except IntegrityError:
+            logger.exception("Failed to upsert model %s", model_id)
+            return False
 
 
 def fetch_openrouter_models() -> list[dict]:
@@ -62,8 +124,8 @@ def upsert_openrouter_models(models_payload: list[dict]) -> int:  # noqa: C901, 
         canonical = model_id.replace("/", "_").replace(":", "_")
         raw_cs = model_data.get("canonical_slug", "")
         if raw_cs:
-            canonical = raw_cs.replace("/", "_").replace(":", "_").replace(" ", "_")
-        canonical = canonical.lower()
+            canonical = raw_cs
+        canonical = _build_canonical_slug(model_id, canonical)
 
         provider = model_id.split("/")[0] if "/" in model_id else "unknown"
         model_name = model_data.get("name") or model_id.split("/")[-1]
@@ -180,25 +242,180 @@ def upsert_openrouter_models(models_payload: list[dict]) -> int:  # noqa: C901, 
             "metadata": meta,
         }
 
-        try:
-            _obj, _created = LLMModel.objects.update_or_create(
-                model_id=model_id,
-                defaults={**defaults, "canonical_slug": canonical},
-            )
+        if _update_or_create_model(model_id, canonical, defaults):
             upserted += 1
-        except IntegrityError:
-            # Slug collision: another model_id already has this slug.
-            # Try updating by slug instead.
-            try:
-                _obj, _created = LLMModel.objects.update_or_create(
-                    canonical_slug=canonical,
-                    defaults={**defaults, "model_id": model_id},
-                )
-                upserted += 1
-            except IntegrityError:
-                logger.exception("Failed to upsert model %s", model_id)
 
     return upserted
+
+
+def extract_import_models(payload: Any) -> list[dict[str, Any]]:
+    """Extract a normalized list of model payloads from import JSON."""
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+
+    if isinstance(payload, dict):
+        if isinstance(payload.get("models"), list):
+            return [item for item in payload["models"] if isinstance(item, dict)]
+        if isinstance(payload.get("data"), list):
+            return [item for item in payload["data"] if isinstance(item, dict)]
+        return [payload]
+
+    return []
+
+
+def upsert_imported_models(models_payload: list[dict[str, Any]]) -> int:
+    """Upsert models from an exported/internal JSON representation."""
+    upserted = 0
+
+    for model_data in models_payload:
+        model_id = str(model_data.get("model_id") or model_data.get("id") or "").strip()
+        if not model_id:
+            continue
+
+        canonical_slug = _build_canonical_slug(
+            model_id,
+            str(model_data.get("canonical_slug") or ""),
+        )
+        provider = str(
+            model_data.get("provider")
+            or (model_id.split("/", 1)[0] if "/" in model_id else "unknown"),
+        ).strip()
+        model_name = str(
+            model_data.get("model_name")
+            or model_data.get("name")
+            or model_id.split("/", 1)[-1],
+        ).strip()
+        description = str(model_data.get("description") or "")
+
+        input_price = _coerce_float(model_data.get("input_price_per_token"))
+        output_price = _coerce_float(model_data.get("output_price_per_token"))
+        if input_price == 0 and model_data.get("input_price_per_million") not in (None, ""):
+            input_price = _coerce_float(model_data.get("input_price_per_million")) / 1_000_000
+        if output_price == 0 and model_data.get("output_price_per_million") not in (None, ""):
+            output_price = _coerce_float(model_data.get("output_price_per_million")) / 1_000_000
+
+        context_window = _coerce_int(model_data.get("context_window"))
+        max_output_tokens = _coerce_int(model_data.get("max_output_tokens"))
+
+        capabilities_json = model_data.get("capabilities_json")
+        if not isinstance(capabilities_json, dict):
+            capabilities_json = {}
+            for field in (
+                "capabilities",
+                "supported_parameters",
+                "top_provider",
+                "pricing",
+                "architecture",
+            ):
+                if field in model_data:
+                    capabilities_json[field] = model_data[field]
+
+        metadata = model_data.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        capabilities = model_data.get("capabilities")
+        supports_function_calling = _coerce_bool(
+            model_data.get("supports_function_calling"),
+            isinstance(capabilities, list) and "Function Calling" in capabilities,
+        )
+        supports_vision = _coerce_bool(
+            model_data.get("supports_vision"),
+            isinstance(capabilities, list) and "Vision" in capabilities,
+        )
+        supports_streaming = _coerce_bool(
+            model_data.get("supports_streaming"),
+            isinstance(capabilities, list) and "Streaming" in capabilities,
+        )
+        supports_json_mode = _coerce_bool(
+            model_data.get("supports_json_mode"),
+            isinstance(capabilities, list) and "JSON Mode" in capabilities,
+        )
+        is_free = _coerce_bool(
+            model_data.get("is_free"),
+            input_price == 0 and output_price == 0,
+        )
+
+        cost_efficiency = _coerce_float(model_data.get("cost_efficiency"))
+        if cost_efficiency <= 0:
+            cost_efficiency = LLMModel.calculate_cost_efficiency(
+                context_window,
+                input_price,
+                output_price,
+            )
+
+        defaults = {
+            "provider": provider,
+            "model_name": model_name,
+            "description": description[:5000],
+            "is_free": is_free,
+            "context_window": context_window,
+            "max_output_tokens": max_output_tokens,
+            "input_price_per_token": input_price,
+            "output_price_per_token": output_price,
+            "supports_function_calling": supports_function_calling,
+            "supports_vision": supports_vision,
+            "supports_streaming": supports_streaming,
+            "supports_json_mode": supports_json_mode,
+            "cost_efficiency": cost_efficiency,
+            "capabilities_json": capabilities_json,
+            "metadata": metadata,
+        }
+
+        if _update_or_create_model(model_id, canonical_slug, defaults):
+            upserted += 1
+
+    return upserted
+
+
+def import_models_from_payload(payload: Any) -> dict[str, int]:
+    """Import models from OpenRouter payloads or exported model JSON."""
+    items = extract_import_models(payload)
+    openrouter_items: list[dict[str, Any]] = []
+    exported_items: list[dict[str, Any]] = []
+
+    for item in items:
+        if "model_id" in item or "canonical_slug" in item:
+            exported_items.append(item)
+            continue
+        if "id" in item:
+            openrouter_items.append(item)
+
+    imported = 0
+    if openrouter_items:
+        imported += upsert_openrouter_models(openrouter_items)
+    if exported_items:
+        imported += upsert_imported_models(exported_items)
+
+    return {"count": len(items), "imported": imported}
+
+
+def refresh_model_from_openrouter(model: LLMModel) -> bool:
+    """Refresh a single model from the OpenRouter catalog."""
+    models_payload = fetch_openrouter_models()
+    if not models_payload:
+        return False
+
+    candidates = {
+        model.model_id.strip().lower(),
+        model.canonical_slug.strip().lower(),
+        normalize_model_identifier(model.model_id),
+        normalize_model_identifier(model.canonical_slug),
+    }
+
+    for model_data in models_payload:
+        model_id = str(model_data.get("id") or "").strip()
+        if not model_id:
+            continue
+
+        canonical_slug = _build_canonical_slug(
+            model_id,
+            str(model_data.get("canonical_slug") or ""),
+        )
+        if model_id.lower() in candidates or canonical_slug in candidates:
+            return upsert_openrouter_models([model_data]) == 1
+
+    return False
 
 
 def sync_models_from_openrouter() -> dict:

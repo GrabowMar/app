@@ -5,6 +5,7 @@ import { Button } from '$lib/components/ui/button';
 import { Input } from '$lib/components/ui/input';
 import { Separator } from '$lib/components/ui/separator';
 import {
+getModelsExportUrl,
 getModels,
 getModelsStats,
 getProviders,
@@ -31,6 +32,7 @@ import ArrowUp from '@lucide/svelte/icons/arrow-up';
 import ArrowDown from '@lucide/svelte/icons/arrow-down';
 import X from '@lucide/svelte/icons/x';
 import Eye from '@lucide/svelte/icons/eye';
+import GitCompareArrows from '@lucide/svelte/icons/git-compare-arrows';
 import Wrench from '@lucide/svelte/icons/wrench';
 import Radio from '@lucide/svelte/icons/radio';
 import Braces from '@lucide/svelte/icons/braces';
@@ -59,8 +61,13 @@ let providers = $state<string[]>([]);
 let loading = $state(true);
 let syncing = $state(false);
 let error = $state('');
+let selectedModelSlugs = $state<Set<string>>(new Set());
 
 let debounceTimer: ReturnType<typeof setTimeout>;
+const visibleModelSlugs = $derived(data?.items.map((item) => item.canonical_slug) ?? []);
+const allVisibleSelected = $derived(
+visibleModelSlugs.length > 0 && visibleModelSlugs.every((slug) => selectedModelSlugs.has(slug))
+);
 
 // Active filters as removable tags
 const activeFilters = $derived(() => {
@@ -182,6 +189,37 @@ currentPage = p;
 load();
 }
 
+function toggleModelSelection(slug: string) {
+const next = new Set(selectedModelSlugs);
+if (next.has(slug)) next.delete(slug);
+else next.add(slug);
+selectedModelSlugs = next;
+}
+
+function toggleVisibleModelSelection() {
+const next = new Set(selectedModelSlugs);
+if (allVisibleSelected) {
+for (const slug of visibleModelSlugs) next.delete(slug);
+} else {
+for (const slug of visibleModelSlugs) next.add(slug);
+}
+selectedModelSlugs = next;
+}
+
+function clearSelection() {
+selectedModelSlugs = new Set();
+}
+
+function openComparison() {
+if (selectedModelSlugs.size === 0) return;
+const models = encodeURIComponent(Array.from(selectedModelSlugs).join(','));
+window.location.href = `/models/compare?models=${models}`;
+}
+
+function downloadExport(format: 'csv' | 'json' = 'csv') {
+window.location.href = getModelsExportUrl(format);
+}
+
 function formatPrice(price: number): string {
 if (price === 0) return 'Free';
 if (price < 0) return '—';
@@ -272,6 +310,10 @@ loadMeta();
 <p class="hidden sm:block">Browse and manage AI models available for research.</p>
 </div>
 <div class="flex items-center gap-2">
+	<Button variant="outline" size="sm" onclick={openComparison} disabled={selectedModelSlugs.size === 0}>
+		<GitCompareArrows class="h-3.5 w-3.5 sm:mr-2" />
+		<span class="hidden sm:inline">Compare{selectedModelSlugs.size > 0 ? ` (${selectedModelSlugs.size})` : ''}</span>
+	</Button>
 <Button variant="outline" size="sm" href="/rankings">
 <Trophy class="h-3.5 w-3.5 sm:mr-2" />
 <span class="hidden sm:inline">Rankings</span>
@@ -370,7 +412,7 @@ onchange={() => applyFilterAndReload()}
 <span class="hidden sm:inline">Sync from OpenRouter</span>
 {/if}
 </Button>
-<Button variant="outline" size="sm" disabled class="hidden sm:inline-flex">
+<Button variant="outline" size="sm" class="hidden sm:inline-flex" onclick={() => downloadExport('csv')}>
 <Download class="mr-2 h-3.5 w-3.5" />
 Export
 </Button>
@@ -458,7 +500,11 @@ onclick={() => { filterContextRange = filterContextRange === opt.value ? '' : op
 <p class="text-xs text-muted-foreground">
 Showing {(data.page - 1) * data.per_page + 1}–{Math.min(data.page * data.per_page, data.total)} of <strong>{data.total}</strong> models
 </p>
-<select
+	<div class="flex items-center gap-2">
+		{#if selectedModelSlugs.size > 0}
+			<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearSelection}>Clear selection</Button>
+		{/if}
+		<select
 class="h-7 rounded-md border border-input bg-background px-2 text-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
 bind:value={perPage}
 onchange={() => { currentPage = 1; load(); }}
@@ -467,6 +513,7 @@ onchange={() => { currentPage = 1; load(); }}
 <option value={50}>50 / page</option>
 <option value={100}>100 / page</option>
 </select>
+	</div>
 </div>
 {/if}
 
@@ -482,6 +529,14 @@ onchange={() => { currentPage = 1; load(); }}
 <table class="w-full">
 <thead>
 <tr class="border-b bg-muted/40 sticky top-0 z-10">
+<th class="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground whitespace-nowrap w-12">
+	<input
+		type="checkbox"
+		checked={allVisibleSelected}
+		onchange={toggleVisibleModelSelection}
+		aria-label="Select visible models"
+	/>
+</th>
 {#each sortableColumns as col}
 <th class="px-3 py-2.5 text-{col.align ?? 'left'} text-xs font-medium text-muted-foreground whitespace-nowrap">
 <button
@@ -509,6 +564,14 @@ onclick={() => toggleSort(col.sortField)}
 <tr class="border-b transition-colors hover:bg-muted/50 group
 {i % 2 === 0 ? '' : 'bg-muted/15'}
 {model.is_free ? 'bg-emerald-500/[0.03]' : ''}">
+<td class="px-3 py-2 text-center align-top">
+	<input
+		type="checkbox"
+		checked={selectedModelSlugs.has(model.canonical_slug)}
+		onchange={() => toggleModelSelection(model.canonical_slug)}
+		aria-label={`Select ${model.model_name}`}
+	/>
+</td>
 <!-- Model Name + Description -->
 <td class="px-3 py-2">
 <a href="/models/{model.canonical_slug}" class="flex items-center gap-2.5 group/link">
