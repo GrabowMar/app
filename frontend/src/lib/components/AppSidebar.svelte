@@ -11,13 +11,16 @@
 	import Zap from '@lucide/svelte/icons/zap';
 	import Layers from '@lucide/svelte/icons/layers';
 	import Container from '@lucide/svelte/icons/container';
+	import Activity from '@lucide/svelte/icons/activity';
 	import ChevronsLeft from '@lucide/svelte/icons/chevrons-left';
 	import ChevronsRight from '@lucide/svelte/icons/chevrons-right';
 	import Circle from '@lucide/svelte/icons/circle';
 	import { page } from '$app/state';
 	import { cn } from '$lib/utils';
 	import { getPreferences } from '$lib/stores/preferences.svelte';
+	import { getMe } from '$lib/api/client';
 	import type { Component } from 'svelte';
+	import { onMount } from 'svelte';
 
 	const prefs = getPreferences();
 
@@ -25,12 +28,25 @@
 		label: string;
 		href: string;
 		icon: Component;
+		staffOnly?: boolean;
 	}
 
 	interface NavSection {
 		title: string;
 		items: NavItem[];
+		staffOnly?: boolean;
 	}
+
+	let isStaff = $state(false);
+
+	onMount(async () => {
+		try {
+			const me = await getMe();
+			isStaff = me.is_staff ?? false;
+		} catch {
+			isStaff = false;
+		}
+	});
 
 	const navSections: NavSection[] = [
 		{
@@ -59,6 +75,11 @@
 				{ label: 'Statistics', href: '/statistics', icon: ChartColumn },
 				{ label: 'Docs', href: '/docs', icon: BookOpen },
 			],
+		},
+		{
+			title: 'Admin',
+			staffOnly: true,
+			items: [{ label: 'System', href: '/system', icon: Activity, staffOnly: true }],
 		},
 	];
 
@@ -103,6 +124,7 @@
 	<!-- Navigation -->
 	<nav class="flex-1 overflow-y-auto no-scrollbar py-2" style="max-height: calc(100vh - 3.5rem - 3rem);">
 		{#each navSections as section (section.title)}
+		{#if !section.staffOnly || isStaff}
 			{#if !prefs.sidebarCollapsed}
 				<div class="px-4 pt-4 pb-1">
 					<span class="text-[0.65rem] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
@@ -141,6 +163,7 @@
 					</a>
 				{/each}
 			</div>
+		{/if}
 		{/each}
 	</nav>
 
