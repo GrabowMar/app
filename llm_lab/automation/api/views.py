@@ -1,7 +1,6 @@
 """Django Ninja API views for automation."""
 
 from typing import Any
-from typing import Optional
 
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
@@ -48,14 +47,14 @@ def _reconcile_steps(pipeline: Pipeline, steps_data: list[dict[str, Any]]) -> No
 
 
 @router.get("/pipelines/", response=PaginatedPipelinesSchema)
-def list_pipelines(
+def list_pipelines(  # noqa: PLR0913
     request: HttpRequest,
     page: int = 1,
     per_page: int = 20,
     status: str | None = None,
     tag: str | None = None,
     search: str | None = None,
-    owner_me: bool = False,
+    owner_me: bool = False,  # noqa: FBT001, FBT002
 ) -> Any:
     qs = Pipeline.objects.all()
     if owner_me:
@@ -208,7 +207,7 @@ def list_schedules(request: HttpRequest, page: int = 1, per_page: int = 20) -> A
 
 @router.post("/schedules/", response={201: ScheduleSchema, 400: DslValidationResult})
 def create_schedule(request: HttpRequest, payload: ScheduleCreateSchema) -> Any:
-    from croniter import croniter
+    from croniter import croniter  # noqa: PLC0415
 
     if not croniter.is_valid(payload.cron_expression):
         return 400, {"valid": False, "errors": ["Invalid cron expression"]}
@@ -225,7 +224,7 @@ def create_schedule(request: HttpRequest, payload: ScheduleCreateSchema) -> Any:
 
 
 @router.patch("/schedules/{schedule_id}/enabled/", response=ScheduleSchema)
-def toggle_schedule(request: HttpRequest, schedule_id: str, enabled: bool) -> Any:
+def toggle_schedule(request: HttpRequest, schedule_id: str, enabled: bool) -> Any:  # noqa: FBT001
     schedule = get_object_or_404(Schedule, id=schedule_id, owner=request.auth)
     schedule.enabled = enabled
     schedule.save(update_fields=["enabled"])

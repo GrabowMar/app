@@ -44,9 +44,11 @@ def validate_pipeline_dsl(config: dict[str, Any]) -> list[str]:
         else:
             required = _REQUIRED_STEP_FIELDS.get(kind, [])
             step_config = step.get("config", {})
-            for field in required:
-                if not step_config.get(field):
-                    errors.append(f"{prefix} (kind={kind}): config.{field} is required")
+            errors.extend(  # PERF401
+                f"{prefix} (kind={kind}): config.{field} is required"
+                for field in required
+                if not step_config.get(field)
+            )
         step_id = step.get("id")
         if step_id:
             if step_id in step_ids:
@@ -55,18 +57,18 @@ def validate_pipeline_dsl(config: dict[str, Any]) -> list[str]:
     for i, step in enumerate(steps):
         if not isinstance(step, dict):
             continue
-        for dep in step.get("depends_on", []):
-            if dep not in step_ids:
-                errors.append(
-                    f"Step {i}: depends_on references unknown step id '{dep}'",
-                )
+        errors.extend(  # PERF401
+            f"Step {i}: depends_on references unknown step id '{dep}'"
+            for dep in step.get("depends_on", [])
+            if dep not in step_ids
+        )
     return errors
 
 
 def clone_pipeline(pipeline: Pipeline, new_name: str) -> Pipeline:
     """Deep-copy a pipeline and all its steps under a new name."""
-    from llm_lab.automation.models import Pipeline as PipelineModel
-    from llm_lab.automation.models import PipelineStep
+    from llm_lab.automation.models import Pipeline as PipelineModel  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineStep  # noqa: PLC0415
 
     new_pipeline = PipelineModel.objects.create(
         owner=pipeline.owner,
@@ -91,7 +93,7 @@ def clone_pipeline(pipeline: Pipeline, new_name: str) -> Pipeline:
 
 def next_cron_time(expr: str, after: datetime | None = None) -> datetime:
     """Return the next scheduled datetime for a cron expression."""
-    from croniter import croniter
+    from croniter import croniter  # noqa: PLC0415
 
     base = after if after is not None else datetime.now(UTC)
     return croniter(expr, base).get_next(datetime)
@@ -99,9 +101,9 @@ def next_cron_time(expr: str, after: datetime | None = None) -> datetime:
 
 def trigger_run(pipeline: Pipeline, params: dict[str, Any], user: User) -> PipelineRun:
     """Create a pending PipelineRun. Execution engine added in Phase 7b."""
-    from llm_lab.automation.models import PipelineRun
-    from llm_lab.automation.models import PipelineStep
-    from llm_lab.automation.models import PipelineStepRun
+    from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineStep  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
 
     run = PipelineRun.objects.create(
         pipeline=pipeline,

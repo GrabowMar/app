@@ -161,7 +161,7 @@ def test_clone_pipeline_deep_copies_config() -> None:
 
 
 def test_next_cron_time_returns_datetime() -> None:
-    from datetime import datetime
+    from datetime import datetime  # noqa: PLC0415
 
     result = next_cron_time("0 * * * *")
     assert isinstance(result, datetime)

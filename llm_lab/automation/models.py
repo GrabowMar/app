@@ -1,4 +1,4 @@
-"""Automation models: Pipeline, PipelineStep, PipelineRun, PipelineStepRun, Batch, BatchItem, Schedule."""
+"""Automation models: Pipeline, PipelineStep, PipelineRun, PipelineStepRun, Batch, BatchItem, Schedule."""  # noqa: E501
 
 from __future__ import annotations
 
@@ -170,7 +170,7 @@ class PipelineStepRun(models.Model):
 
 
 class Batch(models.Model):
-    """A fan-out batch over a matrix of (models × templates)."""
+    """A fan-out batch over a matrix of (models x templates)."""
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Pending")
