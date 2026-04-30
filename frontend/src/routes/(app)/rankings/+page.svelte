@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
@@ -10,57 +11,70 @@
 	import Info from '@lucide/svelte/icons/info';
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import {
+		getRankings,
+		exportRankingsUrl,
+		type RankingRow,
+		type RankingsResponse,
+	} from '$lib/api/client';
+
+	type SortKey = 'mss' | 'benchmark' | 'cost_efficiency' | 'accessibility' | 'adoption';
 
 	let searchQuery = $state('');
 	let providerFilter = $state('all');
-	let sortBy = $state<'mss' | 'security' | 'performance' | 'quality' | 'ai'>('mss');
+	let sortBy = $state<SortKey>('mss');
 	let sortAsc = $state(false);
 	let showMethodology = $state(false);
 	let selectedModels = $state<Set<string>>(new Set());
+	let includeFree = $state(true);
+	let hasBenchmarksOnly = $state(false);
+	let page = $state(1);
+	let perPage = $state(25);
 
-	interface ModelRanking {
-		slug: string;
-		name: string;
-		provider: string;
-		mss: number;
-		security: number;
-		performance: number;
-		quality: number;
-		ai: number;
-		apps: number;
-		humaneval: number | null;
-		mbpp: number | null;
-		swebench: number | null;
-	}
+	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let data = $state<RankingsResponse | null>(null);
 
-	const models: ModelRanking[] = [
-		{ slug: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', mss: 82.4, security: 7.8, performance: 85, quality: 8.1, ai: 7.8, apps: 8, humaneval: 90.2, mbpp: 87.6, swebench: 33.2 },
-		{ slug: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', mss: 85.1, security: 8.4, performance: 82, quality: 8.6, ai: 8.2, apps: 8, humaneval: 92.0, mbpp: 89.4, swebench: 49.0 },
-		{ slug: 'gemini-2-0-flash', name: 'Gemini 2.0 Flash', provider: 'Google', mss: 78.3, security: 7.2, performance: 88, quality: 7.4, ai: 7.0, apps: 8, humaneval: 85.7, mbpp: 82.1, swebench: 28.4 },
-		{ slug: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', mss: 71.6, security: 6.5, performance: 80, quality: 7.0, ai: 6.8, apps: 8, humaneval: 87.0, mbpp: 84.3, swebench: null },
-		{ slug: 'claude-3-5-haiku', name: 'Claude 3.5 Haiku', provider: 'Anthropic', mss: 73.9, security: 7.0, performance: 78, quality: 7.2, ai: 7.1, apps: 8, humaneval: 88.1, mbpp: 85.2, swebench: null },
-		{ slug: 'deepseek-v3', name: 'DeepSeek V3', provider: 'DeepSeek', mss: 76.8, security: 7.1, performance: 79, quality: 7.8, ai: 7.5, apps: 8, humaneval: 82.6, mbpp: 80.4, swebench: 42.0 },
-		{ slug: 'llama-3-1-70b', name: 'Llama 3.1 70B', provider: 'Meta', mss: 68.2, security: 5.9, performance: 74, quality: 6.8, ai: 6.4, apps: 6, humaneval: 80.5, mbpp: 78.3, swebench: null },
-		{ slug: 'mistral-large', name: 'Mistral Large', provider: 'Mistral', mss: 72.1, security: 6.6, performance: 76, quality: 7.1, ai: 6.9, apps: 7, humaneval: 84.0, mbpp: 81.0, swebench: null },
-	];
-
-	const providers = [...new Set(models.map(m => m.provider))];
-
-	const filteredModels = $derived(() => {
-		let list = models.filter(m =>
-			(providerFilter === 'all' || m.provider === providerFilter) &&
-			(searchQuery === '' || m.name.toLowerCase().includes(searchQuery.toLowerCase()))
-		);
-		list.sort((a, b) => {
-			const diff = (a[sortBy] ?? 0) - (b[sortBy] ?? 0);
-			return sortAsc ? diff : -diff;
-		});
-		return list;
+	let providers = $derived(() => {
+		const set = new Set<string>();
+		for (const r of data?.rankings ?? []) if (r.provider) set.add(r.provider);
+		return [...set].sort();
 	});
 
-	function toggleSort(col: typeof sortBy) {
+	async function load() {
+		loading = true;
+		error = null;
+		try {
+			data = await getRankings({
+				page,
+				per_page: perPage,
+				sort_by: sortBy,
+				sort_dir: sortAsc ? 'asc' : 'desc',
+				search: searchQuery || undefined,
+				provider: providerFilter === 'all' ? undefined : providerFilter,
+				include_free: includeFree,
+				has_benchmarks: hasBenchmarksOnly || undefined,
+			});
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to load rankings';
+		} finally {
+			loading = false;
+		}
+	}
+
+	onMount(load);
+
+	$effect(() => {
+		// Re-load when filters/sort/pagination change.
+		void [searchQuery, providerFilter, sortBy, sortAsc, includeFree, hasBenchmarksOnly, page, perPage];
+		load();
+	});
+
+	function toggleSort(col: SortKey) {
 		if (sortBy === col) sortAsc = !sortAsc;
 		else { sortBy = col; sortAsc = false; }
+		page = 1;
 	}
 
 	function toggleSelect(slug: string) {
@@ -70,11 +84,26 @@
 		selectedModels = next;
 	}
 
-	function scoreColor(val: number, max: number = 10): string {
-		const pct = max === 100 ? val : (val / max) * 100;
-		if (pct >= 80) return 'text-emerald-500';
-		if (pct >= 60) return 'text-amber-500';
+	function scoreColor01(v: number): string {
+		if (v >= 0.8) return 'text-emerald-500';
+		if (v >= 0.6) return 'text-amber-500';
+		if (v >= 0.4) return 'text-yellow-500';
 		return 'text-red-400';
+	}
+
+	function pct(v: number | null | undefined): string {
+		if (v == null) return '—';
+		return `${(v * 100).toFixed(1)}`;
+	}
+
+	function fmtBench(row: RankingRow, key: string): string {
+		const v = row[key];
+		if (typeof v !== 'number') return '—';
+		return v.toFixed(1);
+	}
+
+	function indexOnPage(i: number): number {
+		return (page - 1) * perPage + i + 1;
 	}
 </script>
 
@@ -90,12 +119,48 @@
 			<p class="mt-1 text-xs sm:text-sm text-muted-foreground">Compare model performance using the Model Scoring System (MSS).</p>
 		</div>
 		<div class="flex gap-2">
-			<Button variant="outline" size="sm" disabled>
-				<Download class="mr-1.5 h-3.5 w-3.5" />
-				Export
+			<Button variant="outline" size="sm" onclick={load} disabled={loading}>
+				<RefreshCw class="mr-1.5 h-3.5 w-3.5 {loading ? 'animate-spin' : ''}" />
+				Refresh
 			</Button>
+			<a href={exportRankingsUrl()} target="_blank" rel="noopener noreferrer">
+				<Button variant="outline" size="sm">
+					<Download class="mr-1.5 h-3.5 w-3.5" />
+					Export CSV
+				</Button>
+			</a>
 		</div>
 	</div>
+
+	<!-- Stats summary -->
+	{#if data}
+		<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+			<Card.Root>
+				<Card.Content class="p-3">
+					<div class="text-[10px] text-muted-foreground uppercase">Total Models</div>
+					<div class="text-xl font-bold">{data.statistics.total_models}</div>
+				</Card.Content>
+			</Card.Root>
+			<Card.Root>
+				<Card.Content class="p-3">
+					<div class="text-[10px] text-muted-foreground uppercase">With Benchmarks</div>
+					<div class="text-xl font-bold">{data.statistics.with_benchmarks}</div>
+				</Card.Content>
+			</Card.Root>
+			<Card.Root>
+				<Card.Content class="p-3">
+					<div class="text-[10px] text-muted-foreground uppercase">Free Models</div>
+					<div class="text-xl font-bold">{data.statistics.free_models}</div>
+				</Card.Content>
+			</Card.Root>
+			<Card.Root>
+				<Card.Content class="p-3">
+					<div class="text-[10px] text-muted-foreground uppercase">Avg MSS</div>
+					<div class="text-xl font-bold">{(data.statistics.avg_mss * 100).toFixed(1)}</div>
+				</Card.Content>
+			</Card.Root>
+		</div>
+	{/if}
 
 	<!-- Methodology Panel -->
 	<Card.Root class="border-blue-500/20 bg-blue-500/5">
@@ -106,13 +171,13 @@
 		</button>
 		{#if showMethodology}
 			<Card.Content class="pt-0 text-sm text-muted-foreground space-y-2">
-				<p>The <strong>Model Scoring System (MSS)</strong> is a weighted composite score (0–100) derived from four dimensions:</p>
+				<p>The <strong>Model Scoring System (MSS)</strong> is a weighted composite score (0–1) derived from four dimensions:</p>
 				<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
 					{#each [
-						{ label: 'Security (30%)', desc: 'Static + dynamic analysis findings severity-weighted' },
-						{ label: 'Performance (25%)', desc: 'Lighthouse scores + load test response times' },
-						{ label: 'Code Quality (25%)', desc: 'Linting issues, complexity, duplication rate' },
-						{ label: 'AI Review (20%)', desc: 'Requirements compliance + quality assessment' },
+						{ label: 'Adoption (35%)', desc: 'OpenRouter rank and local app generation count' },
+						{ label: 'Benchmarks (30%)', desc: 'Public coding benchmarks: HumanEval, MBPP, SWE-bench, BFCL, WebDev Elo, LiveBench, etc.' },
+						{ label: 'Cost Efficiency (20%)', desc: 'Performance per dollar + context window bonus' },
+						{ label: 'Accessibility (15%)', desc: 'License, API stability, documentation quality' },
 					] as dim}
 						<div class="rounded-lg border p-2.5">
 							<span class="text-xs font-medium text-foreground">{dim.label}</span>
@@ -127,6 +192,9 @@
 					<a href="https://evalplus.github.io/leaderboard.html" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline">
 						EvalPlus (HumanEval/MBPP+) <ExternalLink class="h-3 w-3" />
 					</a>
+					<a href="https://livebench.ai/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline">
+						LiveBench <ExternalLink class="h-3 w-3" />
+					</a>
 				</div>
 			</Card.Content>
 		{/if}
@@ -140,10 +208,18 @@
 		</div>
 		<select bind:value={providerFilter} class="h-9 w-full sm:w-auto rounded-md border bg-background px-3 text-sm">
 			<option value="all">All Providers</option>
-			{#each providers as p}
+			{#each providers() as p}
 				<option value={p}>{p}</option>
 			{/each}
 		</select>
+		<label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+			<input type="checkbox" bind:checked={includeFree} class="rounded" />
+			Include free
+		</label>
+		<label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+			<input type="checkbox" bind:checked={hasBenchmarksOnly} class="rounded" />
+			Has benchmarks
+		</label>
 		{#if selectedModels.size > 0}
 			<Badge variant="outline" class="text-xs">{selectedModels.size}/10 selected</Badge>
 		{/if}
@@ -158,135 +234,158 @@
 			</div>
 		</Card.Header>
 		<Card.Content class="p-0 pt-4">
-			<!-- Desktop table (768px+) -->
-			<div class="hidden md:block overflow-x-auto">
-				<table class="w-full text-sm">
-					<thead>
-						<tr class="border-b bg-muted/30">
-							<th class="w-10 px-3 py-2"></th>
-							<th class="w-14 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rank</th>
-							<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Model</th>
-							{#each [
-								{ key: 'mss' as const, label: 'MSS' },
-								{ key: 'security' as const, label: 'Security' },
-								{ key: 'performance' as const, label: 'Perf.' },
-								{ key: 'quality' as const, label: 'Quality' },
-								{ key: 'ai' as const, label: 'AI Rev.' },
-							] as col}
-								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
-									<button class="inline-flex items-center gap-1 hover:text-foreground" onclick={() => toggleSort(col.key)}>
-										{col.label}
-										<ArrowUpDown class="h-3 w-3 {sortBy === col.key ? 'text-foreground' : ''}" />
-									</button>
-								</th>
-							{/each}
-							<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">HumanEval</th>
-							<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">MBPP+</th>
-							<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">SWE-bench</th>
-							<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Apps</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						{#each filteredModels() as model, i}
-							<tr class="hover:bg-muted/30 {i < 3 ? 'bg-amber-500/5' : ''} {selectedModels.has(model.slug) ? 'ring-1 ring-inset ring-primary/40' : ''}">
-								<td class="px-3 py-2">
-									<input type="checkbox" checked={selectedModels.has(model.slug)} onchange={() => toggleSelect(model.slug)} class="rounded" />
-								</td>
-								<td class="px-3 py-2">
-									<div class="flex items-center gap-1.5">
-										{#if i < 3}
-											<Medal class="h-4 w-4 {i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : 'text-amber-700'}" />
-										{/if}
-										<span class="text-xs font-semibold">#{i + 1}</span>
-									</div>
-								</td>
-								<td class="px-3 py-2">
-									<div>
-										<a href="/models/{model.slug}" class="font-medium hover:underline">{model.name}</a>
-										<div class="text-[10px] text-muted-foreground">{model.provider}</div>
-									</div>
-								</td>
-								<td class="px-3 py-2 font-mono font-bold {scoreColor(model.mss, 100)}">{model.mss.toFixed(1)}</td>
-								<td class="px-3 py-2 font-mono text-xs {scoreColor(model.security)}">{model.security.toFixed(1)}</td>
-								<td class="px-3 py-2 font-mono text-xs {scoreColor(model.performance, 100)}">{model.performance}</td>
-								<td class="px-3 py-2 font-mono text-xs {scoreColor(model.quality)}">{model.quality.toFixed(1)}</td>
-								<td class="px-3 py-2 font-mono text-xs {scoreColor(model.ai)}">{model.ai.toFixed(1)}</td>
-								<td class="px-3 py-2 font-mono text-xs">{model.humaneval?.toFixed(1) ?? '—'}</td>
-								<td class="px-3 py-2 font-mono text-xs">{model.mbpp?.toFixed(1) ?? '—'}</td>
-								<td class="px-3 py-2 font-mono text-xs">{model.swebench?.toFixed(1) ?? '—'}</td>
-								<td class="px-3 py-2 text-xs text-muted-foreground">{model.apps}</td>
+			{#if error}
+				<div class="p-4 text-sm text-red-500">Error: {error}</div>
+			{:else if loading && !data}
+				<div class="p-4 text-sm text-muted-foreground">Loading…</div>
+			{:else if data}
+				<!-- Desktop table (768px+) -->
+				<div class="hidden md:block overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="border-b bg-muted/30">
+								<th class="w-10 px-3 py-2"></th>
+								<th class="w-14 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rank</th>
+								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Model</th>
+								{#each [
+									{ key: 'mss' as SortKey, label: 'MSS' },
+									{ key: 'adoption' as SortKey, label: 'Adoption' },
+									{ key: 'benchmark' as SortKey, label: 'Bench' },
+									{ key: 'cost_efficiency' as SortKey, label: 'Cost-Eff.' },
+									{ key: 'accessibility' as SortKey, label: 'Access.' },
+								] as col}
+									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+										<button class="inline-flex items-center gap-1 hover:text-foreground" onclick={() => toggleSort(col.key)}>
+											{col.label}
+											<ArrowUpDown class="h-3 w-3 {sortBy === col.key ? 'text-foreground' : ''}" />
+										</button>
+									</th>
+								{/each}
+								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">HumanEval</th>
+								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">MBPP</th>
+								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">SWE-bench</th>
+								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Apps</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+						</thead>
+						<tbody class="divide-y">
+							{#each data.rankings as model, i}
+								{@const rank = indexOnPage(i)}
+								<tr class="hover:bg-muted/30 {rank <= 3 ? 'bg-amber-500/5' : ''} {selectedModels.has(model.model_id) ? 'ring-1 ring-inset ring-primary/40' : ''}">
+									<td class="px-3 py-2">
+										<input type="checkbox" checked={selectedModels.has(model.model_id)} onchange={() => toggleSelect(model.model_id)} class="rounded" />
+									</td>
+									<td class="px-3 py-2">
+										<div class="flex items-center gap-1.5">
+											{#if rank <= 3}
+												<Medal class="h-4 w-4 {rank === 1 ? 'text-amber-500' : rank === 2 ? 'text-slate-400' : 'text-amber-700'}" />
+											{/if}
+											<span class="text-xs font-semibold">#{rank}</span>
+										</div>
+									</td>
+									<td class="px-3 py-2">
+										<div>
+											<a href="/models/{encodeURIComponent(model.model_id)}" class="font-medium hover:underline">{model.model_name}</a>
+											<div class="text-[10px] text-muted-foreground">
+												{model.provider}
+												{#if model.is_free}<Badge variant="outline" class="ml-1 text-[9px] h-4 px-1">Free</Badge>{/if}
+											</div>
+										</div>
+									</td>
+									<td class="px-3 py-2 font-mono font-bold {scoreColor01(model.mss_score)}">{pct(model.mss_score)}</td>
+									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.adoption_score)}">{pct(model.adoption_score)}</td>
+									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.benchmark_score)}">{pct(model.benchmark_score)}</td>
+									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.cost_efficiency_score)}">{pct(model.cost_efficiency_score)}</td>
+									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.accessibility_score)}">{pct(model.accessibility_score)}</td>
+									<td class="px-3 py-2 font-mono text-xs">{fmtBench(model, 'humaneval')}</td>
+									<td class="px-3 py-2 font-mono text-xs">{fmtBench(model, 'mbpp')}</td>
+									<td class="px-3 py-2 font-mono text-xs">{fmtBench(model, 'swebench')}</td>
+									<td class="px-3 py-2 text-xs text-muted-foreground">{model.apps}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 
-			<!-- Mobile card view (below 768px) -->
-			<div class="md:hidden space-y-3 px-4 pb-4">
-				{#each filteredModels() as model, i}
-					<div class="bg-card border rounded-lg p-4 {i < 3 ? 'border-amber-500/30' : ''} {selectedModels.has(model.slug) ? 'ring-1 ring-inset ring-primary/40' : ''}">
-						<!-- Card header: rank, model, provider -->
-						<div class="flex items-center gap-3">
-							<input type="checkbox" checked={selectedModels.has(model.slug)} onchange={() => toggleSelect(model.slug)} class="rounded shrink-0" />
-							<div class="flex items-center gap-1.5 shrink-0">
-								{#if i < 3}
-									<Medal class="h-5 w-5 {i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : 'text-amber-700'}" />
-								{:else}
-									<span class="flex h-5 w-5 items-center justify-center text-xs font-bold text-muted-foreground">#{i + 1}</span>
-								{/if}
+				<!-- Mobile card view (below 768px) -->
+				<div class="md:hidden space-y-3 px-4 pb-4">
+					{#each data.rankings as model, i}
+						{@const rank = indexOnPage(i)}
+						<div class="bg-card border rounded-lg p-4 {rank <= 3 ? 'border-amber-500/30' : ''} {selectedModels.has(model.model_id) ? 'ring-1 ring-inset ring-primary/40' : ''}">
+							<div class="flex items-center gap-3">
+								<input type="checkbox" checked={selectedModels.has(model.model_id)} onchange={() => toggleSelect(model.model_id)} class="rounded shrink-0" />
+								<div class="flex items-center gap-1.5 shrink-0">
+									{#if rank <= 3}
+										<Medal class="h-5 w-5 {rank === 1 ? 'text-amber-500' : rank === 2 ? 'text-slate-400' : 'text-amber-700'}" />
+									{:else}
+										<span class="flex h-5 w-5 items-center justify-center text-xs font-bold text-muted-foreground">#{rank}</span>
+									{/if}
+								</div>
+								<div class="min-w-0 flex-1">
+									<a href="/models/{encodeURIComponent(model.model_id)}" class="font-medium text-sm hover:underline truncate block">{model.model_name}</a>
+									<Badge variant="outline" class="mt-0.5 text-[10px]">{model.provider}</Badge>
+								</div>
+								<div class="text-right shrink-0">
+									<div class="text-[10px] font-medium text-muted-foreground">MSS</div>
+									<div class="text-lg font-bold font-mono {scoreColor01(model.mss_score)}">{pct(model.mss_score)}</div>
+								</div>
 							</div>
-							<div class="min-w-0 flex-1">
-								<a href="/models/{model.slug}" class="font-medium text-sm hover:underline truncate block">{model.name}</a>
-								<Badge variant="outline" class="mt-0.5 text-[10px]">{model.provider}</Badge>
-							</div>
-							<div class="text-right shrink-0">
-								<div class="text-[10px] font-medium text-muted-foreground">MSS</div>
-								<div class="text-lg font-bold font-mono {scoreColor(model.mss, 100)}">{model.mss.toFixed(1)}</div>
+
+							<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">Adoption</span>
+									<span class="text-xs font-mono font-medium {scoreColor01(model.adoption_score)}">{pct(model.adoption_score)}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">Benchmarks</span>
+									<span class="text-xs font-mono font-medium {scoreColor01(model.benchmark_score)}">{pct(model.benchmark_score)}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">Cost-Eff.</span>
+									<span class="text-xs font-mono font-medium {scoreColor01(model.cost_efficiency_score)}">{pct(model.cost_efficiency_score)}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">Accessibility</span>
+									<span class="text-xs font-mono font-medium {scoreColor01(model.accessibility_score)}">{pct(model.accessibility_score)}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">HumanEval</span>
+									<span class="text-xs font-mono font-medium">{fmtBench(model, 'humaneval')}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">MBPP</span>
+									<span class="text-xs font-mono font-medium">{fmtBench(model, 'mbpp')}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">SWE-bench</span>
+									<span class="text-xs font-mono font-medium">{fmtBench(model, 'swebench')}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">Apps</span>
+									<span class="text-xs font-mono font-medium text-muted-foreground">{model.apps}</span>
+								</div>
 							</div>
 						</div>
-
-						<!-- Card body: score grid -->
-						<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">Security</span>
-								<span class="text-xs font-mono font-medium {scoreColor(model.security)}">{model.security.toFixed(1)}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">Performance</span>
-								<span class="text-xs font-mono font-medium {scoreColor(model.performance, 100)}">{model.performance}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">Quality</span>
-								<span class="text-xs font-mono font-medium {scoreColor(model.quality)}">{model.quality.toFixed(1)}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">AI Review</span>
-								<span class="text-xs font-mono font-medium {scoreColor(model.ai)}">{model.ai.toFixed(1)}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">HumanEval</span>
-								<span class="text-xs font-mono font-medium">{model.humaneval?.toFixed(1) ?? '—'}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">MBPP+</span>
-								<span class="text-xs font-mono font-medium">{model.mbpp?.toFixed(1) ?? '—'}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">SWE-bench</span>
-								<span class="text-xs font-mono font-medium">{model.swebench?.toFixed(1) ?? '—'}</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-[10px] text-muted-foreground">Apps</span>
-								<span class="text-xs font-mono font-medium text-muted-foreground">{model.apps}</span>
-							</div>
-						</div>
-					</div>
-				{/each}
-			</div>
+					{/each}
+				</div>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 
-	<div class="text-xs text-muted-foreground">
-		Showing {filteredModels().length} of {models.length} models &middot; MSS scores computed from platform analysis data &middot; External benchmarks sourced from public leaderboards
-	</div>
+	<!-- Pagination -->
+	{#if data && data.pagination.pages > 1}
+		<div class="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+			<div>
+				Page {data.pagination.page} of {data.pagination.pages}
+				&middot; {data.pagination.total} models
+			</div>
+			<div class="flex gap-2">
+				<Button variant="outline" size="sm" disabled={page <= 1} onclick={() => page = Math.max(1, page - 1)}>
+					Prev
+				</Button>
+				<Button variant="outline" size="sm" disabled={page >= data.pagination.pages} onclick={() => page = Math.min(data.pagination.pages, page + 1)}>
+					Next
+				</Button>
+			</div>
+		</div>
+	{/if}
 </div>

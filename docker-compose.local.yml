@@ -20,7 +20,7 @@ services:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
     ports:
-      - '8000:8000'
+      - '8001:8000'
     command: /start
 
   postgres:
@@ -89,5 +89,5 @@ services:
       - HOST=0.0.0.0
       - NODE_ENV=production
     ports:
-      - '8080:8080'
+      - '8000:8080'
     command: ["node", "build/index.js"]

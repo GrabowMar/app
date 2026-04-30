@@ -873,3 +873,388 @@ export async function getAnalysisStats(): Promise<AnalysisStats> {
 	const res = await apiFetch('/analysis/stats/');
 	return res.json();
 }
+
+// ---------------------------------------------------------------------------
+// Statistics (cross-app aggregates)
+// ---------------------------------------------------------------------------
+
+export interface StatisticsOverview {
+	total_apps: number;
+	apps_completed: number;
+	apps_failed: number;
+	apps_running: number;
+	apps_success_rate: number;
+	total_analyses: number;
+	analyses_completed: number;
+	analyses_failed: number;
+	analyses_running: number;
+	analyses_success_rate: number;
+	total_findings: number;
+	avg_findings_per_app: number;
+	models_in_use: number;
+	avg_analysis_seconds: number;
+}
+
+export interface SeverityBucket {
+	severity: string;
+	count: number;
+	percent: number;
+}
+
+export interface SeverityDistribution {
+	total: number;
+	distribution: SeverityBucket[];
+}
+
+export interface TrendPoint {
+	date: string;
+	total: number;
+	completed: number;
+	failed: number;
+}
+
+export interface AnalysisTrends {
+	days: number;
+	total: number;
+	series: TrendPoint[];
+}
+
+export interface ModelComparisonRow {
+	model_id: string;
+	name: string;
+	provider: string;
+	apps: number;
+	apps_completed: number;
+	success_rate: number;
+	avg_duration_seconds: number;
+	cost_efficiency: number;
+	security: number;
+	quality: number;
+	performance: number;
+	mss: number;
+	findings: { critical: number; high: number; medium: number; low: number; info: number };
+}
+
+export interface ToolEffectivenessRow {
+	name: string;
+	type: string;
+	scans: number;
+	findings: number;
+	avg_per_scan: number;
+	top_rule: string;
+}
+
+export interface TopFindingRow {
+	title: string;
+	severity: string;
+	rule_id: string;
+	count: number;
+}
+
+export interface RecentActivityItem {
+	kind: string;
+	id: string;
+	title: string;
+	status: string;
+	created_at: string;
+}
+
+export interface CodeGenerationStats {
+	total_apps: number;
+	completed: number;
+	failed: number;
+	running: number;
+	success_rate: number;
+	avg_duration_seconds: number;
+	total_tokens: number;
+	total_cost_usd: number;
+	total_lines_of_code: number;
+	by_provider: { provider: string; apps: number }[];
+}
+
+export interface AnalyzerHealth {
+	total: number;
+	online: number;
+	offline: number;
+	analyzers: {
+		name: string;
+		type: string;
+		display_name: string;
+		available: boolean;
+		availability_message: string;
+	}[];
+}
+
+export interface StatisticsDashboard {
+	overview: StatisticsOverview;
+	severity: SeverityDistribution;
+	trends: AnalysisTrends;
+	models: ModelComparisonRow[];
+	tools: ToolEffectivenessRow[];
+	top_findings: TopFindingRow[];
+	code_generation: CodeGenerationStats;
+	analyzer_health: AnalyzerHealth;
+	recent_activity: RecentActivityItem[];
+}
+
+export async function getStatisticsDashboard(): Promise<StatisticsDashboard> {
+	const res = await apiFetch('/statistics/dashboard/');
+	return res.json();
+}
+
+export async function getStatisticsOverview(): Promise<StatisticsOverview> {
+	const res = await apiFetch('/statistics/overview/');
+	return res.json();
+}
+
+export async function getStatisticsSeverity(): Promise<SeverityDistribution> {
+	const res = await apiFetch('/statistics/severity/');
+	return res.json();
+}
+
+export async function getStatisticsTrends(days = 14): Promise<AnalysisTrends> {
+	const res = await apiFetch(`/statistics/trends/?days=${days}`);
+	return res.json();
+}
+
+export async function getStatisticsModels(limit = 25): Promise<ModelComparisonRow[]> {
+	const res = await apiFetch(`/statistics/models/?limit=${limit}`);
+	return res.json();
+}
+
+export async function getStatisticsTools(): Promise<ToolEffectivenessRow[]> {
+	const res = await apiFetch('/statistics/tools/');
+	return res.json();
+}
+
+export async function getStatisticsTopFindings(limit = 10): Promise<TopFindingRow[]> {
+	const res = await apiFetch(`/statistics/top-findings/?limit=${limit}`);
+	return res.json();
+}
+
+export async function getStatisticsRecentActivity(limit = 20): Promise<RecentActivityItem[]> {
+	const res = await apiFetch(`/statistics/recent-activity/?limit=${limit}`);
+	return res.json();
+}
+
+export async function getStatisticsCodeGeneration(): Promise<CodeGenerationStats> {
+	const res = await apiFetch('/statistics/code-generation/');
+	return res.json();
+}
+
+export async function getStatisticsAnalyzerHealth(): Promise<AnalyzerHealth> {
+	const res = await apiFetch('/statistics/analyzer-health/');
+	return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Rankings
+// ---------------------------------------------------------------------------
+
+export interface RankingFindings {
+critical: number;
+high: number;
+medium: number;
+low: number;
+info: number;
+}
+
+export interface RankingRow {
+model_id: string;
+model_name: string;
+provider: string;
+is_free: boolean;
+context_length: number | null;
+price_per_million_input: number | null;
+price_per_million_output: number | null;
+apps: number;
+apps_completed: number;
+avg_duration: number;
+findings: RankingFindings;
+benchmark_score: number;
+cost_efficiency_score: number;
+accessibility_score: number;
+adoption_score: number;
+mss_score: number;
+composite_score: number;
+[key: string]: unknown;
+}
+
+export interface RankingsPagination {
+page: number;
+per_page: number;
+total: number;
+pages: number;
+}
+
+export interface RankingsStatistics {
+total_models: number;
+with_benchmarks: number;
+free_models: number;
+avg_mss: number;
+unique_providers: number;
+}
+
+export interface RankingsResponse {
+rankings: RankingRow[];
+pagination: RankingsPagination;
+statistics: RankingsStatistics;
+filters_applied: Record<string, unknown>;
+}
+
+export interface RankingsTopResponse {
+models: RankingRow[];
+count: number;
+weights: Record<string, number> | null;
+}
+
+export interface RankingsStatus {
+total_models: number;
+models_with_benchmarks: number;
+total_benchmark_rows: number;
+benchmarks: Record<string, number>;
+}
+
+export interface RankingsListParams {
+page?: number;
+per_page?: number;
+sort_by?: string;
+sort_dir?: 'asc' | 'desc';
+search?: string;
+provider?: string;
+max_price?: number;
+min_context?: number;
+min_composite?: number;
+include_free?: boolean;
+has_benchmarks?: boolean;
+}
+
+function _qs(params: Record<string, unknown>): string {
+const usp = new URLSearchParams();
+for (const [k, v] of Object.entries(params)) {
+if (v === undefined || v === null || v === '') continue;
+usp.set(k, String(v));
+}
+const s = usp.toString();
+return s ? `?${s}` : '';
+}
+
+export async function getRankings(params: RankingsListParams = {}): Promise<RankingsResponse> {
+const res = await apiFetch(`/rankings/${_qs(params as Record<string, unknown>)}`);
+return res.json();
+}
+
+export async function getTopModels(count = 10): Promise<RankingsTopResponse> {
+const res = await apiFetch(`/rankings/top/?count=${count}`);
+return res.json();
+}
+
+export async function getRankingsStatus(): Promise<RankingsStatus> {
+const res = await apiFetch('/rankings/status/');
+return res.json();
+}
+
+export async function refreshRankings(): Promise<RankingsStatus> {
+const res = await apiFetch('/rankings/refresh/', { method: 'POST' });
+return res.json();
+}
+
+export function exportRankingsUrl(): string {
+return '/api/rankings/export/';
+}
+
+// ============================================================
+// Reports
+// ============================================================
+
+export type ReportType =
+        | 'model_analysis'
+        | 'template_comparison'
+        | 'tool_analysis'
+        | 'generation_analytics'
+        | 'comprehensive';
+
+export type ReportStatus = 'pending' | 'generating' | 'completed' | 'failed';
+
+export interface ReportSummary {
+        id: string;
+        report_id: string;
+        report_type: ReportType;
+        title: string;
+        description: string;
+        status: ReportStatus;
+        progress_percent: number;
+        summary: Record<string, unknown>;
+        error_message: string;
+        created_at: string;
+        completed_at: string | null;
+        expires_at: string | null;
+        generation_job_id: string | null;
+        analysis_task_id: string | null;
+}
+
+export interface ReportDetail extends ReportSummary {
+        config: Record<string, unknown>;
+        report_data: Record<string, unknown>;
+}
+
+export interface ReportListResponse {
+        reports: ReportSummary[];
+        pagination: { total: number; limit: number; offset: number };
+}
+
+export interface GenerateReportPayload {
+        report_type: ReportType;
+        config?: Record<string, unknown>;
+        title?: string;
+        description?: string;
+        expires_in_days?: number | null;
+}
+
+export interface ReportListParams {
+        report_type?: ReportType;
+        status?: ReportStatus;
+        limit?: number;
+        offset?: number;
+}
+
+export async function getReports(params: ReportListParams = {}): Promise<ReportListResponse> {
+        const query = new URLSearchParams();
+        if (params.report_type) query.set('report_type', params.report_type);
+        if (params.status) query.set('status', params.status);
+        if (params.limit !== undefined) query.set('limit', String(params.limit));
+        if (params.offset !== undefined) query.set('offset', String(params.offset));
+        const qs = query.toString();
+        const res = await apiFetch(`/reports/${qs ? `?${qs}` : ''}`);
+        return res.json();
+}
+
+export async function generateReport(payload: GenerateReportPayload): Promise<ReportSummary> {
+        const res = await apiFetch('/reports/generate/', {
+                method: 'POST',
+                body: JSON.stringify({ config: {}, ...payload })
+        });
+        return res.json();
+}
+
+export async function getReport(reportId: string): Promise<ReportDetail> {
+        const res = await apiFetch(`/reports/${reportId}/`);
+        return res.json();
+}
+
+export async function getReportData(reportId: string): Promise<{
+        report_id: string;
+        report_type: ReportType;
+        title: string;
+        status: ReportStatus;
+        progress: number;
+        data: Record<string, unknown>;
+}> {
+        const res = await apiFetch(`/reports/${reportId}/data/`);
+        return res.json();
+}
+
+export async function deleteReport(reportId: string): Promise<{ success: boolean; message: string }> {
+        const res = await apiFetch(`/reports/${reportId}/`, { method: 'DELETE' });
+        return res.json();
+}

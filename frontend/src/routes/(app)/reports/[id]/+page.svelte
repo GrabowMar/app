@@ -1,310 +1,235 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { onMount, onDestroy } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
+	import { Badge } from '$lib/components/ui/badge';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import Printer from '@lucide/svelte/icons/printer';
-	import Download from '@lucide/svelte/icons/download';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
-	import ChevronDown from '@lucide/svelte/icons/chevron-down';
-	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import Shield from '@lucide/svelte/icons/shield';
-	import Gauge from '@lucide/svelte/icons/gauge';
-	import Code from '@lucide/svelte/icons/code';
-	import Brain from '@lucide/svelte/icons/brain';
-	import TrendingUp from '@lucide/svelte/icons/trending-up';
-	import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
-	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
-	import CheckCircle from '@lucide/svelte/icons/check-circle';
+	import { getReport, deleteReport, type ReportDetail, type ReportStatus } from '$lib/api/client';
 
-	const reportId = $derived(page.params.id);
+	let report = $state<ReportDetail | null>(null);
+	let loading = $state(true);
+	let error = $state('');
+	let timer: ReturnType<typeof setInterval> | null = null;
 
-	const report = {
-		id: 'rpt-001',
-		title: 'GPT-4o Full Analysis',
-		description: 'Comprehensive analysis of GPT-4o across all 8 generated applications covering security, performance, code quality, and AI review.',
-		type: 'model_analysis',
-		typeLabel: 'Model Analysis',
-		typeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-		config: 'gpt-4o',
-		status: 'completed',
-		createdAt: '2025-03-19 14:30',
-		completedAt: '2025-03-19 14:34',
-		duration: '4m 12s',
-		analyzerFilter: 'All Analyzers',
+	const statusColors: Record<ReportStatus, string> = {
+		completed: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+		generating: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+		pending: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+		failed: 'bg-red-500/15 text-red-400 border-red-500/30'
 	};
 
-	interface Section {
-		id: string;
-		title: string;
-		icon: typeof Shield;
-		color: string;
-		expanded: boolean;
+	async function load() {
+		try {
+			report = await getReport(page.params.id);
+			error = '';
+		} catch (e) {
+			error = (e as Error)?.message || 'Failed to load report';
+		} finally {
+			loading = false;
+		}
 	}
 
-	let sections: Section[] = $state([
-		{ id: 'summary', title: 'Executive Summary', icon: BarChart3, color: 'text-blue-500', expanded: true },
-		{ id: 'security', title: 'Security Analysis', icon: Shield, color: 'text-red-500', expanded: true },
-		{ id: 'performance', title: 'Performance Analysis', icon: Gauge, color: 'text-amber-500', expanded: false },
-		{ id: 'code-quality', title: 'Code Quality', icon: Code, color: 'text-emerald-500', expanded: false },
-		{ id: 'ai-review', title: 'AI Review', icon: Brain, color: 'text-violet-500', expanded: false },
-		{ id: 'trends', title: 'Trends & Recommendations', icon: TrendingUp, color: 'text-cyan-500', expanded: false },
-	]);
+	onMount(() => {
+		load().then(() => {
+			timer = setInterval(() => {
+				if (report && (report.status === 'pending' || report.status === 'generating')) {
+					load();
+				}
+			}, 2000);
+		});
+	});
 
-	function toggleSection(id: string) {
-		sections = sections.map(s => s.id === id ? { ...s, expanded: !s.expanded } : s);
+	onDestroy(() => {
+		if (timer) clearInterval(timer);
+	});
+
+	async function remove() {
+		if (!report) return;
+		if (!confirm('Delete this report?')) return;
+		await deleteReport(report.report_id);
+		goto('/reports');
 	}
 
-	function expandAll() { sections = sections.map(s => ({ ...s, expanded: true })); }
-	function collapseAll() { sections = sections.map(s => ({ ...s, expanded: false })); }
+	function formatDate(s: string | null): string {
+		return s ? new Date(s).toLocaleString() : '—';
+	}
 
-	const summaryCards = [
-		{ label: 'Apps Analyzed', value: '8', sub: 'All templates' },
-		{ label: 'Total Findings', value: '47', sub: '12 critical' },
-		{ label: 'Avg Security', value: '7.2/10', sub: '+0.3 vs avg' },
-		{ label: 'Avg Performance', value: '82', sub: 'Lighthouse' },
-	];
+	function isObject(v: unknown): v is Record<string, unknown> {
+		return typeof v === 'object' && v !== null && !Array.isArray(v);
+	}
 
-	const securityFindings = [
-		{ severity: 'critical', tool: 'Bandit', rule: 'B301', message: 'Use of pickle detected', file: 'app/utils.py', line: 45 },
-		{ severity: 'critical', tool: 'ZAP', rule: 'XSS-1', message: 'Cross-Site Scripting vulnerability', file: 'templates/index.html', line: 12 },
-		{ severity: 'high', tool: 'Semgrep', rule: 'python.sql-injection', message: 'SQL injection via string formatting', file: 'app/db.py', line: 78 },
-		{ severity: 'high', tool: 'Bandit', rule: 'B105', message: 'Hardcoded password string', file: 'config.py', line: 3 },
-		{ severity: 'medium', tool: 'ZAP', rule: 'CSP-1', message: 'Missing Content-Security-Policy header', file: 'app.py', line: 1 },
-		{ severity: 'low', tool: 'Semgrep', rule: 'python.logging', message: 'Debug logging in production code', file: 'app/views.py', line: 22 },
-	];
+	function isArray(v: unknown): v is unknown[] {
+		return Array.isArray(v);
+	}
 
-	const severityColors: Record<string, string> = {
-		critical: 'bg-red-500/15 text-red-400 border-red-500/30',
-		high: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-		medium: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-		low: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-	};
+	function entries(v: unknown): [string, unknown][] {
+		return isObject(v) ? Object.entries(v) : [];
+	}
+
+	function fmtValue(v: unknown): string {
+		if (v === null || v === undefined) return '—';
+		if (typeof v === 'number') {
+			return Number.isInteger(v) ? v.toString() : v.toFixed(2);
+		}
+		if (typeof v === 'boolean') return v ? 'yes' : 'no';
+		return String(v);
+	}
 </script>
 
 <svelte:head>
-	<title>{report.title} - Reports - LLM Lab</title>
+	<title>{report?.title ?? 'Report'} — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<!-- Header -->
-	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-		<div class="space-y-2">
-			<div class="flex items-center gap-3">
-				<Button variant="ghost" size="sm" href="/reports">
-					<ArrowLeft class="mr-1.5 h-4 w-4" />
-					Reports
-				</Button>
-				<Separator orientation="vertical" class="h-6" />
-				<Badge variant="outline" class="text-[10px] {report.typeColor}">{report.typeLabel}</Badge>
-				<Badge variant="outline" class="text-[10px] bg-emerald-500/15 text-emerald-500 border-emerald-500/30">
-					<CheckCircle class="mr-1 h-3 w-3" />
-					Completed
-				</Badge>
-			</div>
-			<h1 class="text-2xl font-bold tracking-tight">{report.title}</h1>
-			<p class="text-sm text-muted-foreground">{report.description}</p>
-			<div class="flex flex-wrap gap-3 text-xs text-muted-foreground">
-				<span>Model: <Badge variant="secondary" class="text-[10px] font-mono">{report.config}</Badge></span>
-				<span>Created: {report.createdAt}</span>
-				<span>Duration: {report.duration}</span>
-				<span>Filter: {report.analyzerFilter}</span>
-			</div>
-		</div>
-		<div class="flex gap-2 shrink-0">
-			<Button variant="outline" size="sm" disabled>
-				<Printer class="mr-1.5 h-3.5 w-3.5" />
-				Print
+<div class="container mx-auto p-6 space-y-6 max-w-5xl">
+	<div class="flex items-center justify-between">
+		<Button variant="ghost" size="sm" onclick={() => goto('/reports')}>
+			<ArrowLeft class="mr-1 h-4 w-4" />Back to reports
+		</Button>
+		<div class="flex gap-2">
+			<Button variant="outline" size="sm" onclick={load}>
+				<RefreshCw class="mr-1 h-4 w-4" />Refresh
 			</Button>
-			<Button variant="outline" size="sm" disabled>
-				<Download class="mr-1.5 h-3.5 w-3.5" />
-				JSON
-			</Button>
-			<Button variant="outline" size="sm" disabled>
-				<RefreshCw class="mr-1.5 h-3.5 w-3.5" />
-				Regenerate
+			<Button variant="outline" size="sm" onclick={remove}>
+				<Trash2 class="mr-1 h-4 w-4" />Delete
 			</Button>
 		</div>
 	</div>
 
-	<!-- Section Nav -->
-	<div class="flex items-center gap-2 overflow-x-auto pb-1">
-		{#each sections as s}
-			<a href="#{s.id}" class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors">{s.title}</a>
-		{/each}
-		<div class="ml-auto flex gap-1 shrink-0">
-			<Button variant="ghost" size="sm" class="h-7 text-xs" onclick={expandAll}>Expand All</Button>
-			<Button variant="ghost" size="sm" class="h-7 text-xs" onclick={collapseAll}>Collapse All</Button>
+	{#if loading}
+		<div class="flex items-center justify-center py-16 text-muted-foreground">
+			<LoaderCircle class="mr-2 h-5 w-5 animate-spin" />Loading…
 		</div>
-	</div>
-
-	<!-- Sections -->
-	{#each sections as section}
-		<Card.Root id={section.id}>
-			<button class="flex w-full items-center gap-3 p-4 text-left" onclick={() => toggleSection(section.id)}>
-				{#if section.expanded}
-					<ChevronDown class="h-4 w-4 shrink-0" />
-				{:else}
-					<ChevronRight class="h-4 w-4 shrink-0" />
-				{/if}
-				<section.icon class="h-4 w-4 shrink-0 {section.color}" />
-				<span class="font-semibold">{section.title}</span>
-			</button>
-
-			{#if section.expanded}
-				<Separator />
-				<Card.Content class="pt-4">
-					{#if section.id === 'summary'}
-						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-							{#each summaryCards as kpi}
-								<div class="rounded-lg border p-3 text-center">
-									<div class="text-2xl font-bold">{kpi.value}</div>
-									<div class="text-xs font-medium">{kpi.label}</div>
-									<div class="text-[10px] text-muted-foreground">{kpi.sub}</div>
-								</div>
-							{/each}
-						</div>
-						<div class="mt-4 rounded-lg bg-muted/30 p-4 text-sm">
-							<p class="font-medium">Key Takeaways</p>
-							<ul class="mt-2 space-y-1 text-muted-foreground list-disc list-inside">
-								<li>GPT-4o shows strong code quality (avg 8.1/10) but has recurring security issues with pickle and SQL injection patterns.</li>
-								<li>Performance scores are above average, with Lighthouse scores ranging from 72-94 across templates.</li>
-								<li>AI Review identified consistent patterns: good error handling but weak input validation.</li>
-								<li>2 applications had critical vulnerabilities requiring immediate attention.</li>
-							</ul>
-						</div>
-
-					{:else if section.id === 'security'}
-						<div class="flex flex-wrap gap-2 mb-4">
-							<Badge variant="outline" class="text-[10px] {severityColors.critical}">2 Critical</Badge>
-							<Badge variant="outline" class="text-[10px] {severityColors.high}">2 High</Badge>
-							<Badge variant="outline" class="text-[10px] {severityColors.medium}">1 Medium</Badge>
-							<Badge variant="outline" class="text-[10px] {severityColors.low}">1 Low</Badge>
-						</div>
-						<table class="w-full text-sm">
-							<thead>
-								<tr class="border-b bg-muted/30">
-									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Severity</th>
-									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Tool</th>
-									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rule</th>
-									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Message</th>
-									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Location</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y">
-								{#each securityFindings as f}
-									<tr class="hover:bg-muted/30">
-										<td class="px-3 py-2">
-											<Badge variant="outline" class="text-[10px] {severityColors[f.severity] ?? ''}">{f.severity}</Badge>
-										</td>
-										<td class="px-3 py-2 text-xs font-mono">{f.tool}</td>
-										<td class="px-3 py-2 text-xs font-mono">{f.rule}</td>
-										<td class="px-3 py-2 text-xs">{f.message}</td>
-										<td class="px-3 py-2 text-xs font-mono text-muted-foreground">{f.file}:{f.line}</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-
-					{:else if section.id === 'performance'}
-						<div class="grid gap-4 sm:grid-cols-3">
-							{#each [{ label: 'Avg Lighthouse', value: '82', grade: 'B' }, { label: 'First Contentful Paint', value: '1.4s', grade: 'A' }, { label: 'Load Test P95', value: '320ms', grade: 'B+' }] as metric}
-								<div class="rounded-lg border p-3 text-center">
-									<div class="text-xl font-bold">{metric.value}</div>
-									<div class="text-xs">{metric.label}</div>
-									<Badge variant="secondary" class="mt-1 text-[10px]">Grade: {metric.grade}</Badge>
-								</div>
-							{/each}
-						</div>
-						<div class="mt-4 flex h-32 items-center justify-center rounded-lg border border-dashed bg-muted/20 text-sm text-muted-foreground">
-							Performance chart placeholder
-						</div>
-
-					{:else if section.id === 'code-quality'}
-						<div class="grid gap-4 sm:grid-cols-2">
-							<div class="space-y-2">
-								<p class="text-sm font-medium">Linting Issues by Tool</p>
-								{#each [{ tool: 'ESLint', issues: 23, color: 'bg-amber-500/70' }, { tool: 'Ruff', issues: 8, color: 'bg-blue-500/70' }, { tool: 'Pylint', issues: 15, color: 'bg-violet-500/70' }] as t}
-									<div class="flex items-center gap-2 text-sm">
-										<span class="w-16 text-xs text-muted-foreground">{t.tool}</span>
-										<div class="flex-1 h-4 bg-muted rounded-full overflow-hidden">
-											<div class="h-full {t.color} rounded-full" style="width: {Math.min(t.issues * 2, 100)}%"></div>
-										</div>
-										<span class="w-8 text-right text-xs font-mono">{t.issues}</span>
-									</div>
-								{/each}
-							</div>
-							<div class="space-y-2">
-								<p class="text-sm font-medium">Code Metrics</p>
-								{#each [{ label: 'Avg Complexity', value: '4.2' }, { label: 'Duplication %', value: '3.8%' }, { label: 'Test Coverage', value: '0%' }] as m}
-									<div class="flex items-center justify-between text-sm">
-										<span class="text-muted-foreground">{m.label}</span>
-										<span class="font-mono">{m.value}</span>
-									</div>
-								{/each}
-							</div>
-						</div>
-
-					{:else if section.id === 'ai-review'}
-						<div class="space-y-4">
-							<div class="grid gap-4 sm:grid-cols-2">
-								<div class="rounded-lg border p-3">
-									<p class="text-sm font-medium">Requirements Met</p>
-									<div class="mt-1 text-2xl font-bold">18/22</div>
-									<div class="mt-1 h-2 w-full rounded-full bg-muted">
-										<div class="h-full rounded-full bg-emerald-500" style="width: 81.8%"></div>
-									</div>
-								</div>
-								<div class="rounded-lg border p-3">
-									<p class="text-sm font-medium">Quality Score</p>
-									<div class="mt-1 text-2xl font-bold">7.8/10</div>
-									<p class="text-xs text-muted-foreground">Above platform average (7.1)</p>
-								</div>
-							</div>
-							<div class="rounded-lg bg-muted/30 p-4 text-sm">
-								<p class="font-medium flex items-center gap-2">
-									<AlertTriangle class="h-4 w-4 text-amber-500" />
-									Critical Issues Identified
-								</p>
-								<ul class="mt-2 space-y-1 text-muted-foreground list-disc list-inside">
-									<li>Missing CSRF protection on 3 form endpoints</li>
-									<li>No rate limiting on authentication endpoints</li>
-									<li>Database queries not parameterized in 2 modules</li>
-								</ul>
-							</div>
-						</div>
-
-					{:else if section.id === 'trends'}
-						<div class="space-y-4">
-							<div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm">
-								<p class="font-medium text-emerald-500 flex items-center gap-2">
-									<CheckCircle class="h-4 w-4" />
-									Strengths
-								</p>
-								<ul class="mt-2 text-muted-foreground list-disc list-inside">
-									<li>Consistent code structure across all generated applications</li>
-									<li>Good error handling patterns with try/except blocks</li>
-									<li>Fast response times under load testing conditions</li>
-								</ul>
-							</div>
-							<div class="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 text-sm">
-								<p class="font-medium text-amber-500 flex items-center gap-2">
-									<AlertTriangle class="h-4 w-4" />
-									Recommendations
-								</p>
-								<ul class="mt-2 text-muted-foreground list-disc list-inside">
-									<li>Add input validation middleware to all user-facing endpoints</li>
-									<li>Replace pickle serialization with JSON or msgpack</li>
-									<li>Implement Content-Security-Policy headers</li>
-									<li>Add parameterized queries for all database operations</li>
-								</ul>
-							</div>
-						</div>
-					{/if}
-				</Card.Content>
-			{/if}
+	{:else if error}
+		<Card.Root><Card.Content class="p-6 text-red-400 text-sm">{error}</Card.Content></Card.Root>
+	{:else if report}
+		<Card.Root>
+			<Card.Header>
+				<div class="flex items-start justify-between gap-4 flex-wrap">
+					<div>
+						<Card.Title class="text-xl">{report.title}</Card.Title>
+						{#if report.description}
+							<Card.Description class="mt-1">{report.description}</Card.Description>
+						{/if}
+					</div>
+					<Badge class={statusColors[report.status]}>{report.status}</Badge>
+				</div>
+			</Card.Header>
+			<Card.Content class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+				<div>
+					<div class="text-muted-foreground">Type</div>
+					<div class="font-medium">{report.report_type}</div>
+				</div>
+				<div>
+					<div class="text-muted-foreground">Created</div>
+					<div class="font-medium">{formatDate(report.created_at)}</div>
+				</div>
+				<div>
+					<div class="text-muted-foreground">Completed</div>
+					<div class="font-medium">{formatDate(report.completed_at)}</div>
+				</div>
+				<div>
+					<div class="text-muted-foreground">Expires</div>
+					<div class="font-medium">{formatDate(report.expires_at)}</div>
+				</div>
+			</Card.Content>
 		</Card.Root>
-	{/each}
+
+		{#if report.status === 'generating' || report.status === 'pending'}
+			<Card.Root>
+				<Card.Content class="p-6 flex items-center gap-3 text-sm text-muted-foreground">
+					<LoaderCircle class="h-5 w-5 animate-spin" />
+					Generating report… ({report.progress_percent}%)
+				</Card.Content>
+			</Card.Root>
+		{:else if report.status === 'failed'}
+			<Card.Root>
+				<Card.Content class="p-6 text-sm text-red-400">
+					{report.error_message || 'Generation failed.'}
+				</Card.Content>
+			</Card.Root>
+		{:else if report.status === 'completed'}
+			{#if report.summary && Object.keys(report.summary).length > 0}
+				<Card.Root>
+					<Card.Header><Card.Title class="text-base">Summary</Card.Title></Card.Header>
+					<Card.Content class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+						{#each entries(report.summary) as [k, v] (k)}
+							<div>
+								<div class="text-xs text-muted-foreground capitalize">{k.replace(/_/g, ' ')}</div>
+								{#if isObject(v)}
+									<pre class="text-xs bg-muted/40 rounded p-1 mt-1 overflow-auto">{JSON.stringify(v, null, 2)}</pre>
+								{:else}
+									<div class="font-semibold">{fmtValue(v)}</div>
+								{/if}
+							</div>
+						{/each}
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			{#each entries(report.report_data) as [section, value] (section)}
+				<Card.Root>
+					<Card.Header>
+						<Card.Title class="text-base capitalize">{section.replace(/_/g, ' ')}</Card.Title>
+					</Card.Header>
+					<Card.Content class="text-sm">
+						{#if isArray(value)}
+							{#if value.length === 0}
+								<p class="text-xs text-muted-foreground">No items.</p>
+							{:else if isObject(value[0])}
+								{@const first = value[0] as Record<string, unknown>}
+								{@const cols = Object.keys(first)}
+								<div class="overflow-auto">
+									<table class="min-w-full text-xs">
+										<thead>
+											<tr class="border-b">
+												{#each cols as c (c)}
+													<th class="text-left p-2 font-medium capitalize">{c.replace(/_/g, ' ')}</th>
+												{/each}
+											</tr>
+										</thead>
+										<tbody>
+											{#each value as row, i (i)}
+												{@const r = row as Record<string, unknown>}
+												<tr class="border-b last:border-0">
+													{#each cols as c (c)}
+														<td class="p-2">{fmtValue(r[c])}</td>
+													{/each}
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+							{:else}
+								<ul class="list-disc pl-5 text-xs">
+									{#each value as v, i (i)}<li>{fmtValue(v)}</li>{/each}
+								</ul>
+							{/if}
+						{:else if isObject(value)}
+							<dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+								{#each entries(value) as [k, v] (k)}
+									<div>
+										<dt class="text-muted-foreground capitalize">{k.replace(/_/g, ' ')}</dt>
+										<dd class="font-medium">
+											{#if isObject(v) || isArray(v)}
+												<pre class="bg-muted/40 rounded p-1 overflow-auto">{JSON.stringify(v, null, 2)}</pre>
+											{:else}
+												{fmtValue(v)}
+											{/if}
+										</dd>
+									</div>
+								{/each}
+							</dl>
+						{:else}
+							<div class="text-xs">{fmtValue(value)}</div>
+						{/if}
+					</Card.Content>
+				</Card.Root>
+			{/each}
+		{/if}
+	{/if}
 </div>

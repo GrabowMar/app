@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getAuth } from '$lib/stores/auth.svelte';
-	import { getAnalysisStats, getAnalysisTasks } from '$lib/api/client';
+	import {
+		getAnalysisStats,
+		getAnalysisTasks,
+		getStatisticsOverview,
+		getStatisticsRecentActivity,
+		type StatisticsOverview,
+		type RecentActivityItem,
+	} from '$lib/api/client';
 	import type { AnalysisTaskList } from '$lib/api/client';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
@@ -56,11 +63,15 @@
 	let analysisStatsSubtitle = $state<string>('Loading…');
 	let analysisStatsChange = $state<string>('');
 	let recentAnalyses = $state<RecentAnalysis[]>([]);
+	let overview = $state<StatisticsOverview | null>(null);
+	let liveActivity = $state<RecentActivityItem[]>([]);
 
 	onMount(async () => {
-		const [statsResult, tasksResult] = await Promise.allSettled([
+		const [statsResult, tasksResult, overviewResult, activityResult] = await Promise.allSettled([
 			getAnalysisStats(),
 			getAnalysisTasks({ per_page: 5 }),
+			getStatisticsOverview(),
+			getStatisticsRecentActivity(8),
 		]);
 
 		if (statsResult.status === 'fulfilled') {
@@ -82,6 +93,14 @@
 				time: timeAgo(task.created_at),
 			}));
 		}
+
+		if (overviewResult.status === 'fulfilled') {
+			overview = overviewResult.value;
+		}
+
+		if (activityResult.status === 'fulfilled') {
+			liveActivity = activityResult.value;
+		}
 	});
 
 	interface SummaryCard {
@@ -95,10 +114,10 @@
 	}
 
 	const summaryCards: SummaryCard[] = [
-		{ title: 'Models', value: () => '24', subtitle: () => 'Registered models', change: () => '3 new apps this week', icon: Boxes, href: '/models', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50' },
-		{ title: 'Applications', value: () => '156', subtitle: () => 'Generated apps', change: () => '8 generated in 24h', icon: AppWindow, href: '/applications', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50' },
+		{ title: 'Models', value: () => (overview ? String(overview.models_in_use) : '—'), subtitle: () => 'Models in use', change: () => (overview ? `${overview.total_apps} total apps` : ''), icon: Boxes, href: '/models', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50' },
+		{ title: 'Applications', value: () => (overview ? String(overview.total_apps) : '—'), subtitle: () => (overview ? `${overview.apps_completed} completed` : 'Loading…'), change: () => (overview ? `${overview.apps_success_rate}% success rate` : ''), icon: AppWindow, href: '/applications', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50' },
 		{ title: 'Security Analyses', value: () => analysisStatsValue, subtitle: () => analysisStatsSubtitle, change: () => analysisStatsChange, icon: BarChart3, href: '/analysis', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50' },
-		{ title: 'Performance Tests', value: () => '42', subtitle: () => 'Tests executed', change: () => '3 run in 24h', icon: FileText, href: '/reports', color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/50' },
+		{ title: 'Findings', value: () => (overview ? String(overview.total_findings) : '—'), subtitle: () => (overview ? `${overview.avg_findings_per_app}/app avg` : 'Loading…'), change: () => (overview ? `${overview.analyses_completed} analyses` : ''), icon: FileText, href: '/statistics', color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/50' },
 	];
 
 	interface ServiceStatus {
@@ -421,20 +440,49 @@
 				</Card.Header>
 				<Card.Content>
 					<div class="space-y-1">
-						{#each activityFeed as event, i (i)}
-							<div class="flex items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50">
-								<div class="mt-0.5">
-									<event.icon class="h-3.5 w-3.5 {event.color}" />
+						{#if liveActivity.length > 0}
+							{#each liveActivity as event, i (event.kind + event.id)}
+								{@const EvtIcon = event.kind === 'analysis' ? Activity : AppWindow}
+								{@const evtColor =
+									event.status === 'completed'
+										? 'text-emerald-500'
+										: event.status === 'failed'
+											? 'text-destructive'
+											: event.status === 'running'
+												? 'text-amber-500'
+												: 'text-blue-500'}
+								<div class="flex items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50">
+									<div class="mt-0.5">
+										<EvtIcon class="h-3.5 w-3.5 {evtColor}" />
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-xs leading-relaxed break-words">
+											<span class="capitalize">{event.kind}</span>: {event.title}
+											<span class="text-muted-foreground">({event.status})</span>
+										</p>
+										<p class="text-[11px] text-muted-foreground mt-0.5">{timeAgo(event.created_at)}</p>
+									</div>
 								</div>
-								<div class="flex-1 min-w-0">
-									<p class="text-xs leading-relaxed break-words">{event.text}</p>
-									<p class="text-[11px] text-muted-foreground mt-0.5">{event.time}</p>
+								{#if i < liveActivity.length - 1}
+									<Separator />
+								{/if}
+							{/each}
+						{:else}
+							{#each activityFeed as event, i (i)}
+								<div class="flex items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50">
+									<div class="mt-0.5">
+										<event.icon class="h-3.5 w-3.5 {event.color}" />
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-xs leading-relaxed break-words">{event.text}</p>
+										<p class="text-[11px] text-muted-foreground mt-0.5">{event.time}</p>
+									</div>
 								</div>
-							</div>
-							{#if i < activityFeed.length - 1}
-								<Separator />
-							{/if}
-						{/each}
+								{#if i < activityFeed.length - 1}
+									<Separator />
+								{/if}
+							{/each}
+						{/if}
 					</div>
 				</Card.Content>
 			</Card.Root>
