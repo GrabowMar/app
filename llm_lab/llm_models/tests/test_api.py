@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 from unittest.mock import patch
 
@@ -153,6 +154,158 @@ class TestSyncAPI:
         data = resp.json()
         assert data["fetched"] == expected_fetched
         assert data["upserted"] == expected_upserted
+
+
+@pytest.mark.django_db
+class TestImportAPI:
+    def test_import_openrouter_payload(self, api_client):
+        payload = {
+            "data": [
+                {
+                    "id": "openai/gpt-4o",
+                    "name": "GPT-4o",
+                    "pricing": {
+                        "prompt": "0.0000025",
+                        "completion": "0.00001",
+                    },
+                    "top_provider": {
+                        "context_length": 128000,
+                        "max_completion_tokens": 4096,
+                    },
+                    "supported_parameters": ["tools", "stream", "response_format"],
+                },
+            ],
+        }
+
+        resp = api_client.post(
+            "/api/models/import/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        assert resp.status_code == HTTPStatus.OK, resp.content
+        assert resp.json() == {"count": 1, "imported": 1}
+        assert LLMModel.objects.filter(canonical_slug="openai_gpt-4o").exists()
+
+    def test_import_exported_payload(self, api_client):
+        payload = {
+            "models": [
+                {
+                    "model_id": "anthropic/claude-3-5-sonnet",
+                    "canonical_slug": "anthropic_claude-3-5-sonnet",
+                    "provider": "anthropic",
+                    "model_name": "Claude 3.5 Sonnet",
+                    "description": "Imported from export.",
+                    "context_window": 200000,
+                    "max_output_tokens": 8192,
+                    "input_price_per_token": 0.000003,
+                    "output_price_per_token": 0.000015,
+                    "supports_function_calling": True,
+                    "supports_vision": True,
+                    "supports_streaming": True,
+                    "supports_json_mode": True,
+                    "metadata": {"source": "test"},
+                    "capabilities_json": {"supported_parameters": ["tools"]},
+                },
+            ],
+        }
+
+        resp = api_client.post(
+            "/api/models/import/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        assert resp.status_code == HTTPStatus.OK, resp.content
+        assert resp.json() == {"count": 1, "imported": 1}
+        model = LLMModel.objects.get(canonical_slug="anthropic_claude-3-5-sonnet")
+        assert model.model_name == "Claude 3.5 Sonnet"
+        assert model.metadata == {"source": "test"}
+
+
+@pytest.mark.django_db
+class TestExportAPI:
+    def test_export_csv(self, api_client):
+        LLMModelFactory(
+            provider="openai",
+            model_name="GPT-4o",
+            model_id="openai/gpt-4o",
+            canonical_slug="openai_gpt-4o",
+        )
+
+        resp = api_client.get("/api/models/export/?format=csv")
+
+        assert resp.status_code == HTTPStatus.OK
+        assert resp["Content-Disposition"] == 'attachment; filename="models_export.csv"'
+        content = resp.content.decode("utf-8")
+        assert "canonical_slug" in content
+        assert "openai_gpt-4o" in content
+
+    def test_export_json(self, api_client):
+        LLMModelFactory(
+            provider="openai",
+            model_name="GPT-4o",
+            model_id="openai/gpt-4o",
+            canonical_slug="openai_gpt-4o",
+        )
+
+        resp = api_client.get("/api/models/export/?format=json")
+
+        assert resp.status_code == HTTPStatus.OK
+        payload = resp.json()
+        assert payload["format"] == "json"
+        assert payload["count"] == 1
+        assert payload["models"][0]["canonical_slug"] == "openai_gpt-4o"
+
+
+@pytest.mark.django_db
+class TestComparisonAPI:
+    def test_compare_models_preserves_order(self, api_client):
+        first = LLMModelFactory(
+            model_id="openai/gpt-4o",
+            canonical_slug="openai_gpt-4o",
+            model_name="GPT-4o",
+        )
+        second = LLMModelFactory(
+            model_id="anthropic/claude-3-5-sonnet",
+            canonical_slug="anthropic_claude-3-5-sonnet",
+            model_name="Claude 3.5 Sonnet",
+        )
+
+        resp = api_client.get(
+            f"/api/models/comparison/?models={second.canonical_slug},{first.canonical_slug}",
+        )
+
+        assert resp.status_code == HTTPStatus.OK
+        payload = resp.json()
+        assert [item["canonical_slug"] for item in payload["items"]] == [
+            second.canonical_slug,
+            first.canonical_slug,
+        ]
+        assert payload["missing"] == []
+
+
+@pytest.mark.django_db
+class TestRefreshAPI:
+    @patch("llm_lab.llm_models.api.views.refresh_model_from_openrouter")
+    def test_refresh_model(self, mock_refresh, api_client):
+        model = LLMModelFactory(
+            model_id="openai/gpt-4o",
+            canonical_slug="openai_gpt-4o",
+            model_name="Old Name",
+        )
+
+        def refresh_side_effect(instance):
+            instance.model_name = "New Name"
+            instance.save(update_fields=["model_name", "updated_at"])
+            return True
+
+        mock_refresh.side_effect = refresh_side_effect
+
+        resp = api_client.post(f"/api/models/detail/{model.canonical_slug}/refresh/")
+
+        assert resp.status_code == HTTPStatus.OK, resp.content
+        assert resp.json()["model_name"] == "New Name"
 
 
 @pytest.mark.django_db

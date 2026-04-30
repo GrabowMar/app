@@ -4,7 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
-	import { getModel, getRelatedModels, type LLMModelDetail, type LLMModelSummary } from '$lib/api/client';
+	import { getModel, getRelatedModels, refreshModelFromOpenRouter, type LLMModelDetail, type LLMModelSummary } from '$lib/api/client';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Cpu from '@lucide/svelte/icons/cpu';
@@ -52,6 +52,7 @@
 	let loading = $state(true);
 	let error = $state('');
 	let rawJsonOpen = $state(false);
+	let refreshing = $state(false);
 	let calcInputTokens = $state(1000);
 	let calcOutputTokens = $state(1000);
 	let metaOpenRouter = $state(false);
@@ -298,6 +299,21 @@
 		}
 	}
 
+	async function handleRefresh() {
+		refreshing = true;
+		try {
+			model = await refreshModelFromOpenRouter(slug);
+			getRelatedModels(slug, 12).then((result) => {
+				relatedModels = result;
+			}).catch(() => {});
+			toast.success('Model metadata refreshed from OpenRouter.');
+		} catch {
+			toast.error('Model refresh failed.');
+		} finally {
+			refreshing = false;
+		}
+	}
+
 	function scrollRelated(dir: 'left' | 'right') {
 		if (!relatedScrollEl) return;
 		const amount = 300;
@@ -366,8 +382,8 @@
 						<Button variant="outline" size="sm" href="/models/compare?models={slug}" title="Compare">
 							<GitCompareArrows class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Compare</span>
 						</Button>
-						<Button size="sm" onclick={load} title="Refresh">
-							<RefreshCw class="h-3.5 w-3.5 sm:mr-1.5" /><span class="hidden sm:inline">Refresh</span>
+						<Button size="sm" onclick={handleRefresh} title="Refresh" disabled={refreshing}>
+							<RefreshCw class="h-3.5 w-3.5 sm:mr-1.5 {refreshing ? 'animate-spin' : ''}" /><span class="hidden sm:inline">Refresh</span>
 						</Button>
 					</div>
 				</div>
@@ -738,13 +754,13 @@
 				<Card.Content>
 					<div class="grid gap-4 grid-cols-1 sm:grid-cols-[1fr_1fr_auto]">
 						<div>
-							<label class="text-xs font-medium text-muted-foreground block mb-1.5">Input tokens (K)</label>
-							<input type="number" min="0" step="100" bind:value={calcInputTokens} class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm tabular-nums" />
+							<label for="calc-input-tokens" class="text-xs font-medium text-muted-foreground block mb-1.5">Input tokens (K)</label>
+							<input id="calc-input-tokens" type="number" min="0" step="100" bind:value={calcInputTokens} class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm tabular-nums" />
 							<div class="text-xs text-muted-foreground mt-1">${calcInputCost.toFixed(4)}</div>
 						</div>
 						<div>
-							<label class="text-xs font-medium text-muted-foreground block mb-1.5">Output tokens (K)</label>
-							<input type="number" min="0" step="100" bind:value={calcOutputTokens} class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm tabular-nums" />
+							<label for="calc-output-tokens" class="text-xs font-medium text-muted-foreground block mb-1.5">Output tokens (K)</label>
+							<input id="calc-output-tokens" type="number" min="0" step="100" bind:value={calcOutputTokens} class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm tabular-nums" />
 							<div class="text-xs text-muted-foreground mt-1">${calcOutputCost.toFixed(4)}</div>
 						</div>
 						<div class="flex flex-col justify-center items-center rounded-lg bg-muted/30 px-6 py-3 min-w-[140px]">

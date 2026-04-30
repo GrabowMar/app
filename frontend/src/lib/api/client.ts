@@ -241,6 +241,16 @@ export interface SyncResult {
 	upserted: number;
 }
 
+export interface ModelImportResult {
+	count: number;
+	imported: number;
+}
+
+export interface ModelComparisonResult {
+	items: LLMModelDetail[];
+	missing: string[];
+}
+
 export async function getModels(params: {
 	page?: number;
 	per_page?: number;
@@ -270,7 +280,7 @@ export async function getModels(params: {
 }
 
 export async function getModel(slug: string): Promise<LLMModelDetail> {
-	const res = await apiFetch(`/models/detail/${slug}/`);
+	const res = await apiFetch(`/models/detail/${encodeURIComponent(slug)}/`);
 	return res.json();
 }
 
@@ -289,12 +299,37 @@ export async function syncModelsFromOpenRouter(): Promise<SyncResult> {
 	return res.json();
 }
 
+export async function refreshModelFromOpenRouter(slug: string): Promise<LLMModelDetail> {
+	const res = await apiFetch(`/models/detail/${encodeURIComponent(slug)}/refresh/`, { method: 'POST' });
+	return res.json();
+}
+
+export async function importModelsFromJson(payload: unknown): Promise<ModelImportResult> {
+	const res = await apiFetch('/models/import/', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	});
+	return res.json();
+}
+
+export async function getModelComparison(slugs: string[]): Promise<ModelComparisonResult> {
+	const q = new URLSearchParams();
+	if (slugs.length > 0) q.set('models', slugs.join(','));
+	const qs = q.toString();
+	const res = await apiFetch(`/models/comparison/${qs ? '?' + qs : ''}`);
+	return res.json();
+}
+
+export function getModelsExportUrl(format: 'csv' | 'json' = 'csv'): string {
+	return `/api/models/export/?format=${format}`;
+}
+
 export async function deleteModel(slug: string): Promise<void> {
-	await apiFetch(`/models/detail/${slug}/`, { method: 'DELETE' });
+	await apiFetch(`/models/detail/${encodeURIComponent(slug)}/`, { method: 'DELETE' });
 }
 
 export async function getRelatedModels(slug: string, limit = 10): Promise<LLMModelSummary[]> {
-	const res = await apiFetch(`/models/detail/${slug}/related/?limit=${limit}`);
+	const res = await apiFetch(`/models/detail/${encodeURIComponent(slug)}/related/?limit=${limit}`);
 	return res.json();
 }
 
