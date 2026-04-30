@@ -690,6 +690,8 @@ export interface AnalysisTask {
 	error_message: string;
 	created_at: string;
 	updated_at: string;
+	target_url: string | null;
+	container_instance_id: string | null;
 }
 
 export interface AnalysisTaskList {
@@ -704,6 +706,8 @@ export interface AnalysisTaskList {
 	started_at: string | null;
 	completed_at: string | null;
 	duration_seconds: number | null;
+	target_url: string | null;
+	container_instance_id: string | null;
 }
 
 export interface PaginatedAnalysisTasks {
@@ -788,6 +792,7 @@ export async function createAnalysisTask(data: {
 	analyzers: string[];
 	settings?: Record<string, any>;
 	auto_start?: boolean;
+	live_target?: boolean;
 }): Promise<AnalysisTask> {
 	const res = await apiFetch('/analysis/tasks/', {
 		method: 'POST',
@@ -1381,4 +1386,46 @@ export async function buildContainerForJob(jobId: string): Promise<GenericRespon
 export async function getDockerInfo(): Promise<DockerInfo> {
 	const res = await apiFetch('/runtime/docker/info/');
 	return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Docs
+// ---------------------------------------------------------------------------
+
+export interface DocNode {
+slug: string;
+title: string;
+children: DocNode[];
+}
+
+export interface DocPage {
+slug: string;
+title: string;
+html: string;
+toc: string;
+raw: string;
+last_modified: number;
+}
+
+export interface DocSearchResult {
+slug: string;
+title: string;
+snippet: string;
+score: number;
+}
+
+export async function getDocsTree(): Promise<DocNode[]> {
+const res = await apiFetch('/docs/tree');
+return res.json();
+}
+
+export async function getDoc(slug: string): Promise<DocPage | null> {
+const res = await apiFetch(`/docs/page?slug=${encodeURIComponent(slug)}`);
+if (res.status === 404) return null;
+return res.json();
+}
+
+export async function searchDocs(q: string): Promise<DocSearchResult[]> {
+const res = await apiFetch(`/docs/search?q=${encodeURIComponent(q)}`);
+return res.json();
 }

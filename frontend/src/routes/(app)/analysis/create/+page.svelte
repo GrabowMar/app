@@ -95,6 +95,7 @@
 	// -- Step 3: Configure --
 	let taskName = $state('');
 	let autoStart = $state(true);
+	let liveTarget = $state(false);
 	let analyzerSettings = $state<Record<string, string>>({});
 
 	let settingsErrors = $state<Record<string, string>>({});
@@ -148,6 +149,7 @@
 				analyzers: [...selectedAnalyzers],
 				settings: settingsMap,
 				auto_start: autoStart,
+				live_target: sourceMode === 'job' && liveTarget ? true : undefined,
 			});
 			await goto(`/analysis/${task.id}`);
 		} catch (err: any) {
@@ -578,6 +580,22 @@
 										>Auto-start analysis</label
 									>
 								</div>
+								{#if sourceMode === 'job' && selectedJobId}
+									<div class="flex items-center gap-2 pt-6">
+										<input
+											type="checkbox"
+											id="liveTarget"
+											bind:checked={liveTarget}
+											class="rounded"
+										/>
+										<label for="liveTarget" class="text-sm">
+											Run against live container
+											<span class="ml-1 text-xs text-muted-foreground"
+												>(starts Docker container for dynamic analysis)</span
+											>
+										</label>
+									</div>
+								{/if}
 							</div>
 						</Card.Content>
 					</Card.Root>
@@ -680,6 +698,18 @@
 											>{autoStart ? 'Yes' : 'No'}</td
 										>
 									</tr>
+									{#if sourceMode === 'job' && liveTarget}
+										<tr>
+											<td class="px-4 py-3 font-medium text-muted-foreground"
+												>Live container</td
+											>
+											<td class="px-4 py-3">
+												<Badge variant="outline" class="text-[10px]"
+													>Enabled</Badge
+												>
+											</td>
+										</tr>
+									{/if}
 								</tbody>
 							</table>
 						</div>

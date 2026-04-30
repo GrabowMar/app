@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 
-from llm_lab.analysis.models import AnalysisTask
 from llm_lab.analysis.services.analysis_service import AnalysisService
 from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.live_target import LIVE_TARGET_PORT_MAX
 from llm_lab.analysis.services.live_target import LIVE_TARGET_PORT_MIN
+from llm_lab.analysis.services.live_target import prepare_live_target
+from llm_lab.analysis.services.live_target import teardown_live_target
 from llm_lab.analysis.services.live_target import validate_live_target_url
 from llm_lab.analysis.tests.factories import AnalysisTaskFactory
 from llm_lab.generation.tests.factories import GenerationJobFactory
 from llm_lab.runtime.models import ContainerInstance
 from llm_lab.runtime.tests.factories import ContainerInstanceFactory
 from llm_lab.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from llm_lab.analysis.models import AnalysisTask
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -28,7 +33,9 @@ pytestmark = pytest.mark.django_db(transaction=True)
 _CS = "llm_lab.runtime.services.container_service"
 
 
-def _make_task(*, live_target: bool = True, extra_config: dict | None = None) -> AnalysisTask:
+def _make_task(
+    *, live_target: bool = True, extra_config: dict | None = None,
+) -> AnalysisTask:
     """Create an AnalysisTask with minimal valid configuration."""
     user = UserFactory()
     job = GenerationJobFactory(
@@ -54,7 +61,9 @@ def _make_task(*, live_target: bool = True, extra_config: dict | None = None) ->
     )
 
 
-def _mock_analyzer(name: str = "bandit", output: AnalyzerOutput | None = None) -> MagicMock:
+def _mock_analyzer(
+    name: str = "bandit", output: AnalyzerOutput | None = None,
+) -> MagicMock:
     """Return a mock analyzer instance."""
     analyzer = MagicMock()
     analyzer.name = name
@@ -77,7 +86,7 @@ def _running_instance() -> ContainerInstance:
 
 
 # ---------------------------------------------------------------------------
-# 1. validate_live_target_url – loopback allowed on runtime ports
+# 1. validate_live_target_url - loopback allowed on runtime ports
 # ---------------------------------------------------------------------------
 
 
@@ -97,7 +106,7 @@ class TestValidateLiveTargetUrl:
         assert "not in the allowed runtime range" in err
 
     def test_blocks_private_ip(self):
-        valid, err = validate_live_target_url("http://192.168.1.1:8080")
+        valid, _err = validate_live_target_url("http://192.168.1.1:8080")
         assert not valid
 
     def test_allows_public_ip(self):
@@ -105,12 +114,12 @@ class TestValidateLiveTargetUrl:
         assert valid, err
 
     def test_blocks_invalid_scheme(self):
-        valid, err = validate_live_target_url(f"ftp://127.0.0.1:{LIVE_TARGET_PORT_MIN}")
+        valid, _err = validate_live_target_url(f"ftp://127.0.0.1:{LIVE_TARGET_PORT_MIN}")
         assert not valid
 
 
 # ---------------------------------------------------------------------------
-# 2. prepare_live_target – happy-path: builds container, polls, returns URL
+# 2. prepare_live_target - happy-path: builds container, polls, returns URL
 # ---------------------------------------------------------------------------
 
 
@@ -125,8 +134,6 @@ class TestPrepareLiveTarget:
             backend_port=6200,
         )
         mock_build.return_value = instance
-
-        from llm_lab.analysis.services.live_target import prepare_live_target
 
         returned_instance, url = prepare_live_target(
             task,
@@ -148,8 +155,6 @@ class TestPrepareLiveTarget:
         )
         mock_build.return_value = instance
 
-        from llm_lab.analysis.services.live_target import prepare_live_target
-
         prepare_live_target(task, str(task.configuration["generation_job_id"]))
         task.refresh_from_db()
         assert task.configuration["container_instance_id"] == str(instance.id)
@@ -165,14 +170,12 @@ class TestPrepareLiveTarget:
         )
         mock_build.return_value = instance
 
-        from llm_lab.analysis.services.live_target import prepare_live_target
-
         with pytest.raises(RuntimeError, match="failed to build/start"):
             prepare_live_target(task, str(task.configuration["generation_job_id"]))
 
 
 # ---------------------------------------------------------------------------
-# 3. teardown_live_target – stop + remove called
+# 3. teardown_live_target - stop + remove called
 # ---------------------------------------------------------------------------
 
 
@@ -182,7 +185,6 @@ class TestTeardownLiveTarget:
     @patch("llm_lab.analysis.services.live_target.time.sleep")
     def test_calls_stop_and_remove(self, mock_sleep, mock_remove, mock_stop):
         instance = ContainerInstanceFactory(status=ContainerInstance.Status.RUNNING)
-        from llm_lab.analysis.services.live_target import teardown_live_target
 
         teardown_live_target(instance)
 
@@ -196,8 +198,6 @@ class TestTeardownLiveTarget:
         """teardown_live_target must not propagate errors."""
         mock_stop.side_effect = Exception("docker gone")
         instance = ContainerInstanceFactory(status=ContainerInstance.Status.RUNNING)
-
-        from llm_lab.analysis.services.live_target import teardown_live_target
 
         teardown_live_target(instance)  # must not raise
 
@@ -337,7 +337,8 @@ class TestAnalysisServiceLiveTarget:
         def _prepare_side_effect(t, job_id):
             t.configuration["container_instance_id"] = str(instance.id)
             t.save(update_fields=["configuration"])
-            raise RuntimeError("Container failed to start")
+            msg = "Container failed to start"
+            raise RuntimeError(msg)
 
         mock_prepare.side_effect = _prepare_side_effect
         mock_get_instance.return_value = _mock_analyzer("bandit")

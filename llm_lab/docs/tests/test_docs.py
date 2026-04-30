@@ -12,15 +12,18 @@ def docs_root(tmp_path, settings):
     """Create a temporary docs tree and point the service at it."""
     (tmp_path / "index.md").write_text("# Welcome\n\nIntro text.", encoding="utf-8")
     (tmp_path / "getting-started.md").write_text(
-        "# Getting Started\n\nStep one.\nStep two.", encoding="utf-8",
+        "# Getting Started\n\nStep one.\nStep two.",
+        encoding="utf-8",
     )
     sub = tmp_path / "api"
     sub.mkdir()
     (sub / "overview.md").write_text(
-        "# API Overview\n\nREST endpoints.", encoding="utf-8"
+        "# API Overview\n\nREST endpoints.",
+        encoding="utf-8",
     )
     (sub / "reference.md").write_text(
-        "# API Reference\n\n```python\nprint('hello')\n```", encoding="utf-8",
+        "# API Reference\n\n```python\nprint('hello')\n```",
+        encoding="utf-8",
     )
     settings.DOCS_ROOT = str(tmp_path)
     services.DOCS_ROOT = tmp_path

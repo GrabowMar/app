@@ -151,7 +151,7 @@ class AnalysisService:
                     cid = task.configuration.get("container_instance_id")
                     if cid:
                         try:
-                            from llm_lab.runtime.models import ContainerInstance
+                            from llm_lab.runtime.models import ContainerInstance  # noqa: PLC0415, I001
 
                             container_instance = ContainerInstance.objects.get(id=cid)
                         except Exception:  # noqa: BLE001

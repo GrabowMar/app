@@ -268,6 +268,35 @@
 			</Card.Content>
 		</Card.Root>
 
+		<!-- Live Container Card (shown when task ran against a live container) -->
+		{#if task.container_instance_id}
+			<Card.Root class="border-blue-500/30 bg-blue-500/5">
+				<Card.Header class="pb-2">
+					<div class="flex items-center gap-2">
+						<div class="h-2 w-2 rounded-full {task.status === 'running' ? 'animate-pulse bg-blue-400' : 'bg-blue-400/50'}"></div>
+						<Card.Title class="text-sm">Live Container</Card.Title>
+					</div>
+				</Card.Header>
+				<Card.Content class="pt-0">
+					<div class="space-y-1 text-sm">
+						{#if task.target_url}
+							<div class="flex items-center gap-2">
+								<span class="text-muted-foreground">Target URL:</span>
+								<code class="rounded bg-muted px-1.5 py-0.5 text-xs">{task.target_url}</code>
+							</div>
+						{/if}
+						<div class="flex items-center gap-2">
+							<span class="text-muted-foreground">Container:</span>
+							<a
+								href="/runtime/{task.container_instance_id}"
+								class="text-xs text-blue-400 underline-offset-2 hover:underline"
+							>{task.container_instance_id.slice(0, 8)}…</a>
+						</div>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+
 		<!-- Section Nav -->
 		<div class="sticky top-0 z-40 -mx-4 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 			<nav class="flex gap-1 overflow-x-auto flex-nowrap border-b py-2">

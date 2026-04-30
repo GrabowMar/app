@@ -94,6 +94,7 @@ LOCAL_APPS = [
     "llm_lab.realtime",
     "llm_lab.export",
     "llm_lab.docs",
+    "llm_lab.system",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

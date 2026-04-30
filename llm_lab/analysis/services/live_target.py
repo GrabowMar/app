@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import socket
 import time
-import urllib.request
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -123,17 +122,17 @@ def prepare_live_target(
             raise RuntimeError(msg)
         time.sleep(POLL_INTERVAL_SECONDS)
     else:
-        raise TimeoutError(
+        msg = (
             f"Container {instance.name} did not reach running status "
-            f"within {POLL_TIMEOUT_SECONDS}s.",
+            f"within {POLL_TIMEOUT_SECONDS}s."
         )
+        raise TimeoutError(msg)
 
     # Prefer frontend_port for web-facing analysis; fallback to backend_port.
     port = instance.frontend_port or instance.backend_port
     if port is None:
-        raise RuntimeError(
-            f"Container {instance.name} has no allocated port.",
-        )
+        msg = f"Container {instance.name} has no allocated port."
+        raise RuntimeError(msg)
 
     target_url = f"http://127.0.0.1:{port}"
 
@@ -145,7 +144,7 @@ def prepare_live_target(
         time.sleep(TCP_PROBE_INTERVAL_SECONDS)
     else:
         logger.warning(
-            "TCP probe to 127.0.0.1:%s timed out – proceeding anyway",
+            "TCP probe to 127.0.0.1:%s timed out - proceeding anyway",
             port,
         )
 

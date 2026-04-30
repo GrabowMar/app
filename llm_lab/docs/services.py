@@ -137,9 +137,7 @@ def _iter_md_files() -> list[Path]:
     files: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(DOCS_ROOT):
         dirnames[:] = [
-            d
-            for d in dirnames
-            if not d.startswith(".") and not d.startswith("_")
+            d for d in dirnames if not d.startswith(".") and not d.startswith("_")
         ]
         files.extend(
             Path(dirpath) / fn
