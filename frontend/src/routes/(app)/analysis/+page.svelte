@@ -28,6 +28,8 @@
 		type PaginatedAnalysisTasks,
 	} from '$lib/api/client';
 	import { statusColors, severityColors } from '$lib/constants/analysis';
+	import { downloadExport } from '$lib/api/export';
+	import Download from '@lucide/svelte/icons/download';
 	import { formatDate, formatDuration, statusLabel } from '$lib/utils/analysis';
 
 	let loading = $state(true);
@@ -186,6 +188,22 @@
 				<RefreshCw class="mr-2 h-3.5 w-3.5 {refreshing ? 'animate-spin' : ''}" />
 				Refresh
 			</Button>
+			<!-- Export dropdown -->
+			<details class="relative">
+				<summary class="list-none">
+					<Button variant="outline" size="sm" tag="span">
+						<Download class="mr-2 h-3.5 w-3.5" />
+						Export
+					</Button>
+				</summary>
+				<div class="absolute right-0 z-50 mt-1 w-52 rounded-md border bg-popover p-1 shadow-md">
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('analysis-tasks.csv', 'analysis-tasks.csv')}>Tasks CSV</button>
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('analysis-tasks.json', 'analysis-tasks.json')}>Tasks JSON</button>
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('findings.csv', 'findings.csv')}>Findings CSV</button>
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('findings.json', 'findings.json')}>Findings JSON</button>
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('findings.sarif', 'findings.sarif')}>Findings SARIF</button>
+				</div>
+			</details>
 			<Button size="sm" href="/analysis/create">
 				<Plus class="mr-2 h-3.5 w-3.5" />
 				New

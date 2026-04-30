@@ -59,24 +59,39 @@ BENCHMARK_WEIGHTS = {
 }
 
 LICENSE_SCORES = {
-    "apache": 1.0, "mit": 1.0, "bsd": 1.0, "cc-by": 1.0,
-    "llama": 0.7, "gemma": 0.7, "yi": 0.7,
-    "commercial": 0.4, "api-only": 0.4,
-    "unknown": 0.0, "proprietary": 0.0,
+    "apache": 1.0,
+    "mit": 1.0,
+    "bsd": 1.0,
+    "cc-by": 1.0,
+    "llama": 0.7,
+    "gemma": 0.7,
+    "yi": 0.7,
+    "commercial": 0.4,
+    "api-only": 0.4,
+    "unknown": 0.0,
+    "proprietary": 0.0,
 }
 
 STABILITY_SCORES = {
-    "stable": 1.0, "production": 1.0,
-    "reliable": 0.7, "recent": 0.7,
-    "beta": 0.4, "experimental": 0.4,
-    "deprecated": 0.0, "unreliable": 0.0,
+    "stable": 1.0,
+    "production": 1.0,
+    "reliable": 0.7,
+    "recent": 0.7,
+    "beta": 0.4,
+    "experimental": 0.4,
+    "deprecated": 0.0,
+    "unreliable": 0.0,
 }
 
 DOCS_SCORES = {
-    "comprehensive": 1.0, "excellent": 1.0,
-    "good": 0.7, "basic": 0.7,
-    "minimal": 0.4, "poor": 0.4,
-    "none": 0.0, "missing": 0.0,
+    "comprehensive": 1.0,
+    "excellent": 1.0,
+    "good": 0.7,
+    "basic": 0.7,
+    "minimal": 0.4,
+    "poor": 0.4,
+    "none": 0.0,
+    "missing": 0.0,
 }
 
 
@@ -257,9 +272,7 @@ def aggregate_rankings() -> list[dict[str, Any]]:
             "is_free": m.is_free,
             "context_length": m.context_window,
             "price_per_million_input": (
-                m.input_price_per_token * 1_000_000
-                if m.input_price_per_token
-                else None
+                m.input_price_per_token * 1_000_000 if m.input_price_per_token else None
             ),
             "price_per_million_output": (
                 m.output_price_per_token * 1_000_000
@@ -291,10 +304,12 @@ def aggregate_rankings() -> list[dict[str, Any]]:
         # Compute component scores
         entry["benchmark_score"] = round(compute_benchmark_score(entry), 4)
         entry["cost_efficiency_score"] = round(
-            compute_cost_efficiency_score(entry), 4,
+            compute_cost_efficiency_score(entry),
+            4,
         )
         entry["accessibility_score"] = round(
-            compute_accessibility_score(entry), 4,
+            compute_accessibility_score(entry),
+            4,
         )
         entry["adoption_score"] = round(compute_adoption_score(entry), 4)
         entry["mss_score"] = compute_mss(entry)
@@ -422,9 +437,7 @@ def get_status() -> dict[str, Any]:
     """Diagnostic info: counts of seeded benchmarks per benchmark name."""
 
     counts: dict[str, int] = {}
-    for r in (
-        BenchmarkResult.objects.values("benchmark").annotate(c=Count("id"))
-    ):
+    for r in BenchmarkResult.objects.values("benchmark").annotate(c=Count("id")):
         counts[r["benchmark"]] = int(r["c"])
     return {
         "benchmarks": counts,

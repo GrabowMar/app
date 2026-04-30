@@ -122,17 +122,27 @@ class LighthouseAnalyzer(BaseAnalyzer):
     ) -> AnalyzerOutput:
         config = config or {}
         target_url: str | None = config.get("target_url")
+        is_live_task: bool = bool(config.get("live_target"))
 
         if target_url:
-            return self._analyze_live(target_url)
+            return self._analyze_live(target_url, is_live_task=is_live_task)
         return self._analyze_code(code)
 
     # ------------------------------------------------------------------
     # Live Lighthouse run
     # ------------------------------------------------------------------
 
-    def _analyze_live(self, target_url: str) -> AnalyzerOutput:
-        valid, err = validate_target_url(target_url)
+    def _analyze_live(
+        self, target_url: str, *, is_live_task: bool = False,
+    ) -> AnalyzerOutput:
+        if is_live_task:
+            from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
+                validate_live_target_url,
+            )
+
+            valid, err = validate_live_target_url(target_url)
+        else:
+            valid, err = validate_target_url(target_url)
         if not valid:
             return AnalyzerOutput(error=f"Invalid target URL: {err}")
 

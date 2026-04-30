@@ -48,7 +48,9 @@ def test_build_action_completes():
             frontend_port=8001,
         )
         action = container_service.create_action(
-            container, ContainerAction.ActionType.BUILD, user,
+            container,
+            ContainerAction.ActionType.BUILD,
+            user,
         )
 
         deadline = time.time() + 10
@@ -81,7 +83,9 @@ def test_stop_action_completes():
             status=ContainerInstance.Status.RUNNING,
         )
         action = container_service.create_action(
-            container, ContainerAction.ActionType.STOP, user,
+            container,
+            ContainerAction.ActionType.STOP,
+            user,
         )
 
         deadline = time.time() + 10
@@ -116,7 +120,9 @@ def test_start_action_completes():
             status=ContainerInstance.Status.STOPPED,
         )
         action = container_service.create_action(
-            container, ContainerAction.ActionType.START, user,
+            container,
+            ContainerAction.ActionType.START,
+            user,
         )
 
         deadline = time.time() + 10
@@ -149,7 +155,9 @@ def test_restart_action_completes():
         user = UserFactory()
         container = ContainerInstanceFactory(status=ContainerInstance.Status.RUNNING)
         action = container_service.create_action(
-            container, ContainerAction.ActionType.RESTART, user,
+            container,
+            ContainerAction.ActionType.RESTART,
+            user,
         )
 
         deadline = time.time() + 10
@@ -176,7 +184,9 @@ def test_daemon_unavailable_marks_action_failed():
         user = UserFactory()
         container = ContainerInstanceFactory(status=ContainerInstance.Status.RUNNING)
         action = container_service.create_action(
-            container, ContainerAction.ActionType.STOP, user,
+            container,
+            ContainerAction.ActionType.STOP,
+            user,
         )
 
         deadline = time.time() + 10

@@ -141,50 +141,46 @@ export async function logout(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// API Token Management
+// API Token Management (multi-token)
 // ---------------------------------------------------------------------------
 
-export interface ApiTokenInfo {
-	key_preview: string;
+export interface ApiTokenSummary {
+	id: string;
+	name: string;
+	prefix: string;
+	scopes: string[];
+	expires_at: string | null;
+	last_used_at: string | null;
+	last_used_ip: string;
+	revoked_at: string | null;
 	created_at: string;
 }
 
-export interface ApiTokenCreated {
-	key: string;
-	created_at: string;
+export interface ApiTokenCreatedResponse extends ApiTokenSummary {
+	token: string;
 }
 
-export async function getApiToken(): Promise<ApiTokenInfo | null> {
-	const res = await apiFetch('/users/me/token/');
+export interface CreateApiTokenPayload {
+	name: string;
+	scopes?: string[];
+	expires_at?: string | null;
+}
+
+export async function listApiTokens(): Promise<ApiTokenSummary[]> {
+	const res = await apiFetch('/tokens/');
 	return res.json();
 }
 
-export async function getApiTokenSafe(): Promise<ApiTokenInfo | null> {
-	try {
-		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-		const res = await fetch(`${API_BASE}/users/me/token/`, {
-			headers,
-			credentials: 'include',
-		});
-		if (res.status === 404) return null;
-		if (res.status === 401) {
-			window.location.href = '/auth/login';
-			return new Promise<null>(() => {});
-		}
-		if (!res.ok) throw new Error('Failed to check token');
-		return res.json();
-	} catch {
-		return null;
-	}
-}
-
-export async function generateApiToken(): Promise<ApiTokenCreated> {
-	const res = await apiFetch('/users/me/token/', { method: 'POST' });
+export async function createApiToken(payload: CreateApiTokenPayload): Promise<ApiTokenCreatedResponse> {
+	const res = await apiFetch('/tokens/', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	});
 	return res.json();
 }
 
-export async function revokeApiToken(): Promise<void> {
-	await apiFetch('/users/me/token/', { method: 'DELETE' });
+export async function revokeApiToken(id: string): Promise<void> {
+	await apiFetch(`/tokens/${id}/`, { method: 'DELETE' });
 }
 
 // ---------------------------------------------------------------------------

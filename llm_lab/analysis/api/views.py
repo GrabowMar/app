@@ -91,6 +91,10 @@ def create_task(request, payload: AnalysisTaskCreateSchema):
         configuration={
             "analyzers": payload.analyzers,
             "settings": payload.settings,
+            "live_target": payload.live_target,
+            "generation_job_id": (
+                str(payload.generation_job_id) if payload.generation_job_id else None
+            ),
         },
         created_by=request.auth,
     )
@@ -143,6 +147,9 @@ def list_tasks(
             started_at=task.started_at,
             completed_at=task.completed_at,
             duration_seconds=task.duration_seconds,
+            container_instance_id=task.configuration.get("container_instance_id")
+            or None,
+            target_url=task.configuration.get("target_url") or None,
         )
         for task in page_qs
     ]

@@ -31,7 +31,10 @@ class ContainerInstance(models.Model):
     name = models.SlugField(_("name"), max_length=200, unique=True)
     image = models.CharField(_("image"), max_length=500, blank=True, default="")
     container_id = models.CharField(
-        _("container id"), max_length=200, blank=True, default="",
+        _("container id"),
+        max_length=200,
+        blank=True,
+        default="",
     )
     status = models.CharField(
         _("status"),
@@ -42,10 +45,15 @@ class ContainerInstance(models.Model):
     backend_port = models.IntegerField(_("backend port"), null=True, blank=True)
     frontend_port = models.IntegerField(_("frontend port"), null=True, blank=True)
     health_status = models.CharField(
-        _("health status"), max_length=100, blank=True, default="",
+        _("health status"),
+        max_length=100,
+        blank=True,
+        default="",
     )
     last_health_check = models.DateTimeField(
-        _("last health check"), null=True, blank=True,
+        _("last health check"),
+        null=True,
+        blank=True,
     )
     config = models.JSONField(_("config"), default=dict, blank=True)
     metadata = models.JSONField(_("metadata"), default=dict, blank=True)
@@ -90,7 +98,10 @@ class ContainerAction(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action_id = models.CharField(
-        _("action id"), max_length=100, unique=True, db_index=True,
+        _("action id"),
+        max_length=100,
+        unique=True,
+        db_index=True,
     )
     container = models.ForeignKey(
         ContainerInstance,
@@ -100,7 +111,10 @@ class ContainerAction(models.Model):
         related_name="actions",
     )
     action_type = models.CharField(
-        _("action type"), max_length=20, choices=ActionType.choices, db_index=True,
+        _("action type"),
+        max_length=20,
+        choices=ActionType.choices,
+        db_index=True,
     )
     status = models.CharField(
         _("status"),

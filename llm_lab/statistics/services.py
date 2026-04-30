@@ -416,10 +416,9 @@ def get_recent_activity(
         .select_related("model")
         .order_by("-created_at")[:limit]
     )
-    tasks = (
-        _scoped(AnalysisTask.objects.all(), user, "created_by")
-        .order_by("-created_at")[:limit]
-    )
+    tasks = _scoped(AnalysisTask.objects.all(), user, "created_by").order_by(
+        "-created_at",
+    )[:limit]
 
     items: list[dict[str, Any]] = [
         {

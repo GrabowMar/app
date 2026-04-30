@@ -202,7 +202,8 @@ def list_managed() -> list[dict[str, Any]]:
         if c is None:
             return []
         containers = c.containers.list(
-            all=True, filters={"label": "llm_lab.managed=true"},
+            all=True,
+            filters={"label": "llm_lab.managed=true"},
         )
         return [
             {

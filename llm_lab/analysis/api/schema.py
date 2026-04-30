@@ -23,6 +23,7 @@ class AnalysisTaskCreateSchema(Schema):
     analyzers: list[str]
     settings: dict[str, Any] = {}
     auto_start: bool = True
+    live_target: bool = False
 
 
 # ── Task schemas ──────────────────────────────────────────────────────
@@ -34,6 +35,8 @@ class AnalysisTaskSchema(ModelSchema):
     created_by_email: str = ""
     results_count: int = 0
     findings_count: int = 0
+    target_url: str | None = None
+    container_instance_id: str | None = None
 
     class Meta:
         model = AnalysisTask
@@ -78,6 +81,14 @@ class AnalysisTaskSchema(ModelSchema):
     def resolve_findings_count(obj: AnalysisTask) -> int:
         return Finding.objects.filter(result__task=obj).count()
 
+    @staticmethod
+    def resolve_target_url(obj: AnalysisTask) -> str | None:
+        return obj.configuration.get("target_url") or None
+
+    @staticmethod
+    def resolve_container_instance_id(obj: AnalysisTask) -> str | None:
+        return obj.configuration.get("container_instance_id") or None
+
 
 class AnalysisTaskListSchema(Schema):
     id: UUID
@@ -91,6 +102,8 @@ class AnalysisTaskListSchema(Schema):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     duration_seconds: float | None = None
+    container_instance_id: str | None = None
+    target_url: str | None = None
 
 
 class PaginatedAnalysisTasksSchema(Schema):

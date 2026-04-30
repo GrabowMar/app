@@ -155,7 +155,10 @@ class AnalysisService:
 
                             container_instance = ContainerInstance.objects.get(id=cid)
                         except Exception:  # noqa: BLE001
-                            pass
+                            logger.warning(
+                                "Could not retrieve container instance %s for teardown",
+                                cid,
+                            )
                 if container_instance is not None:
                     from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
                         teardown_live_target,

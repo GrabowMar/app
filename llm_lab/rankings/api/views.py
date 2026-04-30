@@ -56,9 +56,7 @@ def list_rankings(  # noqa: PLR0913
     paginated = sorted_rows[start : start + per_page]
 
     providers = {r.get("provider") for r in filtered if r.get("provider")}
-    with_benchmarks = sum(
-        1 for r in filtered if (r.get("benchmark_score") or 0) > 0
-    )
+    with_benchmarks = sum(1 for r in filtered if (r.get("benchmark_score") or 0) > 0)
 
     return {
         "count": len(paginated),
@@ -128,7 +126,5 @@ def export_csv(request):
         row: dict[str, Any] = {k: entry.get(k) for k in fieldnames}
         writer.writerow(row)
     response = HttpResponse(buf.getvalue(), content_type="text/csv")
-    response["Content-Disposition"] = (
-        'attachment; filename="model_rankings.csv"'
-    )
+    response["Content-Disposition"] = 'attachment; filename="model_rankings.csv"'
     return response

@@ -161,7 +161,9 @@ def remove_container(request: HttpRequest, container_id: str):
     response={200: str, 503: GenericResponse},
 )
 def get_container_logs(
-    request: HttpRequest, container_id: str, tail: int = Query(200),
+    request: HttpRequest,
+    container_id: str,
+    tail: int = Query(200),
 ):
     """Return last *tail* lines of container logs as plain text."""
     if not docker_manager.ping():

@@ -85,7 +85,8 @@ def test_start_container_daemon_unavailable(auth_client):
     client, _ = auth_client
     instance = ContainerInstanceFactory(status=ContainerInstance.Status.STOPPED)
     with patch(
-        "llm_lab.runtime.services.docker_manager.ping", return_value=False,
+        "llm_lab.runtime.services.docker_manager.ping",
+        return_value=False,
     ):
         resp = client.post(f"/api/runtime/containers/{instance.id}/start/")
     assert resp.status_code == HTTPStatus.SERVICE_UNAVAILABLE

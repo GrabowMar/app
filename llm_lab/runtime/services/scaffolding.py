@@ -42,7 +42,9 @@ def _resolve_template(job: GenerationJob) -> str:
 
 
 def _scaffold_react_flask(
-    dest: Path, backend_code: str, frontend_code: str,
+    dest: Path,
+    backend_code: str,
+    frontend_code: str,
 ) -> None:
     template_dir = _TEMPLATES_DIR / "react-flask"
 

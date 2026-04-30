@@ -23,16 +23,8 @@ def loc_from_job(job: GenerationJob) -> dict[str, int]:
     """Count non-empty, non-comment lines from a job's generated code."""
 
     data = job.result_data or {}
-    backend = (
-        data.get("backend_code")
-        or data.get("backend")
-        or ""
-    )
-    frontend = (
-        data.get("frontend_code")
-        or data.get("frontend")
-        or ""
-    )
+    backend = data.get("backend_code") or data.get("backend") or ""
+    frontend = data.get("frontend_code") or data.get("frontend") or ""
     backend_loc = _count_lines(backend, "#") if backend else 0
     frontend_loc = _count_lines(frontend, "//") if frontend else 0
     return {

@@ -14,6 +14,8 @@
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Layers from '@lucide/svelte/icons/layers';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import { downloadExport } from '$lib/api/export';
+	import Download from '@lucide/svelte/icons/download';
 	import {
 		getReports,
 		deleteReport,
@@ -96,6 +98,18 @@
 			<Button variant="outline" size="sm" onclick={load}>
 				<RefreshCw class="mr-2 h-4 w-4" />Refresh
 			</Button>
+			<!-- Export dropdown -->
+			<details class="relative">
+				<summary class="list-none">
+					<Button variant="outline" size="sm" tag="span">
+						<Download class="mr-2 h-4 w-4" />Export
+					</Button>
+				</summary>
+				<div class="absolute right-0 z-50 mt-1 w-40 rounded-md border bg-popover p-1 shadow-md">
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('reports.csv')}>Reports CSV</button>
+					<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('reports.json')}>Reports JSON</button>
+				</div>
+			</details>
 			<Button size="sm" onclick={() => goto('/reports/create')}>
 				<Plus class="mr-2 h-4 w-4" />New report
 			</Button>

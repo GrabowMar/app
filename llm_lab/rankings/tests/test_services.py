@@ -66,10 +66,9 @@ def test_compute_accessibility_score_with_inputs():
 
 def test_compute_adoption_score_from_rank():
     assert services.compute_adoption_score({"openrouter_programming_rank": 1}) == 1.0
-    assert (
-        services.compute_adoption_score({"openrouter_programming_rank": 5})
-        == pytest.approx(0.84)
-    )
+    assert services.compute_adoption_score(
+        {"openrouter_programming_rank": 5},
+    ) == pytest.approx(0.84)
 
 
 def test_compute_adoption_score_falls_back_to_local_apps():

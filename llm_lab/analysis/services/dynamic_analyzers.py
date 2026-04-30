@@ -213,17 +213,27 @@ class ZAPAnalyzer(BaseAnalyzer):
     ) -> AnalyzerOutput:
         config = config or {}
         target_url: str | None = config.get("target_url")
+        is_live_task: bool = bool(config.get("live_target"))
 
         if target_url:
-            return self._analyze_live(target_url)
+            return self._analyze_live(target_url, is_live_task=is_live_task)
         return self._analyze_static(code)
 
-    def _analyze_live(self, target_url: str) -> AnalyzerOutput:
+    def _analyze_live(
+        self, target_url: str, *, is_live_task: bool = False,
+    ) -> AnalyzerOutput:
         available, msg = self.check_available()
         if not available:
             return AnalyzerOutput(error=f"ZAP unavailable: {msg}")
 
-        valid, err = validate_target_url(target_url)
+        if is_live_task:
+            from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
+                validate_live_target_url,
+            )
+
+            valid, err = validate_live_target_url(target_url)
+        else:
+            valid, err = validate_target_url(target_url)
         if not valid:
             return AnalyzerOutput(error=f"Invalid target URL: {err}")
 

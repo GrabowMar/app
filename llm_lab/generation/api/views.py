@@ -359,7 +359,10 @@ def delete_job(request, job_id: str):
     """Delete a job that is not currently running."""
     job = get_object_or_404(GenerationJob, id=job_id, created_by=request.auth)
     if job.status == "running":
-        return {"success": False, "message": "Cannot delete a running job. Cancel it first."}
+        return {
+            "success": False,
+            "message": "Cannot delete a running job. Cancel it first.",
+        }
     job.delete()
     return {"success": True}
 
@@ -402,9 +405,11 @@ def retry_job(request, job_id: str):
     )
     _dispatch_job(new_job)
     return GenerationJobSchema.from_orm(
-        GenerationJob.objects.select_related("model", "app_requirement", "scaffolding_template").get(
-            id=new_job.id
-        )
+        GenerationJob.objects.select_related(
+            "model", "app_requirement", "scaffolding_template",
+        ).get(
+            id=new_job.id,
+        ),
     )
 
 
