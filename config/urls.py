@@ -7,6 +7,7 @@ from django.urls import path
 from django.views import defaults as default_views
 
 from .api import api
+from llm_lab.realtime.api.views import sse_stream
 
 urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
@@ -29,6 +30,8 @@ if settings.DEBUG:
 urlpatterns += [
     # API base url
     path("api/", api.urls),
+    # Realtime SSE stream (plain Django view — Ninja doesn't support streaming)
+    path("api/realtime/stream", sse_stream),
 ]
 
 if settings.DEBUG:

@@ -13,6 +13,7 @@ from django.db import connection
 from django.db import transaction
 from django.utils import timezone
 
+from llm_lab.realtime import events as realtime
 from llm_lab.runtime.models import ContainerAction
 from llm_lab.runtime.models import ContainerInstance
 from llm_lab.runtime.models import PortAllocation
@@ -112,6 +113,14 @@ def _do_build(action: ContainerAction, container: ContainerInstance) -> None:
     container.status = ContainerInstance.Status.BUILDING
     container.save(update_fields=["status"])
     action.update_progress(10)
+    realtime.publish(
+        f"runtime:{container.id}",
+        {
+            "type": "status",
+            "status": container.status,
+            "updated_at": timezone.now().isoformat(),
+        },
+    )
 
     job = container.generation_job
     tag = f"llm_lab/{container.name}:latest"
@@ -152,12 +161,28 @@ def _do_build(action: ContainerAction, container: ContainerInstance) -> None:
         container.save(update_fields=["image", "container_id", "status"])
         action.update_progress(100)
         action.mark_completed(output=f"Built {tag}, container {cid}", exit_code=0)
+        realtime.publish(
+            f"runtime:{container.id}",
+            {
+                "type": "status",
+                "status": container.status,
+                "updated_at": timezone.now().isoformat(),
+            },
+        )
 
     except Exception as exc:
         logger.exception("Build failed for %s", container.name)
         container.status = ContainerInstance.Status.FAILED
         container.save(update_fields=["status"])
         action.mark_failed(str(exc))
+        realtime.publish(
+            f"runtime:{container.id}",
+            {
+                "type": "status",
+                "status": container.status,
+                "updated_at": timezone.now().isoformat(),
+            },
+        )
 
 
 def _write_minimal_dockerfile(path: Path) -> None:
@@ -187,6 +212,14 @@ def _do_start(action: ContainerAction, container: ContainerInstance) -> None:
         container.status = ContainerInstance.Status.RUNNING
         container.save(update_fields=["status"])
         action.mark_completed(output="Started", exit_code=0)
+        realtime.publish(
+            f"runtime:{container.id}",
+            {
+                "type": "status",
+                "status": container.status,
+                "updated_at": timezone.now().isoformat(),
+            },
+        )
 
 
 def _do_stop(action: ContainerAction, container: ContainerInstance) -> None:
@@ -197,6 +230,14 @@ def _do_stop(action: ContainerAction, container: ContainerInstance) -> None:
         container.status = ContainerInstance.Status.STOPPED
         container.save(update_fields=["status"])
         action.mark_completed(output="Stopped", exit_code=0)
+        realtime.publish(
+            f"runtime:{container.id}",
+            {
+                "type": "status",
+                "status": container.status,
+                "updated_at": timezone.now().isoformat(),
+            },
+        )
 
 
 def _do_restart(action: ContainerAction, container: ContainerInstance) -> None:
@@ -207,6 +248,14 @@ def _do_restart(action: ContainerAction, container: ContainerInstance) -> None:
         container.status = ContainerInstance.Status.RUNNING
         container.save(update_fields=["status"])
         action.mark_completed(output="Restarted", exit_code=0)
+        realtime.publish(
+            f"runtime:{container.id}",
+            {
+                "type": "status",
+                "status": container.status,
+                "updated_at": timezone.now().isoformat(),
+            },
+        )
 
 
 def _do_remove(action: ContainerAction, container: ContainerInstance) -> None:
@@ -218,6 +267,14 @@ def _do_remove(action: ContainerAction, container: ContainerInstance) -> None:
         container.status = ContainerInstance.Status.REMOVED
         container.save(update_fields=["status"])
         action.mark_completed(output="Removed", exit_code=0)
+        realtime.publish(
+            f"runtime:{container.id}",
+            {
+                "type": "status",
+                "status": container.status,
+                "updated_at": timezone.now().isoformat(),
+            },
+        )
 
 
 def _do_logs(action: ContainerAction, container: ContainerInstance) -> None:
@@ -255,7 +312,8 @@ def build_for_job(job: GenerationJob, user: User | None) -> ContainerInstance:
 
     try:
         alloc = PortAllocation.objects.get(
-            backend_port=backend_port, frontend_port=frontend_port,
+            backend_port=backend_port,
+            frontend_port=frontend_port,
         )
         alloc.container = instance
         alloc.save(update_fields=["container"])
@@ -271,18 +329,21 @@ def stop_instance(container: ContainerInstance, user: User | None) -> ContainerA
 
 
 def start_instance(
-    container: ContainerInstance, user: User | None,
+    container: ContainerInstance,
+    user: User | None,
 ) -> ContainerAction:
     return create_action(container, ContainerAction.ActionType.START, user)
 
 
 def restart_instance(
-    container: ContainerInstance, user: User | None,
+    container: ContainerInstance,
+    user: User | None,
 ) -> ContainerAction:
     return create_action(container, ContainerAction.ActionType.RESTART, user)
 
 
 def remove_instance(
-    container: ContainerInstance, user: User | None,
+    container: ContainerInstance,
+    user: User | None,
 ) -> ContainerAction:
     return create_action(container, ContainerAction.ActionType.REMOVE, user)

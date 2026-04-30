@@ -38,6 +38,9 @@
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import Square from '@lucide/svelte/icons/square';
 	import FileCode from '@lucide/svelte/icons/file-code';
+	import Download from '@lucide/svelte/icons/download';
+	import { downloadExport } from '$lib/api/export';
+	import { subscribe } from '$lib/api/sse';
 
 	// --- Shared state ---
 	type TabId = 'custom' | 'scaffolding' | 'copilot';
@@ -193,9 +196,27 @@
 
 	async function pollCustomJob(id: string) {
 		customPolling = true;
+		// SSE: try realtime subscription first; polling as fallback
+		let sseCleanup: (() => void) | null = null;
 		try {
-			while (true) {
-				await new Promise(r => setTimeout(r, 2000));
+			sseCleanup = subscribe([`generation:${id}`], async () => {
+				try {
+					const job = await getGenerationJob(id);
+					customJob = job;
+					if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+						loadHistory();
+						sseCleanup?.();
+						sseCleanup = null;
+						customPolling = false;
+					}
+				} catch {
+					// ignore transient errors
+				}
+			});
+			// Fallback polling in case SSE is unavailable
+			while (customPolling) {
+				await new Promise(r => setTimeout(r, 4000));
+				if (!customPolling) break;
 				const job = await getGenerationJob(id);
 				customJob = job;
 				if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
@@ -206,6 +227,7 @@
 		} catch {
 			// polling stopped
 		} finally {
+			sseCleanup?.();
 			customPolling = false;
 		}
 	}
@@ -286,9 +308,27 @@
 
 	async function pollCopilotJob(id: string) {
 		copilotPolling = true;
+		// SSE: try realtime subscription first; polling as fallback
+		let sseCleanup: (() => void) | null = null;
 		try {
-			while (true) {
-				await new Promise(r => setTimeout(r, 3000));
+			sseCleanup = subscribe([`generation:${id}`], async () => {
+				try {
+					const job = await getGenerationJob(id);
+					copilotJob = job;
+					if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+						loadHistory();
+						sseCleanup?.();
+						sseCleanup = null;
+						copilotPolling = false;
+					}
+				} catch {
+					// ignore transient errors
+				}
+			});
+			// Fallback polling in case SSE is unavailable
+			while (copilotPolling) {
+				await new Promise(r => setTimeout(r, 5000));
+				if (!copilotPolling) break;
 				const job = await getGenerationJob(id);
 				copilotJob = job;
 				if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
@@ -299,6 +339,7 @@
 		} catch {
 			// polling stopped
 		} finally {
+			sseCleanup?.();
 			copilotPolling = false;
 		}
 	}
@@ -979,6 +1020,18 @@
 					<Button variant="outline" size="sm" onclick={loadHistory} disabled={historyLoading}>
 						<RefreshCw class="h-3.5 w-3.5 {historyLoading ? 'animate-spin' : ''}" />
 					</Button>
+					<!-- Export generation jobs -->
+					<details class="relative">
+						<summary class="list-none">
+							<Button variant="outline" size="sm" tag="span">
+								<Download class="h-3.5 w-3.5" />
+							</Button>
+						</summary>
+						<div class="absolute right-0 z-50 mt-1 w-48 rounded-md border bg-popover p-1 shadow-md">
+							<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('generation-jobs.csv')}>Jobs CSV</button>
+							<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport('generation-jobs.json')}>Jobs JSON</button>
+						</div>
+					</details>
 				</div>
 			</div>
 		</Card.Header>

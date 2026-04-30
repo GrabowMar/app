@@ -83,6 +83,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "llm_lab.users",
+    "llm_lab.tokens",
     "llm_lab.llm_models",
     "llm_lab.generation",
     "llm_lab.analysis",
@@ -90,6 +91,8 @@ LOCAL_APPS = [
     "llm_lab.rankings",
     "llm_lab.reports",
     "llm_lab.runtime",
+    "llm_lab.realtime",
+    "llm_lab.export",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

@@ -5,6 +5,8 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
+	import { downloadExport } from '$lib/api/export';
+	import Download from '@lucide/svelte/icons/download';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Microscope from '@lucide/svelte/icons/microscope';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
@@ -25,6 +27,7 @@
 		type AnalysisFinding,
 		type PaginatedFindings,
 	} from '$lib/api/client';
+	import { subscribe } from '$lib/api/sse';
 	import { statusColors, severityColors, analyzerTypeLabels } from '$lib/constants/analysis';
 	import { formatDuration, formatDate } from '$lib/utils/analysis';
 
@@ -140,7 +143,24 @@
 
 	onMount(() => {
 		fetchData();
-		return () => stopPolling();
+
+		// SSE: subscribe for live updates; fall back to polling on error
+		const cleanupSse = subscribe([`analysis:${taskId}`], async () => {
+			try {
+				const [t, r] = await Promise.all([getAnalysisTask(taskId), getAnalysisResults(taskId)]);
+				task = t;
+				results = r;
+				// Stop polling once SSE is delivering updates
+				if (pollTimer) stopPolling();
+			} catch {
+				// refetch failed — polling will cover this
+			}
+		});
+
+		return () => {
+			stopPolling();
+			cleanupSse();
+		};
 	});
 </script>
 
@@ -226,6 +246,19 @@
 					<Button variant="ghost" size="sm" onclick={fetchData}>
 						<RefreshCw class="mr-1.5 h-3.5 w-3.5" /> Refresh
 					</Button>
+					<!-- Export findings for this task -->
+					<details class="relative">
+						<summary class="list-none">
+							<Button variant="outline" size="sm" tag="span">
+								<Download class="mr-1.5 h-3.5 w-3.5" /> Export
+							</Button>
+						</summary>
+						<div class="absolute right-0 z-50 mt-1 w-52 rounded-md border bg-popover p-1 shadow-md">
+							<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport(`findings.csv?task_id=${taskId}`)}>Findings CSV</button>
+							<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport(`findings.json?task_id=${taskId}`)}>Findings JSON</button>
+							<button class="w-full rounded px-3 py-1.5 text-left text-sm hover:bg-accent" onclick={() => downloadExport(`findings.sarif?task_id=${taskId}`)}>Findings SARIF</button>
+						</div>
+					</details>
 				</div>
 				{#if task.error_message}
 					<div class="mt-3 rounded-md bg-red-500/10 p-3 text-sm text-red-400">

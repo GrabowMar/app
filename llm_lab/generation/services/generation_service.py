@@ -15,6 +15,7 @@ from llm_lab.generation.services.code_parser import parse_result_to_structured
 from llm_lab.generation.services.openrouter_client import OpenRouterClient
 from llm_lab.generation.services.openrouter_client import OpenRouterError
 from llm_lab.generation.services.prompt_renderer import PromptRenderer
+from llm_lab.realtime import events as realtime
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,14 @@ class GenerationService:
         job.status = GenerationJob.Status.RUNNING
         job.started_at = timezone.now()
         job.save(update_fields=["status", "started_at", "updated_at"])
+        realtime.publish(
+            f"generation:{job.id}",
+            {
+                "type": "status",
+                "status": job.status,
+                "updated_at": job.started_at.isoformat(),
+            },
+        )
 
         try:
             if job.mode == GenerationJob.Mode.CUSTOM:
@@ -66,6 +75,16 @@ class GenerationService:
                     "copilot_current_iteration",
                     "updated_at",
                 ],
+            )
+            realtime.publish(
+                f"generation:{job.id}",
+                {
+                    "type": "status",
+                    "status": job.status,
+                    "updated_at": job.completed_at.isoformat()
+                    if job.completed_at
+                    else None,
+                },
             )
             self._update_batch(job)
 
@@ -213,6 +232,16 @@ class GenerationService:
 
             job.copilot_current_iteration = iteration
             job.save(update_fields=["copilot_current_iteration", "updated_at"])
+            realtime.publish(
+                f"generation:{job.id}",
+                {
+                    "type": "progress",
+                    "status": job.status,
+                    "iteration": iteration,
+                    "max_iterations": max_iters,
+                    "updated_at": timezone.now().isoformat(),
+                },
+            )
 
             stage = f"copilot_iter_{iteration}"
             iter_start = time.time()

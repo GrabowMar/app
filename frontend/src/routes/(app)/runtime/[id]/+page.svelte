@@ -26,6 +26,7 @@
 		type ContainerStatus,
 		type ActionStatus
 	} from '$lib/api/client';
+	import { subscribe } from '$lib/api/sse';
 
 	const containerId = page.params.id;
 
@@ -114,7 +115,25 @@
 		if (activeTab === 'overview') loadHealth();
 	});
 
-	onMount(load);
+	onMount(() => {
+		load();
+
+		// SSE: subscribe for live container status updates; fall back if SSE fails
+		const cleanupSse = subscribe([`runtime:${containerId}`], async () => {
+			try {
+				const [c, a] = await Promise.all([
+					getContainer(containerId),
+					getContainerActions(containerId)
+				]);
+				container = c;
+				actions = a;
+			} catch {
+				// refetch failed — user can refresh manually
+			}
+		});
+
+		return cleanupSse;
+	});
 </script>
 
 <svelte:head>

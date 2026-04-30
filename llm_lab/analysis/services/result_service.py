@@ -16,6 +16,7 @@ from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.base import AnalyzerRegistry
 from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
+from llm_lab.realtime import events as realtime
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,22 @@ class ResultService:
                 "summary",
             ],
         )
+        # Publish per-result update for SSE clients
+        finding_count = len(output.findings)
+        severity_counts: dict[str, int] = Counter(f.severity for f in output.findings)
+        realtime.publish(
+            f"analysis:{result.task_id}",
+            {
+                "type": "result",
+                "analyzer": result.analyzer_name,
+                "status": result.status,
+                "finding_count": finding_count,
+                "severity_counts": dict(severity_counts),
+                "updated_at": result.completed_at.isoformat()
+                if result.completed_at
+                else None,
+            },
+        )
 
     def mark_result_failed(
         self,
@@ -248,4 +265,14 @@ class ResultService:
             task.status,
             completed_count,
             total,
+        )
+        realtime.publish(
+            f"analysis:{task.id}",
+            {
+                "type": "status",
+                "status": task.status,
+                "updated_at": task.completed_at.isoformat()
+                if task.completed_at
+                else None,
+            },
         )
