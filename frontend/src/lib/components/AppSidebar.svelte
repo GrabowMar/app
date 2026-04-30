@@ -29,6 +29,7 @@
 		href: string;
 		icon: Component;
 		staffOnly?: boolean;
+		subItem?: boolean;
 	}
 
 	interface NavSection {
@@ -62,6 +63,8 @@
 			title: 'Tools',
 			items: [
 				{ label: 'Automation', href: '/automation', icon: Zap },
+				{ label: 'Batches', href: '/automation/batches', icon: Layers, subItem: true },
+				{ label: 'Schedules', href: '/automation/schedules', icon: Activity, subItem: true },
 				{ label: 'Sample Generator', href: '/sample-generator', icon: WandSparkles },
 				{ label: 'Templates', href: '/sample-generator/templates', icon: Layers },
 				{ label: 'Reports', href: '/reports', icon: FileText },
@@ -85,9 +88,13 @@
 
 	function isActive(href: string): boolean {
 		if (href === '/') return page.url.pathname === '/';
-		// Exact match for child routes to avoid parent always being active
 		if (page.url.pathname === href) return true;
-		// Only match parent if we're not on a more specific child
+		// For /automation, only match the pipeline sub-pages (not batches/schedules)
+		if (href === '/automation') {
+			return page.url.pathname.startsWith('/automation/') &&
+				!page.url.pathname.startsWith('/automation/batches') &&
+				!page.url.pathname.startsWith('/automation/schedules');
+		}
 		return page.url.pathname.startsWith(href + '/') || page.url.pathname === href;
 	}
 </script>
@@ -144,6 +151,7 @@
 						class={cn(
 							'group relative flex items-center rounded-lg text-sm transition-colors',
 							prefs.sidebarCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2',
+							!prefs.sidebarCollapsed && item.subItem ? 'ml-4 text-xs' : '',
 							isActive(item.href)
 								? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
 								: 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'

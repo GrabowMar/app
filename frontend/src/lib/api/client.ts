@@ -1761,3 +1761,18 @@ return res.json();
 export async function deleteSchedule(id: string): Promise<void> {
 await apiFetch(`/automation/schedules/${id}/`, { method: 'DELETE' });
 }
+
+export async function getRunLogs(runId: string): Promise<{ logs: string }> {
+const res = await apiFetch(`/automation/runs/${runId}/logs/`);
+return res.json();
+}
+
+export async function retryRun(runId: string): Promise<PipelineRunDetail> {
+const res = await apiFetch(`/automation/runs/${runId}/retry/`, { method: 'POST' });
+return res.json();
+}
+
+export async function cancelBatch(batchId: string): Promise<BatchDetail> {
+const res = await apiFetch(`/automation/batches/${batchId}/cancel/`, { method: 'POST' });
+return res.json();
+}

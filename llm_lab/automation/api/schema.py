@@ -273,3 +273,26 @@ class PaginatedSchedulesSchema(Schema):
 class DslValidationResult(Schema):
     valid: bool
     errors: list[str]
+
+
+class StepRunLogSchema(Schema):
+    step_run_id: UUID
+    step_name: str | None
+    step_kind: str | None
+    status: str
+    started_at: Any
+    completed_at: Any
+    attempt: int
+    retries_remaining: int
+    output: dict[str, Any]
+    error: str
+
+
+class RunLogsSchema(Schema):
+    run_id: UUID
+    run_status: str
+    step_logs: list[StepRunLogSchema]
+
+
+class RetryRunSchema(Schema):
+    new_run_id: UUID

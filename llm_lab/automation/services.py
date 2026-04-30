@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import copy
+import logging
+import threading
 from datetime import UTC
 from datetime import datetime
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -12,6 +15,21 @@ if TYPE_CHECKING:
     from llm_lab.automation.models import Pipeline
     from llm_lab.automation.models import PipelineRun
     from llm_lab.users.models import User
+
+logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _celery_available() -> bool:
+    """Probe the Celery broker once at startup and cache the result."""
+    try:
+        from celery import current_app  # noqa: PLC0415
+
+        result = current_app.control.ping(timeout=1)
+        return bool(result)
+    except Exception:  # noqa: BLE001
+        logger.warning("Celery broker unavailable — falling back to daemon threads")
+        return False
 
 _REQUIRED_STEP_FIELDS: dict[str, list[str]] = {
     "generate": ["model_id", "template_slug"],
@@ -100,7 +118,12 @@ def next_cron_time(expr: str, after: datetime | None = None) -> datetime:
 
 
 def trigger_run(pipeline: Pipeline, params: dict[str, Any], user: User) -> PipelineRun:
-    """Create a pending PipelineRun. Execution engine added in Phase 7b."""
+    """Create a pending PipelineRun and dispatch its execution.
+
+    Dispatch strategy:
+    1. Try Celery (``run_pipeline_task.delay``).
+    2. Fall back to a daemon thread if broker is unreachable.
+    """
     from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
     from llm_lab.automation.models import PipelineStep  # noqa: PLC0415
     from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
@@ -116,5 +139,31 @@ def trigger_run(pipeline: Pipeline, params: dict[str, Any], user: User) -> Pipel
             run=run,
             step=step,
             status="pending",
+            retries_remaining=step.config.get("max_retries", 0),
         )
+
+    run_id_str = str(run.id)
+
+    if _celery_available():
+        from llm_lab.automation.tasks import run_pipeline_task  # noqa: PLC0415
+
+        run_pipeline_task.delay(run_id_str)
+        logger.info("Dispatched run %s via Celery", run_id_str)
+    else:
+        import uuid  # noqa: PLC0415
+
+        from llm_lab.automation.engine.runner import execute_run  # noqa: PLC0415
+
+        t = threading.Thread(
+            target=execute_run,
+            args=(uuid.UUID(run_id_str),),
+            daemon=True,
+            name=f"pipeline-run-{run_id_str}",
+        )
+        t.start()
+        logger.info(
+            "Dispatched run %s via daemon thread (Celery unavailable)",
+            run_id_str,
+        )
+
     return run

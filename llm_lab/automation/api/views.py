@@ -19,8 +19,11 @@ from llm_lab.automation.api.schema import PipelineCreateSchema
 from llm_lab.automation.api.schema import PipelineRunSchema
 from llm_lab.automation.api.schema import PipelineSchema
 from llm_lab.automation.api.schema import PipelineUpdateSchema
+from llm_lab.automation.api.schema import RetryRunSchema
+from llm_lab.automation.api.schema import RunLogsSchema
 from llm_lab.automation.api.schema import ScheduleCreateSchema
 from llm_lab.automation.api.schema import ScheduleSchema
+from llm_lab.automation.api.schema import StepRunLogSchema
 from llm_lab.automation.api.schema import TriggerRunSchema
 from llm_lab.automation.models import Batch
 from llm_lab.automation.models import Pipeline
@@ -174,6 +177,43 @@ def cancel_run(request: HttpRequest, run_id: str) -> Any:
     return 200, run
 
 
+@router.get("/runs/{run_id}/logs/", response=RunLogsSchema)
+def get_run_logs(request: HttpRequest, run_id: str) -> Any:
+    """Return aggregated log: per step_run status, output, error."""
+    run = get_object_or_404(
+        PipelineRun.objects.prefetch_related("step_runs__step"),
+        id=run_id,
+    )
+    step_logs = [
+        StepRunLogSchema(
+            step_run_id=sr.id,
+            step_name=sr.step.name if sr.step else None,
+            step_kind=sr.step.kind if sr.step else None,
+            status=sr.status,
+            started_at=sr.started_at,
+            completed_at=sr.completed_at,
+            attempt=sr.attempt,
+            retries_remaining=sr.retries_remaining,
+            output=sr.output or {},
+            error=sr.error or "",
+        )
+        for sr in run.step_runs.order_by("created_at")
+    ]
+    return RunLogsSchema(
+        run_id=run.id,
+        run_status=run.status,
+        step_logs=step_logs,
+    )
+
+
+@router.post("/runs/{run_id}/retry/", response={202: RetryRunSchema})
+def retry_run(request: HttpRequest, run_id: str) -> Any:
+    """Create a new PipelineRun reusing the same params as the original."""
+    original = get_object_or_404(PipelineRun, id=run_id)
+    new_run = services.trigger_run(original.pipeline, original.params, request.auth)
+    return 202, RetryRunSchema(new_run_id=new_run.id)
+
+
 @router.get("/batches/", response=PaginatedBatchesSchema)
 def list_batches(request: HttpRequest, page: int = 1, per_page: int = 20) -> Any:
     qs = Batch.objects.filter(owner=request.auth)
@@ -196,6 +236,21 @@ def create_batch(request: HttpRequest, payload: BatchCreateSchema) -> Any:
 @router.get("/batches/{batch_id}/", response=BatchDetailSchema)
 def get_batch(request: HttpRequest, batch_id: str) -> Batch:
     return get_object_or_404(Batch, id=batch_id, owner=request.auth)
+
+
+@router.post("/batches/{batch_id}/cancel/", response={200: BatchDetailSchema})
+def cancel_batch(request: HttpRequest, batch_id: str) -> Any:
+    """Cancel all in-flight (pending or running) runs in the batch."""
+    batch = get_object_or_404(Batch, id=batch_id, owner=request.auth)
+    in_flight_run_ids = list(
+        batch.items.filter(
+            pipeline_run__status__in=["pending", "running"],
+        ).values_list("pipeline_run_id", flat=True),
+    )
+    PipelineRun.objects.filter(id__in=in_flight_run_ids).update(status="cancelled")
+    batch.status = "cancelled"
+    batch.save(update_fields=["status"])
+    return 200, batch
 
 
 @router.get("/schedules/", response=PaginatedSchedulesSchema)
