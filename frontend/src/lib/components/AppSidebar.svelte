@@ -10,6 +10,7 @@
 	import BookOpen from '@lucide/svelte/icons/book-open';
 	import Zap from '@lucide/svelte/icons/zap';
 	import Layers from '@lucide/svelte/icons/layers';
+	import Container from '@lucide/svelte/icons/container';
 	import ChevronsLeft from '@lucide/svelte/icons/chevrons-left';
 	import ChevronsRight from '@lucide/svelte/icons/chevrons-right';
 	import Circle from '@lucide/svelte/icons/circle';
@@ -48,6 +49,7 @@
 				{ label: 'Sample Generator', href: '/sample-generator', icon: WandSparkles },
 				{ label: 'Templates', href: '/sample-generator/templates', icon: Layers },
 				{ label: 'Reports', href: '/reports', icon: FileText },
+				{ label: 'Runtime', href: '/runtime', icon: Container },
 			],
 		},
 		{
