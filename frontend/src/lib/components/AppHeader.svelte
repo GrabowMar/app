@@ -112,6 +112,7 @@
 		'/automation': 'Automation',
 		'/docs': 'Docs',
 		'/about': 'About',
+		'/privacy': 'Privacy Policy',
 		'/users/settings': 'Settings'
 	};
 
