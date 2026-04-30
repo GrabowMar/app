@@ -40,6 +40,7 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
         single_ref = f"{{{{{matches[0]}}}}}"
         if len(matches) == 1 and value.strip() == single_ref:
             return _resolve_ref(matches[0], context)
+
         # Otherwise do string substitution.
         def _sub(m: re.Match) -> str:
             resolved = _resolve_ref(m.group(1), context)

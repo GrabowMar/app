@@ -31,6 +31,7 @@ def _celery_available() -> bool:
         logger.warning("Celery broker unavailable — falling back to daemon threads")
         return False
 
+
 _REQUIRED_STEP_FIELDS: dict[str, list[str]] = {
     "generate": ["model_id", "template_slug"],
     "analyze": ["job_ids"],

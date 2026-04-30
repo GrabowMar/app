@@ -37,7 +37,9 @@ from llm_lab.users.tests.factories import UserFactory
 # ---------------------------------------------------------------------------
 
 
-def _wait_for_run(run_id, timeout=10, expected_statuses=("succeeded", "failed", "cancelled")):
+def _wait_for_run(
+    run_id, timeout=10, expected_statuses=("succeeded", "failed", "cancelled"),
+):
     """Poll until run reaches a terminal status."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -89,7 +91,7 @@ def _make_run_with_steps(pipeline):
 class TestParamResolution:
     def test_simple_reference(self):
         config = {"target": "{{steps.step1.output.job_id}}"}
-        prior = {"step1": {"job_id": "abc-123"}}
+        prior = {"step1": {"output": {"job_id": "abc-123"}}}
         result = resolve_params(config, prior, {})
         assert result["target"] == "abc-123"
 
@@ -105,7 +107,7 @@ class TestParamResolution:
 
     def test_nested_dict_resolution(self):
         config = {"nested": {"url": "{{steps.container.output.url}}"}}
-        prior = {"container": {"url": "http://localhost:8080"}}
+        prior = {"container": {"output": {"url": "http://localhost:8080"}}}
         result = resolve_params(config, prior, {})
         assert result["nested"]["url"] == "http://localhost:8080"
 
@@ -146,7 +148,12 @@ class TestLinearPipelineSuccess:
             user,
             [
                 {"name": "step1", "kind": "wait", "config": {"seconds": 0}},
-                {"name": "step2", "kind": "wait", "config": {"seconds": 0}, "depends_on": ["step1"]},
+                {
+                    "name": "step2",
+                    "kind": "wait",
+                    "config": {"seconds": 0},
+                    "depends_on": ["step1"],
+                },
             ],
         )
         run = _make_run_with_steps(pipeline)
@@ -162,7 +169,13 @@ class TestLinearPipelineSuccess:
         user = UserFactory()
         pipeline, _ = _make_pipeline_with_steps(
             user,
-            [{"name": "notif", "kind": "notify", "config": {"channel": "test", "message": "hello"}}],
+            [
+                {
+                    "name": "notif",
+                    "kind": "notify",
+                    "config": {"channel": "test", "message": "hello"},
+                },
+            ],
         )
         run = _make_run_with_steps(pipeline)
 
@@ -199,9 +212,9 @@ class TestDagParallelism:
 
         run.refresh_from_db()
         assert run.status == RunStatus.SUCCEEDED
-        # If they ran in parallel, total time should be << 0.2s (both ≈ 0.1s)
-        # Allow generous buffer for CI overhead
-        assert elapsed < 1.0
+        # With 0.25s poll interval + 0.1s wait per step, parallel should be ~0.35s max.
+        # Serial would be ~0.7s+; use 0.7s threshold to confirm parallelism.
+        assert elapsed < 0.7
 
     def test_dependent_step_waits_for_parent(self):
         user = UserFactory()
@@ -209,7 +222,12 @@ class TestDagParallelism:
             user,
             [
                 {"name": "parent", "kind": "wait", "config": {"seconds": 0}},
-                {"name": "child", "kind": "wait", "config": {"seconds": 0}, "depends_on": ["parent"]},
+                {
+                    "name": "child",
+                    "kind": "wait",
+                    "config": {"seconds": 0},
+                    "depends_on": ["parent"],
+                },
             ],
         )
         run = _make_run_with_steps(pipeline)
@@ -256,7 +274,12 @@ class TestFailurePropagation:
             user,
             [
                 {"name": "step1", "kind": "wait", "config": {"seconds": 0}},
-                {"name": "step2", "kind": "wait", "config": {"seconds": 0}, "depends_on": ["step1"]},
+                {
+                    "name": "step2",
+                    "kind": "wait",
+                    "config": {"seconds": 0},
+                    "depends_on": ["step1"],
+                },
             ],
         )
         run = _make_run_with_steps(pipeline)
@@ -280,7 +303,13 @@ class TestFailurePropagation:
         user = UserFactory()
         pipeline, _ = _make_pipeline_with_steps(
             user,
-            [{"name": "gen", "kind": "generate", "config": {"model_id": "x", "template_slug": "y"}}],
+            [
+                {
+                    "name": "gen",
+                    "kind": "generate",
+                    "config": {"model_id": "x", "template_slug": "y"},
+                },
+            ],
         )
         run = _make_run_with_steps(pipeline)
 
@@ -298,7 +327,7 @@ class TestFailurePropagation:
 
 
 # ---------------------------------------------------------------------------
-# Engine: Retries
+# Engine: Retries  # noqa: ERA001
 # ---------------------------------------------------------------------------
 
 
@@ -309,7 +338,13 @@ class TestRetries:
         user = UserFactory()
         pipeline, _ = _make_pipeline_with_steps(
             user,
-            [{"name": "flaky", "kind": "wait", "config": {"seconds": 0, "max_retries": 1}}],
+            [
+                {
+                    "name": "flaky",
+                    "kind": "wait",
+                    "config": {"seconds": 0, "max_retries": 1},
+                },
+            ],
         )
         run = _make_run_with_steps(pipeline)
         sr = run.step_runs.first()
@@ -329,21 +364,30 @@ class TestRetries:
                 return {"status": "failed", "error": "transient error"}
             return original_wait(step_run, params, run_params)
 
-        with patch("llm_lab.automation.engine.dispatchers.dispatch_wait", side_effect=flaky_wait):
+        with patch(
+            "llm_lab.automation.engine.dispatchers.dispatch_wait",
+            side_effect=flaky_wait,
+        ):
             execute_run(run.id)
 
         run.refresh_from_db()
         assert run.status == RunStatus.SUCCEEDED
         sr.refresh_from_db()
-        assert sr.attempt == 2
-        assert call_count["n"] == 2
+        assert sr.attempt == 2  # noqa: PLR2004
+        assert call_count["n"] == 2  # noqa: PLR2004
 
     def test_exhausted_retries_fails_step(self):
         """Step fails all attempts → run fails."""
         user = UserFactory()
         pipeline, _ = _make_pipeline_with_steps(
             user,
-            [{"name": "always_fail", "kind": "wait", "config": {"seconds": 0, "max_retries": 1}}],
+            [
+                {
+                    "name": "always_fail",
+                    "kind": "wait",
+                    "config": {"seconds": 0, "max_retries": 1},
+                },
+            ],
         )
         run = _make_run_with_steps(pipeline)
         sr = run.step_runs.first()
@@ -361,7 +405,7 @@ class TestRetries:
 
 
 # ---------------------------------------------------------------------------
-# Engine: Cancellation
+# Engine: Cancellation  # noqa: ERA001
 # ---------------------------------------------------------------------------
 
 
@@ -404,7 +448,9 @@ class TestParamResolutionFromStepOutput:
                     "kind": "script",
                     "config": {
                         "code": "set_variables",
-                        "variables": {"upstream_waited": "{{steps.step1.output.waited_seconds}}"},
+                        "variables": {
+                            "upstream_waited": "{{steps.step1.output.waited_seconds}}",
+                        },
                     },
                     "depends_on": ["step1"],
                 },
@@ -431,7 +477,9 @@ class TestBatchExpansion:
     def test_matrix_creates_correct_number_of_runs(self):
         user = UserFactory()
         pipeline = PipelineFactory(owner=user)
-        PipelineStepFactory(pipeline=pipeline, name="w", kind="wait", config={"seconds": 0})
+        PipelineStepFactory(
+            pipeline=pipeline, name="w", kind="wait", config={"seconds": 0},
+        )
 
         batch = BatchFactory(
             owner=user,
@@ -447,12 +495,14 @@ class TestBatchExpansion:
         with patch("llm_lab.automation.engine.batches.execute_run"):
             run_ids = expand_batch(batch.id)
 
-        assert len(run_ids) == 4  # 2 models × 2 templates
+        assert len(run_ids) == 4  # noqa: PLR2004 -- 2 models x 2 templates
 
     def test_matrix_creates_batch_items(self):
         user = UserFactory()
         pipeline = PipelineFactory(owner=user)
-        PipelineStepFactory(pipeline=pipeline, name="w", kind="wait", config={"seconds": 0})
+        PipelineStepFactory(
+            pipeline=pipeline, name="w", kind="wait", config={"seconds": 0},
+        )
 
         batch = BatchFactory(
             owner=user,
@@ -463,10 +513,10 @@ class TestBatchExpansion:
         )
 
         with patch("llm_lab.automation.engine.batches.execute_run"):
-            run_ids = expand_batch(batch.id)
+            expand_batch(batch.id)
 
         items = list(BatchItem.objects.filter(batch=batch))
-        assert len(items) == 2
+        assert len(items) == 2  # noqa: PLR2004
         item_params = [item.params for item in items]
         assert {"models": "a", "templates": "t1"} in item_params
         assert {"models": "b", "templates": "t1"} in item_params
@@ -545,9 +595,11 @@ class TestScheduler:
             next_run_at=now - timedelta(minutes=1),
         )
 
-        with patch("llm_lab.automation.engine.runner.execute_run"):
-            with patch("llm_lab.automation.services._celery_available", return_value=False):
-                fired = tick(now=now)
+        with (
+            patch("llm_lab.automation.engine.runner.execute_run"),
+            patch("llm_lab.automation.services._celery_available", return_value=False),
+        ):
+            fired = tick(now=now)
 
         assert fired == 1
 
@@ -567,9 +619,11 @@ class TestScheduler:
         )
         original_next = schedule.next_run_at
 
-        with patch("llm_lab.automation.services._celery_available", return_value=False):
-            with patch("llm_lab.automation.engine.runner.execute_run"):
-                tick(now=now)
+        with (
+            patch("llm_lab.automation.services._celery_available", return_value=False),
+            patch("llm_lab.automation.engine.runner.execute_run"),
+        ):
+            tick(now=now)
 
         schedule.refresh_from_db()
         assert schedule.next_run_at > original_next
@@ -587,7 +641,13 @@ class TestDispatcherMocking:
         user = UserFactory()
         pipeline, _ = _make_pipeline_with_steps(
             user,
-            [{"name": "gen", "kind": "generate", "config": {"model_id": "m", "template_slug": "t"}}],
+            [
+                {
+                    "name": "gen",
+                    "kind": "generate",
+                    "config": {"model_id": "m", "template_slug": "t"},
+                },
+            ],
         )
         run = _make_run_with_steps(pipeline)
 

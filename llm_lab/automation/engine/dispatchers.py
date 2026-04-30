@@ -22,6 +22,8 @@ import time
 from typing import TYPE_CHECKING
 from typing import Any
 
+from llm_lab.realtime.events import publish
+
 if TYPE_CHECKING:
     from llm_lab.automation.models import PipelineStepRun
 
@@ -113,8 +115,8 @@ def dispatch_analyze(
     triggered_by = step_run.run.triggered_by
     user = triggered_by if triggered_by else User.objects.first()
 
-    generation_job_id = (
-        params.get("generation_job_id") or run_params.get("generation_job_id")
+    generation_job_id = params.get("generation_job_id") or run_params.get(
+        "generation_job_id",
     )
     source_code = params.get("source_code")
     analyzers = params.get("analyzers", ["static"])
@@ -248,8 +250,6 @@ def dispatch_notify(
     run_params: dict[str, Any],
 ) -> dict[str, Any]:
     """Log + publish a notification event. No actual email delivery yet."""
-    from llm_lab.realtime.events import publish  # noqa: PLC0415
-
     channel = params.get("channel", "general")
     message = params.get("message", "Pipeline step completed")
     run_id = str(step_run.run_id)
@@ -275,10 +275,10 @@ def dispatch_notify(
 
 _ALLOWED_SCRIPT_OPERATIONS = frozenset(
     {
-        "set_variables",   # Store key-value pairs into step output
-        "conditional",     # Evaluate a condition, store result in output
-        "log",             # Emit a log message
-        "noop",            # Do nothing (placeholder)
+        "set_variables",  # Store key-value pairs into step output
+        "conditional",  # Evaluate a condition, store result in output
+        "log",  # Emit a log message
+        "noop",  # Do nothing (placeholder)
     },
 )
 

@@ -11,6 +11,8 @@ import itertools
 import logging
 from typing import Any
 
+from llm_lab.automation.engine.runner import execute_run
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +34,6 @@ def expand_batch(batch_id: Any) -> list[Any]:
     """
     import threading  # noqa: PLC0415
 
-    from llm_lab.automation.engine.runner import execute_run  # noqa: PLC0415
     from llm_lab.automation.models import Batch  # noqa: PLC0415
     from llm_lab.automation.models import BatchItem  # noqa: PLC0415
     from llm_lab.automation.models import Pipeline  # noqa: PLC0415

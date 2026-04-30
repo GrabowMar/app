@@ -24,25 +24,24 @@ from django.db import connection
 from django.db import transaction
 from django.utils import timezone
 
-from llm_lab.automation.engine.dispatchers import dispatch_analyze
-from llm_lab.automation.engine.dispatchers import dispatch_generate
-from llm_lab.automation.engine.dispatchers import dispatch_notify
-from llm_lab.automation.engine.dispatchers import dispatch_report
-from llm_lab.automation.engine.dispatchers import dispatch_script
-from llm_lab.automation.engine.dispatchers import dispatch_wait
 from llm_lab.automation.engine.params import resolve_params
 from llm_lab.realtime.events import publish
 
 logger = logging.getLogger(__name__)
 
-_DISPATCHER_MAP = {
-    "generate": dispatch_generate,
-    "analyze": dispatch_analyze,
-    "report": dispatch_report,
-    "wait": dispatch_wait,
-    "notify": dispatch_notify,
-    "script": dispatch_script,
-}
+
+def _get_dispatcher(kind: str) -> Any:
+    """Look up dispatcher by step kind, enabling test-time mocking via module patch."""
+    from llm_lab.automation.engine import dispatchers  # noqa: PLC0415
+
+    return {
+        "generate": dispatchers.dispatch_generate,
+        "analyze": dispatchers.dispatch_analyze,
+        "report": dispatchers.dispatch_report,
+        "wait": dispatchers.dispatch_wait,
+        "notify": dispatchers.dispatch_notify,
+        "script": dispatchers.dispatch_script,
+    }.get(kind, dispatchers.dispatch_script)
 
 
 # ---------------------------------------------------------------------------
@@ -89,12 +88,11 @@ def _collect_prior_outputs(run_id: Any) -> dict[str, dict[str, Any]]:
     from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
 
     result: dict[str, dict[str, Any]] = {}
-    for sr in (
-        PipelineStepRun.objects.filter(run_id=run_id, status="succeeded")
-        .select_related("step")
-    ):
+    for sr in PipelineStepRun.objects.filter(
+        run_id=run_id, status="succeeded",
+    ).select_related("step"):
         if sr.step and sr.step.name:
-            result[sr.step.name] = sr.output or {}
+            result[sr.step.name] = {"output": sr.output or {}}
     return result
 
 
@@ -157,10 +155,7 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
             run.params,
         )
 
-        dispatcher = _DISPATCHER_MAP.get(
-            sr.step.kind if sr.step else "script",
-            dispatch_script,
-        )
+        dispatcher = _get_dispatcher(sr.step.kind if sr.step else "script")
 
         try:
             output = dispatcher(sr, resolved_config, run.params)
@@ -172,8 +167,8 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
 
         if failed and sr.retries_remaining > 0:
             with transaction.atomic():
-                sr_locked = (
-                    PipelineStepRun.objects.select_for_update().get(id=step_run_id)
+                sr_locked = PipelineStepRun.objects.select_for_update().get(
+                    id=step_run_id,
                 )
                 sr_locked.status = RunStatus.PENDING
                 sr_locked.retries_remaining -= 1
@@ -199,9 +194,7 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
             return
 
         with transaction.atomic():
-            sr_locked = (
-                PipelineStepRun.objects.select_for_update().get(id=step_run_id)
-            )
+            sr_locked = PipelineStepRun.objects.select_for_update().get(id=step_run_id)
             sr_locked.output = output or {}
             sr_locked.completed_at = timezone.now()
             if failed:
@@ -366,8 +359,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
             }
 
             any_failed = any(
-                sr.status == RunStatus.FAILED
-                for sr in fresh_step_runs.values()
+                sr.status == RunStatus.FAILED for sr in fresh_step_runs.values()
             )
             if any_failed:
                 _cancel_pending_steps(run_id)
@@ -405,13 +397,12 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
                     t.start()
 
             all_terminal = all(
-                sr.status in terminal_statuses
-                for sr in fresh_step_runs.values()
+                sr.status in terminal_statuses for sr in fresh_step_runs.values()
             )
             if all_terminal and not in_flight:
                 break
 
-            threading.Event().wait(timeout=1)
+            threading.Event().wait(timeout=0.25)
 
         final_step_runs = list(PipelineStepRun.objects.filter(run_id=run_id))
         if any(sr.status == RunStatus.FAILED for sr in final_step_runs):
