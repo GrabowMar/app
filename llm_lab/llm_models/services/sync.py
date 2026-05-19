@@ -14,11 +14,11 @@ from llm_lab.llm_models.services.helpers import normalize_model_identifier
 logger = logging.getLogger(__name__)
 
 
-def fetch_openrouter_models() -> list[dict]:
+def fetch_openrouter_models(api_key: str) -> list[dict]:
     """Fetch all models from the OpenRouter API. Returns raw model dicts."""
-    api_key = settings.OPENROUTER_API_KEY
+    api_key = api_key.strip()
     if not api_key:
-        logger.error("OPENROUTER_API_KEY not configured")
+        logger.error("OpenRouter API key not provided")
         return []
 
     headers = {
@@ -188,9 +188,9 @@ def upsert_openrouter_models(models_payload: list[dict]) -> int:
     return upserted
 
 
-def refresh_model_from_openrouter(model: LLMModel) -> bool:
+def refresh_model_from_openrouter(model: LLMModel, api_key: str) -> bool:
     """Refresh a single model from the OpenRouter catalog."""
-    models_payload = fetch_openrouter_models()
+    models_payload = fetch_openrouter_models(api_key)
     if not models_payload:
         return False
 
@@ -216,9 +216,9 @@ def refresh_model_from_openrouter(model: LLMModel) -> bool:
     return False
 
 
-def sync_models_from_openrouter() -> dict:
+def sync_models_from_openrouter(api_key: str) -> dict:
     """Full sync: fetch from OpenRouter and upsert into DB."""
-    models_payload = fetch_openrouter_models()
+    models_payload = fetch_openrouter_models(api_key)
     if not models_payload:
         return {"fetched": 0, "upserted": 0}
     upserted = upsert_openrouter_models(models_payload)

@@ -13,8 +13,11 @@ from django.shortcuts import get_object_or_404
 from ninja import Query
 from ninja import Router
 from ninja.errors import HttpError
+from ninja.responses import Status
 
 from llm_lab.common.pagination import paginate_queryset
+from llm_lab.credentials.services.resolver import MissingApiKeyError
+from llm_lab.credentials.services.resolver import get_openrouter_key
 from llm_lab.llm_models.api.schema import LLMModelListSchema
 from llm_lab.llm_models.api.schema import LLMModelSchema
 from llm_lab.llm_models.api.schema import ModelComparisonSchema
@@ -47,6 +50,14 @@ PRICE_PER_MILLION_THRESHOLDS = {
     "medium": (1e-6, 10e-6, False),  # $1-$10/1M
     "high": (10e-6, None, False),  # >$10/1M
 }
+
+
+def _resolve_openrouter_catalog_key(request) -> str | Status[dict[str, str]]:
+    try:
+        return get_openrouter_key(request.auth, allow_global_fallback=False)
+    except MissingApiKeyError as exc:
+        return Status(403, {"detail": str(exc), "remediation": exc.remediation})
+
 
 CONTEXT_RANGE_THRESHOLDS = {
     "small": (0, 8_000),
@@ -285,10 +296,13 @@ def list_providers(request):
     )
 
 
-@router.post("/sync/", response=SyncResultSchema)
+@router.post("/sync/", response={200: SyncResultSchema, 403: dict})
 def sync_models(request):
     """Fetch models from OpenRouter and upsert into DB."""
-    return sync_models_from_openrouter()
+    api_key = _resolve_openrouter_catalog_key(request)
+    if not isinstance(api_key, str):
+        return api_key
+    return Status(200, sync_models_from_openrouter(api_key))
 
 
 @router.post("/import/", response=ModelImportResultSchema)
@@ -355,14 +369,17 @@ def get_model(request, slug: str):
     return _get_model_by_identifier(slug)
 
 
-@router.post("/detail/{slug}/refresh/", response=LLMModelSchema)
+@router.post("/detail/{slug}/refresh/", response={200: LLMModelSchema, 403: dict})
 def refresh_model(request, slug: str):
     """Refresh a single model from the OpenRouter model catalog."""
     model = _get_model_by_identifier(slug)
-    if not refresh_model_from_openrouter(model):
+    api_key = _resolve_openrouter_catalog_key(request)
+    if not isinstance(api_key, str):
+        return api_key
+    if not refresh_model_from_openrouter(model, api_key):
         raise HttpError(404, "Model not found in OpenRouter catalog.")
     model.refresh_from_db()
-    return model
+    return Status(200, model)
 
 
 @router.delete("/detail/{slug}/")

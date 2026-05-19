@@ -7,6 +7,7 @@
 		type LLMModelDetail,
 		type LLMModelSummary,
 	} from '$lib/api/client';
+		import { formatApiError } from '$lib/api/core';
 	import { toast } from 'svelte-sonner';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
@@ -67,8 +68,8 @@
 				relatedModels = result;
 			}).catch(() => {});
 			toast.success('Model metadata refreshed from OpenRouter.');
-		} catch {
-			toast.error('Model refresh failed.');
+		} catch (caughtError) {
+			toast.error(formatApiError(caughtError, 'Model refresh failed.'));
 		} finally {
 			refreshing = false;
 		}

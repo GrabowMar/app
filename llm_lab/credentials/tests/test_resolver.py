@@ -30,6 +30,12 @@ def test_global_fallback_used_when_user_has_no_key(user):
     assert get_openrouter_key(user) == "global-key"
 
 
+@override_settings(OPENROUTER_API_KEY="global-key", OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True)
+def test_global_fallback_can_be_disabled_per_call(user):
+    with pytest.raises(MissingApiKeyError):
+        get_openrouter_key(user, allow_global_fallback=False)
+
+
 @override_settings(OPENROUTER_API_KEY="", OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True)
 def test_missing_key_raises(user):
     with pytest.raises(MissingApiKeyError) as exc_info:

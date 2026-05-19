@@ -20,9 +20,7 @@ if TYPE_CHECKING:
     from llm_lab.users.models import User
 
 
-SETTINGS_LINK_REMEDIATION = (
-    "Add or update your OpenRouter API key in Settings → API Access."
-)
+SETTINGS_LINK_REMEDIATION = "Add or update your OpenRouter API key in Settings → API Access."
 
 
 class MissingApiKeyError(Exception):
@@ -51,7 +49,11 @@ def get_user_credential_for(
     ).first()
 
 
-def get_openrouter_key(user: User | None) -> str:
+def get_openrouter_key(
+    user: User | None,
+    *,
+    allow_global_fallback: bool | None = None,
+) -> str:
     """Return the OpenRouter API key to use for ``user``.
 
     Falls back to the global ``OPENROUTER_API_KEY`` when allowed and
@@ -67,7 +69,11 @@ def get_openrouter_key(user: User | None) -> str:
         if secret:
             return secret
 
-    allow_global = getattr(settings, "OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK", True)
+    allow_global = (
+        getattr(settings, "OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK", True)
+        if allow_global_fallback is None
+        else allow_global_fallback
+    )
     if allow_global:
         global_key = getattr(settings, "OPENROUTER_API_KEY", "") or ""
         if global_key:

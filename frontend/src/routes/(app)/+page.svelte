@@ -23,6 +23,7 @@
 		type GenerationJobList,
 		type AnalysisTaskList,
 	} from '$lib/api/client';
+	import { formatApiError } from '$lib/api/core';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
@@ -182,10 +183,10 @@
 		pendingAction = 'sync';
 		try {
 			const result = await syncModelsFromOpenRouter();
-			toast.success(`Models synced: ${result.created ?? 0} new, ${result.updated ?? 0} updated`);
+			toast.success(`Models synced: ${result.upserted} of ${result.fetched} records`);
 			await loadAll();
 		} catch (e) {
-			toast.error(`Sync failed: ${(e as Error).message}`);
+			toast.error(formatApiError(e, 'Sync failed.'));
 		} finally {
 			pendingAction = null;
 		}

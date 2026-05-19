@@ -3,7 +3,10 @@ from http import HTTPStatus
 from unittest.mock import patch
 
 import pytest
+from django.test import override_settings
 
+from llm_lab.credentials.models import Provider
+from llm_lab.credentials.models import UserApiCredential
 from llm_lab.llm_models.models import LLMModel
 from llm_lab.llm_models.tests.factories import LLMModelFactory
 
@@ -13,6 +16,13 @@ def api_client(client, user):
     """Authenticated test client."""
     client.force_login(user)
     return client
+
+
+def _set_user_openrouter_key(user, raw: str) -> UserApiCredential:
+    cred = UserApiCredential(user=user, provider=Provider.OPENROUTER)
+    cred.set_secret(raw)
+    cred.save()
+    return cred
 
 
 @pytest.mark.django_db
@@ -142,7 +152,8 @@ class TestProvidersAPI:
 @pytest.mark.django_db
 class TestSyncAPI:
     @patch("llm_lab.llm_models.api.views.sync_models_from_openrouter")
-    def test_sync(self, mock_sync, api_client):
+    def test_sync(self, mock_sync, api_client, user):
+        _set_user_openrouter_key(user, "user-key")
         expected_fetched = 100
         expected_upserted = 95
         mock_sync.return_value = {
@@ -154,6 +165,18 @@ class TestSyncAPI:
         data = resp.json()
         assert data["fetched"] == expected_fetched
         assert data["upserted"] == expected_upserted
+        mock_sync.assert_called_once_with("user-key")
+
+    @override_settings(OPENROUTER_API_KEY="global-key", OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True)
+    @patch("llm_lab.llm_models.api.views.sync_models_from_openrouter")
+    def test_sync_requires_user_key_even_when_global_fallback_exists(self, mock_sync, api_client):
+        resp = api_client.post("/api/models/sync/")
+
+        assert resp.status_code == HTTPStatus.FORBIDDEN
+        data = resp.json()
+        assert data["detail"] == "No OpenRouter API key is configured for this account."
+        assert "Settings" in data["remediation"]
+        mock_sync.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -288,14 +311,16 @@ class TestComparisonAPI:
 @pytest.mark.django_db
 class TestRefreshAPI:
     @patch("llm_lab.llm_models.api.views.refresh_model_from_openrouter")
-    def test_refresh_model(self, mock_refresh, api_client):
+    def test_refresh_model(self, mock_refresh, api_client, user):
+        _set_user_openrouter_key(user, "user-key")
         model = LLMModelFactory(
             model_id="openai/gpt-4o",
             canonical_slug="openai_gpt-4o",
             model_name="Old Name",
         )
 
-        def refresh_side_effect(instance):
+        def refresh_side_effect(instance, api_key):
+            assert api_key == "user-key"
             instance.model_name = "New Name"
             instance.save(update_fields=["model_name", "updated_at"])
             return True
@@ -306,6 +331,23 @@ class TestRefreshAPI:
 
         assert resp.status_code == HTTPStatus.OK, resp.content
         assert resp.json()["model_name"] == "New Name"
+        mock_refresh.assert_called_once()
+
+    @override_settings(OPENROUTER_API_KEY="global-key", OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True)
+    @patch("llm_lab.llm_models.api.views.refresh_model_from_openrouter")
+    def test_refresh_requires_user_key_even_when_global_fallback_exists(self, mock_refresh, api_client):
+        model = LLMModelFactory(
+            model_id="openai/gpt-4o",
+            canonical_slug="openai_gpt-4o",
+        )
+
+        resp = api_client.post(f"/api/models/detail/{model.canonical_slug}/refresh/")
+
+        assert resp.status_code == HTTPStatus.FORBIDDEN
+        data = resp.json()
+        assert data["detail"] == "No OpenRouter API key is configured for this account."
+        assert "Settings" in data["remediation"]
+        mock_refresh.assert_not_called()
 
 
 @pytest.mark.django_db

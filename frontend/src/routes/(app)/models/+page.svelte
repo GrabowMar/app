@@ -11,7 +11,9 @@ import {
 	type PaginatedModels,
 	type ModelsStats,
 } from '$lib/api/client';
+import { formatApiError } from '$lib/api/core';
 import { onMount } from 'svelte';
+import { toast } from 'svelte-sonner';
 import Cpu from '@lucide/svelte/icons/cpu';
 import Upload from '@lucide/svelte/icons/upload';
 import Trophy from '@lucide/svelte/icons/trophy';
@@ -153,9 +155,9 @@ async function handleSync() {
 	try {
 		const result = await syncModelsFromOpenRouter();
 		await Promise.all([load(), loadMeta()]);
-		alert(`Synced ${result.upserted} of ${result.fetched} models from OpenRouter.`);
-	} catch {
-		alert('Sync failed. Check backend logs.');
+		toast.success(`Synced ${result.upserted} of ${result.fetched} models from OpenRouter.`);
+	} catch (caughtError) {
+		toast.error(formatApiError(caughtError, 'Sync failed.'));
 	} finally {
 		syncing = false;
 	}
