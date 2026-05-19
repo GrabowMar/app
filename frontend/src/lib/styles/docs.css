@@ -118,63 +118,223 @@
 
 /* Code blocks (Shiki dual-theme) --------------------------------------- */
 .docs-article .code-block {
-	margin: 1.25em 0;
-	border-radius: 0.5rem;
+	margin: 1.4em 0;
+	border-radius: 0.6rem;
 	border: 1px solid hsl(var(--border));
 	overflow: hidden;
-	background: hsl(var(--muted) / 0.4);
+	background: hsl(var(--card));
+	box-shadow:
+		0 1px 0 hsl(var(--border) / 0.4),
+		0 1px 3px hsl(0 0% 0% / 0.04);
 }
+:where([data-theme='dark']) .docs-article .code-block {
+	box-shadow:
+		0 1px 0 hsl(var(--border) / 0.6),
+		0 4px 12px hsl(0 0% 0% / 0.25);
+}
+
 .docs-article .code-block__header {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	padding: 0.4rem 0.75rem;
-	border-bottom: 1px solid hsl(var(--border));
-	background: hsl(var(--muted) / 0.6);
-	font-size: 0.7rem;
+	gap: 0.6rem;
+	padding: 0.45rem 0.65rem 0.45rem 0.85rem;
+	border-bottom: 1px solid hsl(var(--border) / 0.7);
+	background: linear-gradient(
+		to bottom,
+		hsl(var(--muted) / 0.45),
+		hsl(var(--muted) / 0.25)
+	);
+	font-size: 0.72rem;
+	min-height: 2.1rem;
 }
+
+.docs-article .code-block__dots {
+	display: inline-flex;
+	gap: 0.3rem;
+	flex-shrink: 0;
+}
+.docs-article .code-block__dots i {
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 999px;
+	background: hsl(var(--muted-foreground) / 0.25);
+	display: inline-block;
+}
+.docs-article .code-block__dots i:nth-child(1) { background: hsl(0 65% 60% / 0.6); }
+.docs-article .code-block__dots i:nth-child(2) { background: hsl(38 85% 55% / 0.6); }
+.docs-article .code-block__dots i:nth-child(3) { background: hsl(142 55% 50% / 0.6); }
+
+.docs-article .code-block__title {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.72rem;
+	color: hsl(var(--foreground));
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
 .docs-article .code-block__lang {
+	margin-left: auto;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	color: hsl(var(--muted-foreground));
 	text-transform: lowercase;
 	letter-spacing: 0.02em;
+	padding: 0.05rem 0.45rem;
+	border-radius: 0.25rem;
+	background: hsl(var(--muted) / 0.6);
+	border: 1px solid hsl(var(--border) / 0.6);
+	flex-shrink: 0;
 }
+.docs-article .code-block[data-title] .code-block__lang {
+	margin-left: 0;
+}
+.docs-article .code-block:not([data-title]) .code-block__title {
+	display: none;
+}
+
 .docs-article .code-block__copy {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
 	font-family: ui-sans-serif, system-ui, sans-serif;
 	font-size: 0.7rem;
 	color: hsl(var(--muted-foreground));
-	background: transparent;
+	background: hsl(var(--background) / 0.6);
 	border: 1px solid hsl(var(--border));
-	border-radius: 0.25rem;
-	padding: 0.15rem 0.5rem;
+	border-radius: 0.3rem;
+	padding: 0.2rem 0.5rem;
 	cursor: pointer;
-	transition: all 120ms;
+	transition:
+		color 120ms,
+		background-color 120ms,
+		border-color 120ms;
+	flex-shrink: 0;
 }
 .docs-article .code-block__copy:hover {
 	color: hsl(var(--foreground));
 	background: hsl(var(--background));
+	border-color: hsl(var(--border));
+}
+.docs-article .code-block__copy:focus-visible {
+	outline: 2px solid hsl(var(--ring, var(--primary)));
+	outline-offset: 2px;
+}
+.docs-article .code-block__icon--check {
+	display: none;
 }
 .docs-article .code-block__copy.is-copied {
 	color: hsl(142 70% 45%);
 	border-color: hsl(142 70% 45% / 0.5);
+	background: hsl(142 70% 45% / 0.08);
+}
+.docs-article .code-block__copy.is-copied .code-block__icon--copy { display: none; }
+.docs-article .code-block__copy.is-copied .code-block__icon--check { display: inline; }
+
+/* Scrollable code body with masked edge to hint overflow ---------------- */
+.docs-article .code-block__body {
+	position: relative;
+	max-height: 28rem;
+	overflow: auto;
+	background: var(--shiki-light-bg, transparent);
+}
+:where([data-theme='dark']) .docs-article .code-block__body {
+	background: var(--shiki-dark-bg, transparent);
 }
 
 .docs-article .code-block pre.shiki {
 	margin: 0;
-	padding: 0.85rem 1rem;
-	overflow-x: auto;
+	padding: 0.85rem 0;
 	font-size: 0.82rem;
 	line-height: 1.6;
-	background: var(--shiki-bg, transparent) !important;
+	background: transparent !important;
+	tab-size: 4;
 }
 .docs-article .code-block pre.shiki code {
+	display: block;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	background: transparent;
 	padding: 0;
 	border: 0;
+	min-width: max-content;
+}
+.docs-article .code-block pre.shiki .line {
+	display: block;
+	padding: 0 1rem;
+	min-height: 1.6em;
 }
 
-/* Shiki dual-theme: switch between css variables via root theme attr.    */
+/* Highlighted lines + diff lines from transformers --------------------- */
+.docs-article .code-block pre.shiki .line.highlighted {
+	background: hsl(var(--primary) / 0.08);
+	box-shadow: inset 2px 0 0 hsl(var(--primary) / 0.6);
+}
+.docs-article .code-block pre.shiki .line.diff.add {
+	background: hsl(142 71% 45% / 0.12);
+	box-shadow: inset 2px 0 0 hsl(142 71% 45%);
+}
+.docs-article .code-block pre.shiki .line.diff.remove {
+	background: hsl(0 84% 60% / 0.12);
+	box-shadow: inset 2px 0 0 hsl(0 84% 60%);
+}
+.docs-article .code-block pre.shiki .line.diff.add::before {
+	content: '+';
+	color: hsl(142 71% 35%);
+	margin-right: 0.5rem;
+	margin-left: -0.4rem;
+}
+.docs-article .code-block pre.shiki .line.diff.remove::before {
+	content: '-';
+	color: hsl(0 70% 45%);
+	margin-right: 0.5rem;
+	margin-left: -0.4rem;
+}
+/* Focus dim (notation focus): non-focused lines fade out */
+.docs-article .code-block pre.shiki.has-focused .line:not(.focused) {
+	opacity: 0.45;
+	filter: blur(0.5px);
+	transition: opacity 150ms, filter 150ms;
+}
+.docs-article .code-block pre.shiki.has-focused:hover .line:not(.focused) {
+	opacity: 1;
+	filter: none;
+}
+
+/* Line numbers (opt-in via showLineNumbers / numbers flag) ------------- */
+.docs-article .code-block pre.shiki.has-line-numbers {
+	counter-reset: docs-line;
+}
+.docs-article .code-block pre.shiki.has-line-numbers .line {
+	padding-left: 3.25rem;
+	position: relative;
+}
+.docs-article .code-block pre.shiki.has-line-numbers .line::after {
+	counter-increment: docs-line;
+	content: counter(docs-line);
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 2.5rem;
+	padding-right: 0.6rem;
+	text-align: right;
+	color: hsl(var(--muted-foreground) / 0.6);
+	font-variant-numeric: tabular-nums;
+	user-select: none;
+	font-size: 0.75rem;
+	line-height: 1.6;
+}
+
+/* Soft wrap (opt-in via wrap flag) ------------------------------------- */
+.docs-article .code-block pre.shiki.is-wrapped code {
+	min-width: 0;
+}
+.docs-article .code-block pre.shiki.is-wrapped .line {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+/* Shiki dual-theme variable swap --------------------------------------- */
 .docs-article pre.shiki,
 .docs-article pre.shiki span {
 	color: var(--shiki-light) !important;
@@ -184,6 +344,11 @@
 :where([data-theme='dark']) .docs-article pre.shiki span {
 	color: var(--shiki-dark) !important;
 	background-color: var(--shiki-dark-bg) !important;
+}
+/* Lines inherit theme bg only as a fallback — explicit highlight/diff   */
+/* backgrounds override via the `.highlighted` / `.diff` rules above.    */
+.docs-article pre.shiki .line {
+	background-color: transparent !important;
 }
 
 /* Tables ---------------------------------------------------------------- */

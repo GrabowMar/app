@@ -1,15 +1,18 @@
 /**
  * Client-side Markdown rendering pipeline.
  *
- * Uses `marked` for parsing, `marked-alert` for GitHub-style callouts
- * (> [!NOTE] / [!TIP] / [!WARNING] / [!IMPORTANT] / [!CAUTION]),
- * `marked-gfm-heading-id` for slugged heading anchors, Shiki for
- * VS Code-grade syntax highlighting (dual light/dark theme via CSS
- * variables so theme switches are instant), and DOMPurify for safe
- * HTML injection.
+ * Code blocks support the following info-string flags:
  *
- * Mermaid code fences become a `<div class="mermaid-placeholder"
- * data-source="...">` which `lib/docs/mermaid.ts` upgrades after mount.
+ *   ```ts title="src/foo.ts" {1,3-5} showLineNumbers
+ *   ```
+ *
+ *   - `title="..."`  — filename / caption shown in the header
+ *   - `{1,3-5}`      — highlight ranges (1-based line numbers)
+ *   - `showLineNumbers` (or just `numbers`) — render a gutter
+ *   - `wrap`         — soft-wrap long lines
+ *
+ * Mermaid code fences become a `<div class="mermaid-placeholder">` that
+ * `lib/docs/mermaid.ts` upgrades after mount.
  */
 
 import { Marked } from 'marked';
@@ -17,6 +20,11 @@ import markedAlert from 'marked-alert';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import DOMPurify from 'dompurify';
 import { createHighlighter, type Highlighter } from 'shiki';
+import {
+	transformerNotationDiff,
+	transformerNotationHighlight,
+	transformerNotationFocus,
+} from '@shikijs/transformers';
 
 export interface Heading {
 	id: string;
@@ -44,6 +52,7 @@ const SHIKI_LANGS = [
 	'tsx',
 	'jsx',
 	'json',
+	'jsonc',
 	'yaml',
 	'yml',
 	'toml',
@@ -52,6 +61,7 @@ const SHIKI_LANGS = [
 	'docker',
 	'html',
 	'css',
+	'scss',
 	'svelte',
 	'sql',
 	'diff',
@@ -60,6 +70,19 @@ const SHIKI_LANGS = [
 	'text',
 	'plaintext',
 ];
+
+const LANG_ALIASES: Record<string, string> = {
+	py: 'python',
+	js: 'javascript',
+	ts: 'typescript',
+	yml: 'yaml',
+	docker: 'dockerfile',
+	sh: 'bash',
+	shell: 'bash',
+	console: 'bash',
+	plaintext: 'text',
+	md: 'markdown',
+};
 
 let _highlighterPromise: Promise<Highlighter> | null = null;
 
@@ -87,15 +110,63 @@ function escapeAttr(s: string): string {
 }
 
 function langOrFallback(lang: string, highlighter: Highlighter): string {
+	const aliased = LANG_ALIASES[lang] ?? lang;
 	const loaded = new Set<string>(highlighter.getLoadedLanguages());
-	if (loaded.has(lang)) return lang;
+	if (loaded.has(aliased)) return aliased;
 	return 'text';
 }
 
-/**
- * Render markdown to sanitized HTML. Extracts headings (for the TOC rail)
- * and flags whether the document contains mermaid blocks.
- */
+interface CodeMeta {
+	lang: string;
+	title?: string;
+	highlightLines: Set<number>;
+	showLineNumbers: boolean;
+	wrap: boolean;
+}
+
+function parseCodeMeta(rawLang: string): CodeMeta {
+	const info = (rawLang || '').trim();
+	// First token is the language.
+	const firstSpace = info.search(/\s/);
+	const lang = (firstSpace === -1 ? info : info.slice(0, firstSpace)).toLowerCase();
+	const rest = firstSpace === -1 ? '' : info.slice(firstSpace + 1);
+
+	const meta: CodeMeta = {
+		lang,
+		highlightLines: new Set<number>(),
+		showLineNumbers: false,
+		wrap: false,
+	};
+
+	// title="..."
+	const titleMatch = rest.match(/title=(?:"([^"]+)"|'([^']+)'|(\S+))/);
+	if (titleMatch) meta.title = titleMatch[1] ?? titleMatch[2] ?? titleMatch[3];
+
+	// {1,3-5}
+	const hlMatch = rest.match(/\{([\d,\s\-]+)\}/);
+	if (hlMatch) {
+		for (const part of hlMatch[1].split(',')) {
+			const trimmed = part.trim();
+			if (!trimmed) continue;
+			if (trimmed.includes('-')) {
+				const [a, b] = trimmed.split('-').map((n) => parseInt(n, 10));
+				if (Number.isFinite(a) && Number.isFinite(b)) {
+					for (let i = Math.min(a, b); i <= Math.max(a, b); i++) meta.highlightLines.add(i);
+				}
+			} else {
+				const n = parseInt(trimmed, 10);
+				if (Number.isFinite(n)) meta.highlightLines.add(n);
+			}
+		}
+	}
+
+	if (/\b(showLineNumbers|numbers)\b/i.test(rest)) meta.showLineNumbers = true;
+	if (/\bwrap\b/i.test(rest)) meta.wrap = true;
+
+	return meta;
+}
+
+/** Render markdown to sanitized HTML. */
 export async function renderMarkdown(raw: string): Promise<RenderedDoc> {
 	const highlighter = await getHighlighter();
 
@@ -110,23 +181,62 @@ export async function renderMarkdown(raw: string): Promise<RenderedDoc> {
 	marked.use({
 		renderer: {
 			code({ text, lang }: { text: string; lang?: string }) {
-				const language = (lang || '').toLowerCase().trim();
-				if (language === 'mermaid') {
+				const meta = parseCodeMeta(lang ?? '');
+				if (meta.lang === 'mermaid') {
 					return `<div class="mermaid-placeholder" data-source="${escapeAttr(text)}"></div>`;
 				}
-				const effective = langOrFallback(language || 'text', highlighter);
-				const displayLang = language || 'text';
+
+				const effective = langOrFallback(meta.lang || 'text', highlighter);
+				const displayLang = meta.lang || 'text';
+
 				const highlighted = highlighter.codeToHtml(text, {
 					lang: effective,
 					themes: { light: 'github-light', dark: 'github-dark' },
 					defaultColor: false,
+					transformers: [
+						transformerNotationDiff({ matchAlgorithm: 'v3' }),
+						transformerNotationHighlight({ matchAlgorithm: 'v3' }),
+						transformerNotationFocus({ matchAlgorithm: 'v3' }),
+						{
+							name: 'docs:lines',
+							line(node, line) {
+								node.properties['data-line'] = line;
+								if (meta.highlightLines.has(line)) {
+									const cur = (node.properties.class as string | undefined) ?? '';
+									node.properties.class = `${cur} highlighted`.trim();
+								}
+							},
+							pre(node) {
+								const cur = (node.properties.class as string | undefined) ?? '';
+								const flags = [
+									meta.showLineNumbers ? 'has-line-numbers' : '',
+									meta.wrap ? 'is-wrapped' : '',
+								]
+									.filter(Boolean)
+									.join(' ');
+								if (flags) node.properties.class = `${cur} ${flags}`.trim();
+							},
+						},
+					],
 				});
-				return `<figure class="code-block" data-lang="${escapeAttr(displayLang)}">
+
+				const titleAttr = meta.title ? ` data-title="${escapeAttr(meta.title)}"` : '';
+				const titleNode = meta.title
+					? `<span class="code-block__title">${escapeHtml(meta.title)}</span>`
+					: '';
+
+				return `<figure class="code-block" data-lang="${escapeAttr(displayLang)}"${titleAttr}>
 <figcaption class="code-block__header">
+<span class="code-block__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+${titleNode}
 <span class="code-block__lang">${escapeHtml(displayLang)}</span>
-<button type="button" class="code-block__copy" data-copy="${escapeAttr(text)}" aria-label="Copy code">Copy</button>
+<button type="button" class="code-block__copy" data-copy="${escapeAttr(text)}" aria-label="Copy code">
+<svg class="code-block__icon code-block__icon--copy" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M4 4V2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 0h4a2 2 0 0 1 2 2v4h2V2H6zM2 6v8h8V6z"/></svg>
+<svg class="code-block__icon code-block__icon--check" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 1 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+<span class="code-block__copy-label">Copy</span>
+</button>
 </figcaption>
-${highlighted}
+<div class="code-block__body">${highlighted}</div>
 </figure>`;
 			},
 		},
@@ -134,8 +244,26 @@ ${highlighted}
 
 	const dirty = await marked.parse(raw, { async: true });
 	const clean = DOMPurify.sanitize(dirty, {
-		ADD_TAGS: ['figure', 'figcaption'],
-		ADD_ATTR: ['data-lang', 'data-source', 'data-copy', 'data-theme', 'style', 'tabindex'],
+		ADD_TAGS: ['figure', 'figcaption', 'svg', 'path', 'i'],
+		ADD_ATTR: [
+			'data-lang',
+			'data-source',
+			'data-copy',
+			'data-theme',
+			'data-line',
+			'data-title',
+			'data-highlighted',
+			'data-focused',
+			'data-diff',
+			'style',
+			'tabindex',
+			'viewBox',
+			'width',
+			'height',
+			'fill',
+			'aria-hidden',
+			'aria-label',
+		],
 	});
 
 	const headings: Heading[] = [];

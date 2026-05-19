@@ -46,13 +46,14 @@
 			const btn = target.closest('.code-block__copy') as HTMLButtonElement | null;
 			if (!btn) return;
 			const code = btn.dataset.copy ?? '';
+			const label = btn.querySelector<HTMLElement>('.code-block__copy-label');
 			try {
 				await navigator.clipboard.writeText(code);
-				const original = btn.textContent;
-				btn.textContent = 'Copied!';
+				const original = label?.textContent ?? 'Copy';
+				if (label) label.textContent = 'Copied!';
 				btn.classList.add('is-copied');
 				setTimeout(() => {
-					btn.textContent = original;
+					if (label) label.textContent = original;
 					btn.classList.remove('is-copied');
 				}, 1400);
 			} catch {

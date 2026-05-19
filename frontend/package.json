@@ -29,6 +29,7 @@
 		"vite": "^7.3.1"
 	},
 	"dependencies": {
+		"@shikijs/transformers": "^4.1.0",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"dompurify": "^3.4.5",
