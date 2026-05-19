@@ -50,4 +50,3 @@ Hover tooltips, chart zoom on click, row highlighting on hover, smooth filter an
 - [ ] Focus states visible for keyboard nav
 - [ ] prefers-reduced-motion respected
 - [ ] Responsive: 375px, 768px, 1024px, 1440px
-

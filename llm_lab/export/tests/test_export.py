@@ -103,7 +103,7 @@ class TestFindingsCsv:
 
         resp = auth_client.get("/api/export/findings.csv")
         _, rows = _parse_csv(resp.content.decode())
-        assert len(rows) == 3  # noqa: PLR2004
+        assert len(rows) == 3
 
     def test_user_scoping(self, auth_client, user, other_user):
         """User should only see their own findings."""
@@ -117,7 +117,7 @@ class TestFindingsCsv:
 
         resp = auth_client.get("/api/export/findings.csv")
         _, rows = _parse_csv(resp.content.decode())
-        assert len(rows) == 2  # noqa: PLR2004
+        assert len(rows) == 2
 
     def test_filter_by_severity(self, auth_client, user):
         task = AnalysisTaskFactory(created_by=user)
@@ -141,7 +141,7 @@ class TestFindingsCsv:
 
         resp = auth_client.get(f"/api/export/findings.csv?task_id={task1.id}")
         _, rows = _parse_csv(resp.content.decode())
-        assert len(rows) == 2  # noqa: PLR2004
+        assert len(rows) == 2
 
 
 # ── Findings JSON ─────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ class TestFindingsJson:
         assert "analyzer" in item
         assert item["rule_id"] == "B101"
         assert item["file_path"] == "app.py"
-        assert item["line"] == 10  # noqa: PLR2004
+        assert item["line"] == 10
 
     def test_limit_cap(self, auth_client, user):
         """limit param cannot exceed 50000 hard cap."""
@@ -180,7 +180,7 @@ class TestFindingsJson:
         resp = auth_client.get("/api/export/findings.json?limit=100000")
         assert resp.status_code == HTTPStatus.OK
         data = json.loads(resp.content)
-        assert len(data) == 5  # noqa: PLR2004
+        assert len(data) == 5
 
 
 # ── Findings SARIF ────────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ class TestFindingsSarif:
         assert "text" in result_entry["message"]
         loc = result_entry["locations"][0]
         assert loc["physicalLocation"]["artifactLocation"]["uri"] == "app.py"
-        assert loc["physicalLocation"]["region"]["startLine"] == 42  # noqa: PLR2004
+        assert loc["physicalLocation"]["region"]["startLine"] == 42
 
     def test_sarif_groups_by_analyzer(self, auth_client, user):
         task = AnalysisTaskFactory(created_by=user)
@@ -225,7 +225,7 @@ class TestFindingsSarif:
 
         resp = auth_client.get("/api/export/findings.sarif")
         data = json.loads(resp.content)
-        assert len(data["runs"]) == 2  # noqa: PLR2004
+        assert len(data["runs"]) == 2
         names = {run["tool"]["driver"]["name"] for run in data["runs"]}
         assert names == {"bandit", "eslint"}
 

@@ -72,9 +72,7 @@ class TestLighthouseStaticMode:
         """Backend-only code still gets a grade and summary."""
         analyzer = LighthouseAnalyzer()
         code = {
-            "backend/views.py": (
-                "def index(request):\n    return HttpResponse('ok')\n"
-            ),
+            "backend/views.py": ("def index(request):\n    return HttpResponse('ok')\n"),
         }
         output = analyzer.analyze(code)
 
@@ -98,9 +96,7 @@ class TestLighthouseStaticMode:
         )
 
         assert output.has_error
-        assert (
-            "Blocked hostname" in output.error or "Invalid target URL" in output.error
-        )
+        assert "Blocked hostname" in output.error or "Invalid target URL" in output.error
 
     def test_lighthouse_missing_meta_tags(self):
         """Missing viewport/description/title produce SEO findings."""
@@ -123,9 +119,7 @@ class TestLighthouseStaticMode:
         output = analyzer.analyze(code)
 
         assert not output.has_error
-        lazy_findings = [
-            f for f in output.findings if f.rule_id == "lighthouse/missing-lazy-loading"
-        ]
+        lazy_findings = [f for f in output.findings if f.rule_id == "lighthouse/missing-lazy-loading"]
         assert len(lazy_findings) == 1
 
     def test_lighthouse_missing_alt_attribute(self):
@@ -136,9 +130,7 @@ class TestLighthouseStaticMode:
         output = analyzer.analyze(code)
 
         assert not output.has_error
-        alt_findings = [
-            f for f in output.findings if f.rule_id == "lighthouse/missing-alt"
-        ]
+        alt_findings = [f for f in output.findings if f.rule_id == "lighthouse/missing-alt"]
         assert len(alt_findings) == 1
 
     def test_lighthouse_console_logs(self):
@@ -150,28 +142,18 @@ class TestLighthouseStaticMode:
         output = analyzer.analyze(code)
 
         assert not output.has_error
-        console_findings = [
-            f for f in output.findings if f.rule_id == "lighthouse/no-console"
-        ]
+        console_findings = [f for f in output.findings if f.rule_id == "lighthouse/no-console"]
         assert len(console_findings) == EXPECTED_CONSOLE_FINDINGS
 
     def test_lighthouse_layout_shift_elements(self):
         """Media elements without dimensions flagged."""
         analyzer = LighthouseAnalyzer()
-        html = (
-            '<img src="a.jpg" width="100" height="100">'
-            '<img src="b.jpg">'
-            '<video src="c.mp4">'
-        )
+        html = '<img src="a.jpg" width="100" height="100"><img src="b.jpg"><video src="c.mp4">'
         code = {"frontend/page.html": html}
         output = analyzer.analyze(code)
 
         assert not output.has_error
-        shift_findings = [
-            f
-            for f in output.findings
-            if f.rule_id == "lighthouse/layout-shift-elements"
-        ]
+        shift_findings = [f for f in output.findings if f.rule_id == "lighthouse/layout-shift-elements"]
         assert len(shift_findings) == EXPECTED_SHIFT_FINDINGS
 
     def test_lighthouse_unoptimized_images(self):
@@ -182,7 +164,5 @@ class TestLighthouseStaticMode:
         output = analyzer.analyze(code)
 
         assert not output.has_error
-        img_findings = [
-            f for f in output.findings if f.rule_id == "lighthouse/unoptimized-image"
-        ]
+        img_findings = [f for f in output.findings if f.rule_id == "lighthouse/unoptimized-image"]
         assert len(img_findings) == 1

@@ -56,9 +56,7 @@ class GenerationService:
         finally:
             job.completed_at = timezone.now()
             if job.started_at:
-                job.duration_seconds = (
-                    job.completed_at - job.started_at
-                ).total_seconds()
+                job.duration_seconds = (job.completed_at - job.started_at).total_seconds()
             job.save(
                 update_fields=[
                     "status",
@@ -228,20 +226,12 @@ class GenerationService:
             CopilotIteration.objects.create(
                 job=job,
                 iteration_number=iteration,
-                action=(
-                    CopilotIteration.Action.GENERATE
-                    if iteration == 1
-                    else CopilotIteration.Action.FIX
-                ),
+                action=(CopilotIteration.Action.GENERATE if iteration == 1 else CopilotIteration.Action.FIX),
                 llm_request={"messages": messages, "model": model_id},
                 llm_response=content[:50000],
                 build_success=len(errors) == 0,
                 errors_detected=errors,
-                fix_applied=(
-                    f"Fix attempt for: {'; '.join(last_errors[:3])}"
-                    if iteration > 1
-                    else ""
-                ),
+                fix_applied=(f"Fix attempt for: {'; '.join(last_errors[:3])}" if iteration > 1 else ""),
             )
 
             logger.info(
@@ -368,8 +358,7 @@ class GenerationService:
 
         if len(code.strip().split("\n")) < 30:
             errors.append(
-                f"Code too short ({len(code.strip().split(chr(10)))} lines); "
-                "expected 100+ lines for a complete app",
+                f"Code too short ({len(code.strip().split(chr(10)))} lines); expected 100+ lines for a complete app",
             )
 
         return errors

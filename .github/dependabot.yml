@@ -1,30 +1,29 @@
-# Config for Dependabot updates. See Documentation here:
-# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot config — weekly cadence, broad grouping, fewer noisy PRs.
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
-  # Update GitHub actions in workflows
+  # GitHub Actions
   - package-ecosystem: 'github-actions'
     directory: '/'
-    # Every weekday
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
     groups:
       github-actions:
-        patterns:
-          - '*'
+        patterns: ['*']
 
-  # Enable version updates for Docker
+  # Docker images — Python base images (local + docs + production)
   - package-ecosystem: 'docker'
-    # Look for a `Dockerfile` in the `compose/local/django` directory
     directories:
       - 'compose/local/django/'
       - 'compose/local/docs/'
       - 'compose/production/django/'
-    # Every weekday
     schedule:
-      interval: 'daily'
-    # Ignore minor version updates (3.10 -> 3.11) but update patch versions
+      interval: 'weekly'
+      day: 'monday'
+    # Ignore Python major/minor bumps (these are project decisions)
     ignore:
       - dependency-name: '*'
         update-types:
@@ -32,39 +31,58 @@ updates:
           - 'version-update:semver-minor'
     groups:
       docker-python:
-        patterns:
-          - '*'
+        patterns: ['*']
 
-
+  # Docker images — everything else (node, postgres, redis, traefik, nginx…)
   - package-ecosystem: 'docker'
-    # Look for a `Dockerfile` in the listed directories
     directories:
       - 'compose/local/node/'
       - 'compose/production/aws/'
       - 'compose/production/postgres/'
       - 'compose/production/traefik/'
       - 'compose/production/nginx/'
-    # Every weekday
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    groups:
+      docker-infra:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
 
-  # Enable version updates for Docker Compose files
+  # Compose files
   - package-ecosystem: 'docker-compose'
     directories:
       - '/'
-    # Every weekday
     schedule:
-      interval: 'daily'
-
-  # Enable version updates for Python/uv
-  - package-ecosystem: 'uv'
-    # Look for a `pyproject.toml` in the `root` directory
-    directory: '/'
-    # Every weekday
-    schedule:
-      interval: 'daily'
+      interval: 'weekly'
+      day: 'monday'
     groups:
-      python:
-        update-types:
-          - 'minor'
-          - 'patch'
+      docker-compose:
+        patterns: ['*']
+
+  # Python / uv
+  - package-ecosystem: 'uv'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 10
+    groups:
+      python-minor:
+        update-types: ['minor', 'patch']
+      python-major:
+        update-types: ['major']
+
+  # Frontend / npm
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 10
+    groups:
+      npm-minor:
+        update-types: ['minor', 'patch']
+      npm-major:
+        update-types: ['major']

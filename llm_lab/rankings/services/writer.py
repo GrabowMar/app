@@ -8,7 +8,7 @@ from llm_lab.rankings.services.aggregator import aggregate_rankings
 from llm_lab.rankings.services.constants import SORT_KEY_MAP
 
 
-def filter_rankings(  # noqa: PLR0913, C901, PLR0912
+def filter_rankings(
     rankings: list[dict[str, Any]],
     *,
     max_price: float | None = None,
@@ -88,9 +88,7 @@ def get_top_models(
                 if v is not None:
                     total += float(v) * w
                     total_weight += w
-            entry["composite_score"] = (
-                round(total / total_weight, 4) if total_weight else None
-            )
+            entry["composite_score"] = round(total / total_weight, 4) if total_weight else None
         rankings.sort(
             key=lambda x: x.get("composite_score") or 0.0,
             reverse=True,

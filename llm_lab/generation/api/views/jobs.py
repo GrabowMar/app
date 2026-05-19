@@ -60,9 +60,7 @@ def list_jobs(
             model_name=job.model.model_name if job.model else None,
             model_id_str=job.model.model_id if job.model else None,
             template_name=(job.app_requirement.name if job.app_requirement else None),
-            scaffolding_name=(
-                job.scaffolding_template.name if job.scaffolding_template else None
-            ),
+            scaffolding_name=(job.scaffolding_template.name if job.scaffolding_template else None),
             started_at=job.started_at,
             completed_at=job.completed_at,
             duration_seconds=job.duration_seconds,
@@ -266,9 +264,7 @@ def get_batch_jobs(request, batch_id: str):
             model_name=job.model.model_name if job.model else None,
             model_id_str=job.model.model_id if job.model else None,
             template_name=(job.app_requirement.name if job.app_requirement else None),
-            scaffolding_name=(
-                job.scaffolding_template.name if job.scaffolding_template else None
-            ),
+            scaffolding_name=(job.scaffolding_template.name if job.scaffolding_template else None),
             started_at=job.started_at,
             completed_at=job.completed_at,
             duration_seconds=job.duration_seconds,

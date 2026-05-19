@@ -54,7 +54,7 @@ def _dispatch(action_id) -> None:
     thread.start()
 
 
-def _execute(action_id) -> None:  # noqa: C901, PLR0912
+def _execute(action_id) -> None:
     try:
         with transaction.atomic():
             action = ContainerAction.objects.select_for_update().get(id=action_id)
@@ -129,7 +129,7 @@ def _do_build(action: ContainerAction, container: ContainerInstance) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             build_path = Path(tmpdir)
             if job is not None:
-                from llm_lab.runtime.services.scaffolding import prepare_build_dir  # noqa: PLC0415, I001
+                from llm_lab.runtime.services.scaffolding import prepare_build_dir
 
                 prepare_build_dir(job, build_path)
             else:
@@ -187,11 +187,7 @@ def _do_build(action: ContainerAction, container: ContainerInstance) -> None:
 
 def _write_minimal_dockerfile(path: Path) -> None:
     (path / "Dockerfile").write_text(
-        "FROM python:3.11-slim\n"
-        "WORKDIR /app\n"
-        "COPY . .\n"
-        "RUN pip install flask --quiet\n"
-        'CMD ["python", "app.py"]\n',
+        'FROM python:3.11-slim\nWORKDIR /app\nCOPY . .\nRUN pip install flask --quiet\nCMD ["python", "app.py"]\n',
     )
     (path / "app.py").write_text(
         "from flask import Flask, jsonify\n"

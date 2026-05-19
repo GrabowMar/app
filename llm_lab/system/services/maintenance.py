@@ -21,9 +21,7 @@ def clear_stuck_analysis_tasks(older_than_minutes: int = 60) -> int:
         updated_at__lt=threshold,
     ).update(
         status=AnalysisTask.Status.FAILED,
-        error_message=(
-            f"Marked failed by maintenance: stuck for >{older_than_minutes}m"
-        ),
+        error_message=(f"Marked failed by maintenance: stuck for >{older_than_minutes}m"),
     )
 
 
@@ -34,9 +32,7 @@ def clear_stuck_generation_jobs(older_than_minutes: int = 60) -> int:
         updated_at__lt=threshold,
     ).update(
         status=GenerationJob.Status.FAILED,
-        error_message=(
-            f"Marked failed by maintenance: stuck for >{older_than_minutes}m"
-        ),
+        error_message=(f"Marked failed by maintenance: stuck for >{older_than_minutes}m"),
     )
 
 
@@ -63,9 +59,7 @@ def purge_orphan_containers() -> int:
     orphan_ids = []
     for inst in candidates:
         cid = inst.container_id
-        is_present = cid in existing_ids or any(
-            full_id.startswith(cid) for full_id in existing_ids
-        )
+        is_present = cid in existing_ids or any(full_id.startswith(cid) for full_id in existing_ids)
         if not is_present:
             orphan_ids.append(inst.pk)
 

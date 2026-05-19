@@ -17,7 +17,7 @@ from .generators import GENERATORS
 logger = logging.getLogger(__name__)
 
 
-def create_and_dispatch(  # noqa: PLR0913
+def create_and_dispatch(
     *,
     report_type: str,
     config: dict[str, Any],
@@ -34,11 +34,7 @@ def create_and_dispatch(  # noqa: PLR0913
     _validate_config(report_type, config)
 
     final_title = title or _default_title(report_type, config)
-    expires_at = (
-        timezone.now() + timedelta(days=int(expires_in_days))
-        if expires_in_days
-        else None
-    )
+    expires_at = timezone.now() + timedelta(days=int(expires_in_days)) if expires_in_days else None
 
     report = Report.objects.create(
         report_type=report_type,
@@ -63,7 +59,7 @@ def _dispatch(report_id) -> None:
 
 
 def _run_generation(report_id) -> None:
-    from django.db import connection  # noqa: PLC0415
+    from django.db import connection
 
     try:
         with transaction.atomic():

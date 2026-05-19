@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def _get_dispatcher(kind: str) -> Any:
     """Look up dispatcher by step kind, enabling test-time mocking via module patch."""
-    from llm_lab.automation.engine import dispatchers  # noqa: PLC0415
+    from llm_lab.automation.engine import dispatchers
 
     return {
         "generate": dispatchers.dispatch_generate,
@@ -85,7 +85,7 @@ def _publish_step_event(
 
 def _collect_prior_outputs(run_id: Any) -> dict[str, dict[str, Any]]:
     """Return {step_name: output_dict} for all succeeded step runs in a run."""
-    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineStepRun
 
     result: dict[str, dict[str, Any]] = {}
     for sr in PipelineStepRun.objects.filter(
@@ -99,7 +99,7 @@ def _collect_prior_outputs(run_id: Any) -> dict[str, dict[str, Any]]:
 
 def _is_cancelled(run_id: Any) -> bool:
     """Check if a run has been externally cancelled."""
-    from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineRun
 
     return PipelineRun.objects.filter(id=run_id, status="cancelled").exists()
 
@@ -118,14 +118,14 @@ def _output_is_failed(output: Any) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
+def execute_step(step_run_id: Any) -> None:
     """Dispatch a single step, handle retries, record output.
 
     This function is designed to be called from a thread. It closes the
     Django DB connection in the finally block to avoid leaks.
     """
-    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
-    from llm_lab.automation.models import RunStatus  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineStepRun
+    from llm_lab.automation.models import RunStatus
 
     try:
         # Idempotency guard: only execute if still pending
@@ -174,9 +174,7 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
                 sr_locked.status = RunStatus.PENDING
                 sr_locked.retries_remaining -= 1
                 sr_locked.attempt += 1
-                sr_locked.error = (
-                    output.get("error", "") if isinstance(output, dict) else ""
-                )
+                sr_locked.error = output.get("error", "") if isinstance(output, dict) else ""
                 sr_locked.save(
                     update_fields=[
                         "status",
@@ -200,11 +198,7 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
             sr_locked.completed_at = timezone.now()
             if failed:
                 sr_locked.status = RunStatus.FAILED
-                sr_locked.error = (
-                    output.get("error", "Step failed")
-                    if isinstance(output, dict)
-                    else "Step failed"
-                )
+                sr_locked.error = output.get("error", "Step failed") if isinstance(output, dict) else "Step failed"
             else:
                 sr_locked.status = RunStatus.SUCCEEDED
                 sr_locked.error = ""
@@ -223,8 +217,8 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
     except Exception:
         logger.exception("Unexpected error in execute_step for %s", step_run_id)
         try:
-            from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
-            from llm_lab.automation.models import RunStatus  # noqa: PLC0415
+            from llm_lab.automation.models import PipelineStepRun
+            from llm_lab.automation.models import RunStatus
 
             PipelineStepRun.objects.filter(
                 id=step_run_id,
@@ -250,8 +244,8 @@ def execute_step(step_run_id: Any) -> None:  # noqa: PLR0915
 
 def _cancel_pending_steps(run_id: Any) -> None:
     """Set all pending step_runs in *run_id* to cancelled."""
-    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
-    from llm_lab.automation.models import RunStatus  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineStepRun
+    from llm_lab.automation.models import RunStatus
 
     PipelineStepRun.objects.filter(
         run_id=run_id,
@@ -268,7 +262,7 @@ def _deps_satisfied(
     name_to_sr_id: dict[str, Any],
 ) -> bool:
     """Return True when all dependencies of *sr* have succeeded."""
-    from llm_lab.automation.models import RunStatus  # noqa: PLC0415
+    from llm_lab.automation.models import RunStatus
 
     if not (sr.step and sr.step.depends_on):
         return True
@@ -287,7 +281,7 @@ def _deps_satisfied(
 # ---------------------------------------------------------------------------
 
 
-def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
+def execute_run(run_id: Any) -> None:
     """Top-level entry point. Loads run + steps, executes DAG, marks terminal.
 
     Algorithm:
@@ -301,9 +295,9 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
     4. Once all step_runs are terminal, compute overall run status.
     5. Publish final run event.
     """
-    from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
-    from llm_lab.automation.models import RunStatus  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineRun
+    from llm_lab.automation.models import PipelineStepRun
+    from llm_lab.automation.models import RunStatus
 
     try:
         with transaction.atomic():
@@ -322,9 +316,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
         _publish_run_event(run_id, "running")
 
         step_runs = list(
-            PipelineStepRun.objects.filter(run_id=run_id)
-            .select_related("step")
-            .order_by("created_at"),
+            PipelineStepRun.objects.filter(run_id=run_id).select_related("step").order_by("created_at"),
         )
         if not step_runs:
             _finish_run(run_id, RunStatus.SUCCEEDED, "No steps to execute")
@@ -359,9 +351,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
                 ).select_related("step")
             }
 
-            any_failed = any(
-                sr.status == RunStatus.FAILED for sr in fresh_step_runs.values()
-            )
+            any_failed = any(sr.status == RunStatus.FAILED for sr in fresh_step_runs.values())
             if any_failed:
                 _cancel_pending_steps(run_id)
                 for t in list(in_flight_threads.values()):
@@ -374,11 +364,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
                 RunStatus.FAILED,
                 RunStatus.CANCELLED,
             )
-            finished_ids = {
-                sr_id
-                for sr_id in in_flight
-                if fresh_step_runs[sr_id].status in terminal_statuses
-            }
+            finished_ids = {sr_id for sr_id in in_flight if fresh_step_runs[sr_id].status in terminal_statuses}
             in_flight -= finished_ids
 
             for sr in fresh_step_runs.values():
@@ -397,9 +383,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
                     in_flight_threads[sr.id] = t
                     t.start()
 
-            all_terminal = all(
-                sr.status in terminal_statuses for sr in fresh_step_runs.values()
-            )
+            all_terminal = all(sr.status in terminal_statuses for sr in fresh_step_runs.values())
             if all_terminal and not in_flight:
                 break
 
@@ -416,7 +400,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
     except Exception:
         logger.exception("Unexpected error in execute_run for %s", run_id)
         try:
-            from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
+            from llm_lab.automation.models import PipelineRun
 
             PipelineRun.objects.filter(id=run_id, status="running").update(
                 status="failed",
@@ -432,7 +416,7 @@ def execute_run(run_id: Any) -> None:  # noqa: C901, PLR0912, PLR0915
 
 def _finish_run(run_id: Any, status: str, summary_msg: str) -> None:
     """Mark run terminal and publish event."""
-    from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineRun
 
     with transaction.atomic():
         PipelineRun.objects.filter(id=run_id).update(

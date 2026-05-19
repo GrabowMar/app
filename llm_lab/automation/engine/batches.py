@@ -32,14 +32,14 @@ def expand_batch(batch_id: Any) -> list[Any]:
 
     Returns list of PipelineRun IDs created.
     """
-    import threading  # noqa: PLC0415
+    import threading
 
-    from llm_lab.automation.models import Batch  # noqa: PLC0415
-    from llm_lab.automation.models import BatchItem  # noqa: PLC0415
-    from llm_lab.automation.models import Pipeline  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineStep  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
+    from llm_lab.automation.models import Batch
+    from llm_lab.automation.models import BatchItem
+    from llm_lab.automation.models import Pipeline
+    from llm_lab.automation.models import PipelineRun
+    from llm_lab.automation.models import PipelineStep
+    from llm_lab.automation.models import PipelineStepRun
 
     batch = Batch.objects.get(id=batch_id)
     config = batch.config
@@ -97,8 +97,8 @@ def expand_batch(batch_id: Any) -> list[Any]:
 
 def update_batch_status(batch_id: Any) -> str:
     """Recompute Batch.status from its BatchItems. Returns new status string."""
-    from llm_lab.automation.models import Batch  # noqa: PLC0415
-    from llm_lab.automation.models import BatchItem  # noqa: PLC0415
+    from llm_lab.automation.models import Batch
+    from llm_lab.automation.models import BatchItem
 
     batch = Batch.objects.get(id=batch_id)
     items = list(BatchItem.objects.filter(batch=batch))

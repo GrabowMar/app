@@ -19,12 +19,7 @@ class AnalysisTaskFactory(DjangoModelFactory):
     generation_job = None
     source_code = {
         "backend": (
-            "from flask import Flask\n"
-            "app = Flask(__name__)\n"
-            "\n"
-            "@app.route('/')\n"
-            "def index():\n"
-            "    return 'Hello'"
+            "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/')\ndef index():\n    return 'Hello'"
         ),
         "frontend": "",
     }

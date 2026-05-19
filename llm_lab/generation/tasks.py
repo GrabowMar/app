@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, soft_time_limit=600, time_limit=660)
 def run_generation_job(self, job_id: str) -> dict:
     """Execute a single generation job (any mode)."""
-    from llm_lab.generation.models import GenerationJob  # noqa: PLC0415
+    from llm_lab.generation.models import GenerationJob
     from llm_lab.generation.services.generation_service import GenerationService
 
     logger.info("Starting generation job %s", job_id)
@@ -41,7 +41,7 @@ def run_generation_job(self, job_id: str) -> dict:
 @shared_task(bind=True)
 def run_generation_batch(self, batch_id: str) -> dict:
     """Orchestrate a batch of generation jobs via Celery."""
-    from llm_lab.generation.models import GenerationBatch  # noqa: PLC0415
+    from llm_lab.generation.models import GenerationBatch
 
     logger.info("Starting generation batch %s", batch_id)
     try:

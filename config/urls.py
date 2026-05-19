@@ -6,8 +6,9 @@ from django.urls import include
 from django.urls import path
 from django.views import defaults as default_views
 
-from .api import api
 from llm_lab.realtime.api.views import sse_stream
+
+from .api import api
 
 urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}

@@ -36,7 +36,7 @@ class OpenRouterClient:
             msg = "OPENROUTER_API_KEY not configured"
             raise OpenRouterError(msg)
 
-    def chat_completion(  # noqa: PLR0913, C901
+    def chat_completion(
         self,
         *,
         model: str,
@@ -140,8 +140,7 @@ class OpenRouterClient:
                 data = response.json()
                 usage = data.get("usage", {})
                 logger.info(
-                    "OpenRouter response: model=%s prompt_tokens=%s "
-                    "completion_tokens=%s finish_reason=%s",
+                    "OpenRouter response: model=%s prompt_tokens=%s completion_tokens=%s finish_reason=%s",
                     model,
                     usage.get("prompt_tokens"),
                     usage.get("completion_tokens"),
@@ -188,6 +187,4 @@ class OpenRouterClient:
         output_price_per_token: float,
     ) -> float:
         """Calculate estimated cost for a request."""
-        return (prompt_tokens * input_price_per_token) + (
-            completion_tokens * output_price_per_token
-        )
+        return (prompt_tokens * input_price_per_token) + (completion_tokens * output_price_per_token)

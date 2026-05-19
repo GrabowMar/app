@@ -50,12 +50,7 @@ def get_system_overview(user: AbstractBaseUser | None = None) -> dict[str, Any]:
         avg_duration=Avg("duration_seconds", filter=Q(status="completed")),
     )
 
-    unique_models_used = (
-        jobs.exclude(model__isnull=True)
-        .values_list("model_id", flat=True)
-        .distinct()
-        .count()
-    )
+    unique_models_used = jobs.exclude(model__isnull=True).values_list("model_id", flat=True).distinct().count()
 
     return {
         "total_models": LLMModel.objects.count(),
@@ -79,9 +74,7 @@ def get_system_overview(user: AbstractBaseUser | None = None) -> dict[str, Any]:
             task_counts["total"] or 0,
         ),
         "avg_analysis_duration_seconds": (
-            round(task_counts["avg_duration"], 1)
-            if task_counts["avg_duration"]
-            else 0.0
+            round(task_counts["avg_duration"], 1) if task_counts["avg_duration"] else 0.0
         ),
         "total_findings": findings.count(),
     }
@@ -97,9 +90,7 @@ def get_severity_distribution(
     )
 
     raw = dict(
-        findings.values_list("severity")
-        .annotate(c=Count("id"))
-        .values_list("severity", "c"),
+        findings.values_list("severity").annotate(c=Count("id")).values_list("severity", "c"),
     )
     severities = ["critical", "high", "medium", "low", "info"]
     counts = {s: int(raw.get(s, 0)) for s in severities}
@@ -184,9 +175,7 @@ def get_model_comparison(
                 "apps": int(j["apps"]),
                 "apps_completed": int(j["apps_completed"]),
                 "success_rate": success,
-                "avg_duration_seconds": (
-                    round(j["avg_duration"], 1) if j["avg_duration"] else 0.0
-                ),
+                "avg_duration_seconds": (round(j["avg_duration"], 1) if j["avg_duration"] else 0.0),
                 "cost_efficiency": round(j["model__cost_efficiency"] or 0.0, 3),
                 "security": security,
                 "quality": quality,
@@ -261,11 +250,7 @@ def get_top_findings(
         user,
         "result__task__created_by",
     )
-    rows = (
-        findings.values("title", "severity")
-        .annotate(count=Count("id"))
-        .order_by("-count")[:limit]
-    )
+    rows = findings.values("title", "severity").annotate(count=Count("id")).order_by("-count")[:limit]
     return [
         {
             "title": r["title"],
@@ -316,9 +301,7 @@ def get_code_generation_stats(
         "failed": counts["failed"] or 0,
         "running": counts["running"] or 0,
         "success_rate": _percent(counts["completed"] or 0, counts["total"] or 0),
-        "avg_duration_seconds": (
-            round(counts["avg_duration"], 1) if counts["avg_duration"] else 0.0
-        ),
+        "avg_duration_seconds": (round(counts["avg_duration"], 1) if counts["avg_duration"] else 0.0),
         "total_tokens": total_tokens,
         "total_cost_usd": round(total_cost, 4),
         "total_lines_of_code": total_loc,

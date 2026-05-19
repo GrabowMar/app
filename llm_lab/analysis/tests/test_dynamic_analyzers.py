@@ -139,9 +139,7 @@ class TestZAPAnalyzerLive:
         )
 
         assert output.has_error
-        assert (
-            "Blocked hostname" in output.error or "Invalid target URL" in output.error
-        )
+        assert "Blocked hostname" in output.error or "Invalid target URL" in output.error
 
     @patch("shutil.which", return_value="/usr/bin/docker")
     @patch(
@@ -202,7 +200,7 @@ class TestZAPAnalyzerLive:
             stdout=json.dumps(zap_report),
             stderr="",
         )
-        output = analyzer._parse_zap_output(result)  # noqa: SLF001
+        output = analyzer._parse_zap_output(result)
 
         assert not output.has_error
         assert len(output.findings) == EXPECTED_ZAP_ALERT_COUNT

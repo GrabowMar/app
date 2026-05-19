@@ -43,11 +43,9 @@ def dispatch_generate(
     run_params: dict[str, Any],
 ) -> dict[str, Any]:
     """Create and execute a GenerationJob, poll until terminal, return output."""
-    from llm_lab.generation.models import GenerationJob  # noqa: PLC0415
-    from llm_lab.generation.services.generation_service import (  # noqa: PLC0415
-        GenerationService,
-    )
-    from llm_lab.users.models import User  # noqa: PLC0415
+    from llm_lab.generation.models import GenerationJob
+    from llm_lab.generation.services.generation_service import GenerationService
+    from llm_lab.users.models import User
 
     model_id = params.get("model_id") or run_params.get("model_id")
     mode = params.get("mode", "custom")
@@ -104,13 +102,11 @@ def dispatch_analyze(
     run_params: dict[str, Any],
 ) -> dict[str, Any]:
     """Create an AnalysisTask and run it synchronously, return output."""
-    import threading  # noqa: PLC0415
+    import threading
 
-    from llm_lab.analysis.models import AnalysisTask  # noqa: PLC0415
-    from llm_lab.analysis.services.analysis_service import (  # noqa: PLC0415
-        AnalysisService,
-    )
-    from llm_lab.users.models import User  # noqa: PLC0415
+    from llm_lab.analysis.models import AnalysisTask
+    from llm_lab.analysis.services.analysis_service import AnalysisService
+    from llm_lab.users.models import User
 
     triggered_by = step_run.run.triggered_by
     user = triggered_by if triggered_by else User.objects.first()
@@ -183,9 +179,7 @@ def dispatch_report(
 ) -> dict[str, Any]:
     """Create and dispatch a Report generation job, poll until terminal."""
 
-    from llm_lab.reports.services.report_service import (  # noqa: PLC0415
-        create_and_dispatch,
-    )
+    from llm_lab.reports.services.report_service import create_and_dispatch
 
     report_type = params.get("report_type") or run_params.get("report_type", "summary")
     config = params.get("config", {})

@@ -22,7 +22,7 @@ def due_schedules(now: datetime | None = None) -> list:
     Returns:
         List of Schedule model instances.
     """
-    from llm_lab.automation.models import Schedule  # noqa: PLC0415
+    from llm_lab.automation.models import Schedule
 
     if now is None:
         now = datetime.now(UTC)
@@ -40,9 +40,9 @@ def tick(now: datetime | None = None) -> int:
 
     Returns the number of schedules that fired.
     """
-    from croniter import croniter  # noqa: PLC0415
+    from croniter import croniter
 
-    from llm_lab.automation import services as automation_services  # noqa: PLC0415
+    from llm_lab.automation import services as automation_services
 
     if now is None:
         now = datetime.now(UTC)

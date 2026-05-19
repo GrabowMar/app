@@ -70,7 +70,7 @@ class AnalysisService:
                 "Internal error during analysis execution.",
             )
 
-    def _execute_inner(self, task: AnalysisTask) -> None:  # noqa: C901
+    def _execute_inner(self, task: AnalysisTask) -> None:
         with transaction.atomic():
             task = AnalysisTask.objects.select_for_update().get(id=task.id)
             if task.status != AnalysisTask.Status.PENDING:
@@ -102,8 +102,7 @@ class AnalysisService:
             [],
         )
         settings: dict[str, Any] = {
-            k: dict(v) if isinstance(v, dict) else v
-            for k, v in task.configuration.get("settings", {}).items()
+            k: dict(v) if isinstance(v, dict) else v for k, v in task.configuration.get("settings", {}).items()
         }
 
         if not analyzer_names:
@@ -120,9 +119,7 @@ class AnalysisService:
 
         try:
             if live_target_enabled and job_id:
-                from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
-                    prepare_live_target,
-                )
+                from llm_lab.analysis.services.live_target import prepare_live_target
 
                 container_instance, target_url = prepare_live_target(task, job_id)
                 # Inject target_url + live_target flag into every analyzer's settings.
@@ -151,7 +148,7 @@ class AnalysisService:
                     cid = task.configuration.get("container_instance_id")
                     if cid:
                         try:
-                            from llm_lab.runtime.models import ContainerInstance  # noqa: PLC0415, I001
+                            from llm_lab.runtime.models import ContainerInstance
 
                             container_instance = ContainerInstance.objects.get(id=cid)
                         except Exception:  # noqa: BLE001
@@ -160,8 +157,6 @@ class AnalysisService:
                                 cid,
                             )
                 if container_instance is not None:
-                    from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
-                        teardown_live_target,
-                    )
+                    from llm_lab.analysis.services.live_target import teardown_live_target
 
                     teardown_live_target(container_instance)

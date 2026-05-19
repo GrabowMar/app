@@ -43,9 +43,7 @@ class PylintAnalyzer(BaseAnalyzer):
     name: ClassVar[str] = "pylint"
     analyzer_type: ClassVar[str] = "static"
     display_name: ClassVar[str] = "Pylint Code Quality Analyzer"
-    description: ClassVar[str] = (
-        "Checks Python code for errors, style, and quality issues."
-    )
+    description: ClassVar[str] = "Checks Python code for errors, style, and quality issues."
 
     def check_available(self) -> tuple[bool, str]:
         try:

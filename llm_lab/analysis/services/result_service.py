@@ -155,9 +155,7 @@ class ResultService:
                 "status": result.status,
                 "finding_count": finding_count,
                 "severity_counts": dict(severity_counts),
-                "updated_at": result.completed_at.isoformat()
-                if result.completed_at
-                else None,
+                "updated_at": result.completed_at.isoformat() if result.completed_at else None,
             },
         )
 
@@ -194,12 +192,8 @@ class ResultService:
             all_findings.values_list("category", flat=True),
         )
 
-        by_severity: dict[str, int] = {
-            s.value: severity_counts.get(s.value, 0) for s in Finding.Severity
-        }
-        by_category: dict[str, int] = {
-            c.value: category_counts.get(c.value, 0) for c in Finding.Category
-        }
+        by_severity: dict[str, int] = {s.value: severity_counts.get(s.value, 0) for s in Finding.Severity}
+        by_category: dict[str, int] = {c.value: category_counts.get(c.value, 0) for c in Finding.Category}
 
         completed = 0
         failed = 0
@@ -271,8 +265,6 @@ class ResultService:
             {
                 "type": "status",
                 "status": task.status,
-                "updated_at": task.completed_at.isoformat()
-                if task.completed_at
-                else None,
+                "updated_at": task.completed_at.isoformat() if task.completed_at else None,
             },
         )

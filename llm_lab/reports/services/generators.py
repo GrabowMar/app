@@ -40,10 +40,7 @@ def _job_summary(jobs_qs) -> dict[str, Any]:
         total=Count("id"),
         avg_duration=Avg("duration_seconds"),
     )
-    by_status = {
-        row["status"]: row["n"]
-        for row in jobs_qs.values("status").annotate(n=Count("id"))
-    }
+    by_status = {row["status"]: row["n"] for row in jobs_qs.values("status").annotate(n=Count("id"))}
     completed = by_status.get(GenerationJob.Status.COMPLETED, 0)
     total = agg["total"] or 0
     return {
@@ -66,7 +63,7 @@ def _findings_for_jobs(jobs_qs):
 def _tools_for_jobs(jobs_qs) -> list[dict[str, Any]]:
     """Per-tool breakdown derived from AnalysisResult rows."""
 
-    from llm_lab.analysis.models import AnalysisResult  # noqa: PLC0415
+    from llm_lab.analysis.models import AnalysisResult
 
     job_ids = list(jobs_qs.values_list("id", flat=True))
     rows = (

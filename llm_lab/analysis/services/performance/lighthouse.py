@@ -35,9 +35,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
     analyzer_type: ClassVar[str] = "performance"
     display_name: ClassVar[str] = "Lighthouse Performance Auditor"
     description: ClassVar[str] = (
-        "Analyzes web application performance, "
-        "accessibility, best practices, and SEO "
-        "using Google Lighthouse"
+        "Analyzes web application performance, accessibility, best practices, and SEO using Google Lighthouse"
     )
 
     def check_available(self) -> tuple[bool, str]:
@@ -71,9 +69,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
         is_live_task: bool = False,
     ) -> AnalyzerOutput:
         if is_live_task:
-            from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
-                validate_live_target_url,
-            )
+            from llm_lab.analysis.services.live_target import validate_live_target_url
 
             valid, err = validate_live_target_url(target_url)
         else:
@@ -131,9 +127,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     )
                     stderr = result.stderr[:500]
                     return AnalyzerOutput(
-                        error=(
-                            f"Lighthouse exited with code {result.returncode}: {stderr}"
-                        ),
+                        error=(f"Lighthouse exited with code {result.returncode}: {stderr}"),
                     )
 
                 with Path(output_path).open() as f:
@@ -195,16 +189,12 @@ class LighthouseAnalyzer(BaseAnalyzer):
     @staticmethod
     def _is_frontend(file_key: str) -> bool:
         lower = file_key.lower()
-        return any(lower.endswith(ext) for ext in _FRONTEND_EXTS) or any(
-            d in lower for d in _FRONTEND_DIRS
-        )
+        return any(lower.endswith(ext) for ext in _FRONTEND_EXTS) or any(d in lower for d in _FRONTEND_DIRS)
 
     @staticmethod
     def _is_backend(file_key: str) -> bool:
         lower = file_key.lower()
-        return any(lower.endswith(ext) for ext in _BACKEND_EXTS) or any(
-            d in lower for d in _BACKEND_DIRS
-        )
+        return any(lower.endswith(ext) for ext in _BACKEND_EXTS) or any(d in lower for d in _BACKEND_DIRS)
 
     # -- Frontend checks ------------------------------------------------
 
@@ -295,9 +285,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                                 " cacheable."
                             ),
                             suggestion=(
-                                f"Extract this {label} into an"
-                                " external file for better"
-                                " caching and parallel loading."
+                                f"Extract this {label} into an external file for better caching and parallel loading."
                             ),
                             file_path=file_key,
                             line_number=line_no,
@@ -331,11 +319,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                             severity="low",
                             category="performance",
                             title=("Image missing lazy loading attribute"),
-                            description=(
-                                "<img> tag without"
-                                ' loading="lazy" delays'
-                                " offscreen image loading."
-                            ),
+                            description=('<img> tag without loading="lazy" delays offscreen image loading.'),
                             suggestion=('Add loading="lazy" to offscreen images.'),
                             file_path=file_key,
                             line_number=idx,
@@ -384,11 +368,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         " patterns. This can lead to"
                         " large initial bundles."
                     ),
-                    suggestion=(
-                        "Use dynamic import() or"
-                        " framework-specific lazy"
-                        " loading to split code."
-                    ),
+                    suggestion=("Use dynamic import() or framework-specific lazy loading to split code."),
                     file_path=file_key,
                     rule_id="lighthouse/no-code-splitting",
                     confidence="medium",
@@ -418,16 +398,8 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         severity="low",
                         category="performance",
                         title=("Potentially unoptimized image format"),
-                        description=(
-                            f"Image '{src}' uses a"
-                            " traditional format. Modern"
-                            " formats reduce payload."
-                        ),
-                        suggestion=(
-                            "Use WebP or AVIF formats"
-                            " with <picture> fallback"
-                            " for smaller file sizes."
-                        ),
+                        description=(f"Image '{src}' uses a traditional format. Modern formats reduce payload."),
+                        suggestion=("Use WebP or AVIF formats with <picture> fallback for smaller file sizes."),
                         file_path=file_key,
                         line_number=idx,
                         code_snippet=line.strip()[:120],
@@ -456,16 +428,8 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     severity="high",
                     category="seo",
                     title="Missing viewport meta tag",
-                    description=(
-                        "No viewport meta tag found."
-                        " Mobile rendering will not"
-                        " be optimized."
-                    ),
-                    suggestion=(
-                        'Add <meta name="viewport"'
-                        ' content="width=device-width,'
-                        ' initial-scale=1">.'
-                    ),
+                    description=("No viewport meta tag found. Mobile rendering will not be optimized."),
+                    suggestion=('Add <meta name="viewport" content="width=device-width, initial-scale=1">.'),
                     file_path=file_key,
                     rule_id="lighthouse/missing-viewport",
                     confidence="high",
@@ -483,16 +447,8 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     severity="medium",
                     category="seo",
                     title="Missing meta description",
-                    description=(
-                        "No meta description found."
-                        " Search engines use this"
-                        " for result snippets."
-                    ),
-                    suggestion=(
-                        'Add <meta name="description"'
-                        ' content="..."> with a concise'
-                        " page summary."
-                    ),
+                    description=("No meta description found. Search engines use this for result snippets."),
+                    suggestion=('Add <meta name="description" content="..."> with a concise page summary.'),
                     file_path=file_key,
                     rule_id=("lighthouse/missing-meta-description"),
                     confidence="high",
@@ -509,11 +465,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     severity="medium",
                     category="seo",
                     title="Missing or empty <title> tag",
-                    description=(
-                        "Page has no <title> element."
-                        " Search engines rely on this"
-                        " for indexing."
-                    ),
+                    description=("Page has no <title> element. Search engines rely on this for indexing."),
                     suggestion=("Add a descriptive <title> element inside <head>."),
                     file_path=file_key,
                     rule_id="lighthouse/missing-title",
@@ -544,16 +496,8 @@ class LighthouseAnalyzer(BaseAnalyzer):
                             severity="high",
                             category="accessibility",
                             title=("Image missing alt attribute"),
-                            description=(
-                                "<img> tag without alt text"
-                                " is inaccessible to"
-                                " screen readers."
-                            ),
-                            suggestion=(
-                                "Add a descriptive alt"
-                                ' attribute, or alt="" for'
-                                " decorative images."
-                            ),
+                            description=("<img> tag without alt text is inaccessible to screen readers."),
+                            suggestion=('Add a descriptive alt attribute, or alt="" for decorative images.'),
                             file_path=file_key,
                             line_number=idx,
                             code_snippet=tag[:120],
@@ -596,19 +540,10 @@ class LighthouseAnalyzer(BaseAnalyzer):
                             FindingData(
                                 severity="medium",
                                 category="accessibility",
-                                title=(
-                                    f"Form element <{element}>"
-                                    " may lack accessible label"
-                                ),
-                                description=(
-                                    f"<{element}> without"
-                                    " aria-label or associated"
-                                    " <label> element."
-                                ),
+                                title=(f"Form element <{element}> may lack accessible label"),
+                                description=(f"<{element}> without aria-label or associated <label> element."),
                                 suggestion=(
-                                    "Add aria-label or ensure"
-                                    " a <label> with matching"
-                                    " 'for' attribute exists."
+                                    "Add aria-label or ensure a <label> with matching 'for' attribute exists."
                                 ),
                                 file_path=file_key,
                                 line_number=idx,
@@ -617,25 +552,14 @@ class LighthouseAnalyzer(BaseAnalyzer):
                                 confidence="medium",
                             ),
                         )
-                elif (
-                    element in ("button", "a")
-                    and not has_aria
-                    and not has_text
-                    and not has_title
-                ):
+                elif element in ("button", "a") and not has_aria and not has_text and not has_title:
                     findings.append(
                         FindingData(
                             severity="medium",
                             category="accessibility",
                             title=(f"<{element}> may lack accessible name"),
-                            description=(
-                                f"<{element}> without visible"
-                                " text, aria-label, or"
-                                " title attribute."
-                            ),
-                            suggestion=(
-                                "Add text content, aria-label, or title to the element."
-                            ),
+                            description=(f"<{element}> without visible text, aria-label, or title attribute."),
+                            suggestion=("Add text content, aria-label, or title to the element."),
                             file_path=file_key,
                             line_number=idx,
                             code_snippet=tag[:120],
@@ -663,14 +587,8 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         severity="low",
                         category="best_practice",
                         title=("Console statement left in code"),
-                        description=(
-                            "console.log/debug statements"
-                            " should be removed from"
-                            " production code."
-                        ),
-                        suggestion=(
-                            "Remove or replace with a proper logging framework."
-                        ),
+                        description=("console.log/debug statements should be removed from production code."),
+                        suggestion=("Remove or replace with a proper logging framework."),
                         file_path=file_key,
                         line_number=idx,
                         code_snippet=line.strip()[:120],
@@ -709,14 +627,9 @@ class LighthouseAnalyzer(BaseAnalyzer):
                             category="performance",
                             title=("Synchronous script loading blocks rendering"),
                             description=(
-                                "External <script> without"
-                                " async, defer, or"
-                                ' type="module" blocks'
-                                " HTML parsing."
+                                'External <script> without async, defer, or type="module" blocks HTML parsing.'
                             ),
-                            suggestion=(
-                                'Add async or defer attribute, or use type="module".'
-                            ),
+                            suggestion=('Add async or defer attribute, or use type="module".'),
                             file_path=file_key,
                             line_number=idx,
                             code_snippet=tag[:120],
@@ -749,22 +662,9 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         FindingData(
                             severity="medium",
                             category="performance",
-                            title=(
-                                "Element without explicit"
-                                " dimensions may cause"
-                                " layout shift"
-                            ),
-                            description=(
-                                "Media elements without"
-                                " width/height cause"
-                                " Cumulative Layout"
-                                " Shift (CLS)."
-                            ),
-                            suggestion=(
-                                "Set explicit width and"
-                                " height attributes to"
-                                " reserve space."
-                            ),
+                            title=("Element without explicit dimensions may cause layout shift"),
+                            description=("Media elements without width/height cause Cumulative Layout Shift (CLS)."),
+                            suggestion=("Set explicit width and height attributes to reserve space."),
                             file_path=file_key,
                             line_number=idx,
                             code_snippet=tag[:120],
@@ -793,16 +693,9 @@ class LighthouseAnalyzer(BaseAnalyzer):
                             category="performance",
                             title=("@font-face without font-display property"),
                             description=(
-                                "Custom font without"
-                                " font-display can cause"
-                                " invisible text during"
-                                " loading (FOIT)."
+                                "Custom font without font-display can cause invisible text during loading (FOIT)."
                             ),
-                            suggestion=(
-                                "Add font-display: swap"
-                                " (or optional) to your"
-                                " @font-face rule."
-                            ),
+                            suggestion=("Add font-display: swap (or optional) to your @font-face rule."),
                             file_path=file_key,
                             line_number=idx,
                             code_snippet=line.strip()[:120],
@@ -968,16 +861,9 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         category="performance",
                         title=("Unbounded query without pagination"),
                         description=(
-                            "Query returns all records"
-                            " with no pagination. Large"
-                            " tables will cause slow"
-                            " responses."
+                            "Query returns all records with no pagination. Large tables will cause slow responses."
                         ),
-                        suggestion=(
-                            "Add pagination (e.g., Django"
-                            " Paginator, LIMIT/OFFSET)"
-                            " to bound result sets."
-                        ),
+                        suggestion=("Add pagination (e.g., Django Paginator, LIMIT/OFFSET) to bound result sets."),
                         file_path=file_key,
                         line_number=idx,
                         code_snippet=line.strip()[:120],
@@ -1021,11 +907,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     severity="low",
                     category="performance",
                     title=("No caching indicators in view module"),
-                    description=(
-                        "View/endpoint module has no"
-                        " cache headers, decorators,"
-                        " or cache backend usage."
-                    ),
+                    description=("View/endpoint module has no cache headers, decorators, or cache backend usage."),
                     suggestion=(
                         "Consider adding cache_page,"
                         " cache_control, ETags, or"
@@ -1074,9 +956,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                             " pagination can create very"
                             " large responses."
                         ),
-                        suggestion=(
-                            "Select only needed fields and paginate the queryset."
-                        ),
+                        suggestion=("Select only needed fields and paginate the queryset."),
                         file_path=file_key,
                         line_number=idx,
                         code_snippet=line.strip()[:120],
@@ -1091,17 +971,9 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     FindingData(
                         severity="low",
                         category="performance",
-                        title=(
-                            "JSON serialization of potentially large data structure"
-                        ),
-                        description=(
-                            "Direct JSON serialization"
-                            " without size limits may"
-                            " produce oversized responses."
-                        ),
-                        suggestion=(
-                            "Consider streaming responses or limiting the data size."
-                        ),
+                        title=("JSON serialization of potentially large data structure"),
+                        description=("Direct JSON serialization without size limits may produce oversized responses."),
+                        suggestion=("Consider streaming responses or limiting the data size."),
                         file_path=file_key,
                         line_number=idx,
                         code_snippet=line.strip()[:120],
@@ -1116,11 +988,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     severity="low",
                     category="performance",
                     title=('Serializer uses fields="__all__"'),
-                    description=(
-                        "Exposing all model fields may"
-                        " include unnecessary data"
-                        " in responses."
-                    ),
+                    description=("Exposing all model fields may include unnecessary data in responses."),
                     suggestion=("Explicitly list only the required fields."),
                     file_path=file_key,
                     rule_id="lighthouse/fields-all",
@@ -1161,14 +1029,8 @@ class LighthouseAnalyzer(BaseAnalyzer):
                     severity="medium",
                     category="performance",
                     title=("No compression middleware detected"),
-                    description=(
-                        "Settings file has no GZip or"
-                        " Brotli middleware. Responses"
-                        " will be uncompressed."
-                    ),
-                    suggestion=(
-                        "Add GZipMiddleware or WhiteNoise compression to MIDDLEWARE."
-                    ),
+                    description=("Settings file has no GZip or Brotli middleware. Responses will be uncompressed."),
+                    suggestion=("Add GZipMiddleware or WhiteNoise compression to MIDDLEWARE."),
                     file_path=file_key,
                     rule_id=("lighthouse/missing-compression"),
                     confidence="medium",
@@ -1205,16 +1067,9 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         category="performance",
                         title=("Synchronous blocking call in request path"),
                         description=(
-                            "Blocking I/O (sleep,"
-                            " subprocess, HTTP request)"
-                            " can degrade response"
-                            " time under load."
+                            "Blocking I/O (sleep, subprocess, HTTP request) can degrade response time under load."
                         ),
-                        suggestion=(
-                            "Use async alternatives,"
-                            " background tasks (Celery),"
-                            " or connection pooling."
-                        ),
+                        suggestion=("Use async alternatives, background tasks (Celery), or connection pooling."),
                         file_path=file_key,
                         line_number=idx,
                         code_snippet=line.strip()[:120],
@@ -1256,7 +1111,4 @@ class LighthouseAnalyzer(BaseAnalyzer):
                 )
                 category_deductions[score_key] += deduction
 
-        return {
-            cat: round(max(1.0 - ded, 0.0), 2)
-            for cat, ded in category_deductions.items()
-        }
+        return {cat: round(max(1.0 - ded, 0.0), 2) for cat, ded in category_deductions.items()}

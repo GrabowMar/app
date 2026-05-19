@@ -277,3 +277,18 @@ llm_lab/media/
 .env
 .envs/*
 !.envs/.local/
+
+# Vite dev-server cache (top-level + frontend)
+.vite/
+frontend/.vite/
+
+# Playwright / test runner artifacts
+test-results/
+frontend/test-results/
+playwright-report/
+frontend/playwright-report/
+
+# Ad-hoc dev screenshots & probes (keep intentional assets under docs/, frontend/static/)
+/login_probe.png
+/ss_*.png
+*.local.png

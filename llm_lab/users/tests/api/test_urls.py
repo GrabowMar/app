@@ -5,9 +5,7 @@ from llm_lab.users.models import User
 
 
 def test_user_detail(user: User):
-    assert (
-        reverse("api:retrieve_user", kwargs={"pk": user.pk}) == f"/api/users/{user.pk}/"
-    )
+    assert reverse("api:retrieve_user", kwargs={"pk": user.pk}) == f"/api/users/{user.pk}/"
     assert resolve(f"/api/users/{user.pk}/").view_name == "api:retrieve_user"
 
 
