@@ -120,7 +120,7 @@ onMount(fetchData);
 
 <!-- Header -->
 <div class="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-4">
-<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/20">
+<div class="flex h-10 w-10 items-center justify-center rounded-md bg-red-500/20">
 <Skull class="h-5 w-5 text-red-400" />
 </div>
 <div class="flex-1">
@@ -290,7 +290,7 @@ Request Artifacts
 <!-- Status Card -->
 <Card.Root>
 <Card.Content class="py-8 text-center">
-<div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/20">
+<div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-md bg-red-500/20">
 <Skull class="h-8 w-8 text-red-400" />
 </div>
 <h3 class="text-lg font-semibold text-red-400">Failed</h3>

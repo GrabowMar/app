@@ -287,14 +287,16 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<div class="flex items-center justify-between">
-		<div>
+		<div class="page-header w-full">
 			<div class="flex items-center gap-3">
 				<a href="/sample-generator" class="text-muted-foreground hover:text-foreground transition-colors">
-					<ArrowLeft class="h-5 w-5" />
+					<ArrowLeft class="h-4 w-4" />
 				</a>
-				<h1 class="text-2xl font-bold tracking-tight">Template Management</h1>
+				<div>
+					<h1>Template Management</h1>
+					<p>Create, edit, and manage generation templates.</p>
+				</div>
 			</div>
-			<p class="mt-1 text-sm text-muted-foreground ml-8">Create, edit, and manage generation templates.</p>
 		</div>
 	</div>
 

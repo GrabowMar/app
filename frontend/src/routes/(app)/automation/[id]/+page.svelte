@@ -7,6 +7,7 @@ import { Badge } from '$lib/components/ui/badge';
 import { Button } from '$lib/components/ui/button';
 import { Label } from '$lib/components/ui/label';
 import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+import Eye from '@lucide/svelte/icons/eye';
 import Edit from '@lucide/svelte/icons/pencil';
 import Copy from '@lucide/svelte/icons/copy';
 import Play from '@lucide/svelte/icons/play';
@@ -124,19 +125,27 @@ onMount(load);
 
 <svelte:head><title>{pipeline?.name ?? 'Pipeline'} — LLM Eval Lab</title></svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-3">
-<Button variant="ghost" size="icon" onclick={() => goto('/automation')}>
-<ArrowLeft class="h-4 w-4" />
-</Button>
-<h1 class="text-2xl font-bold tracking-tight">{pipeline?.name ?? 'Loading...'}</h1>
+<div class="space-y-6">
+<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted-foreground">
+<a href="/automation" class="hover:text-foreground transition-colors flex items-center gap-1">
+<ArrowLeft class="h-3.5 w-3.5" />
+<span class="font-medium text-foreground">Automation</span>
+</a>
+<span>/</span>
+<span class="truncate max-w-[300px]">{pipeline?.name ?? 'Loading...'}</span>
+</nav>
+<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+<div class="page-header">
+<h1>
+{pipeline?.name ?? 'Loading...'}
 {#if pipeline}
 <Badge class={statusColors[pipeline.status] ?? ''} variant="outline">{pipeline.status}</Badge>
 {/if}
+</h1>
+<p class="font-mono text-xs">{id}</p>
 </div>
 {#if pipeline}
-<div class="flex gap-2 flex-wrap">
+<div class="flex items-center gap-2 flex-wrap">
 <Button variant="outline" size="sm" onclick={load}>
 <RefreshCw class="mr-2 h-4 w-4" />Refresh
 </Button>
@@ -181,9 +190,11 @@ class="w-full rounded-md border bg-background p-3 font-mono text-sm resize-y foc
 {/if}
 
 {#if loading}
-<div class="flex justify-center py-12">
+<Card.Root>
+<Card.Content class="flex items-center justify-center py-20">
 <LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
-</div>
+</Card.Content>
+</Card.Root>
 {:else if error}
 <p class="text-destructive">{error}</p>
 {:else if pipeline}
@@ -244,32 +255,67 @@ class="w-full rounded-md border bg-background p-3 font-mono text-sm resize-y foc
 <Card.Header>
 <Card.Title>Run History ({runsTotal})</Card.Title>
 </Card.Header>
-<Card.Content>
+<Card.Content class={runs.length === 0 ? '' : 'p-0'}>
 {#if runs.length === 0}
 <p class="text-sm text-muted-foreground">No runs yet. Click <strong>Run</strong> to trigger the pipeline.</p>
 {:else}
-<table class="w-full text-sm">
-<thead class="border-b">
-<tr class="text-left text-muted-foreground">
-<th class="pb-2">Run ID</th>
-<th class="pb-2">Status</th>
-<th class="pb-2">Started</th>
-<th class="pb-2">Duration</th>
+<!-- Table (desktop) -->
+<div class="hidden md:block">
+<div class="overflow-x-auto">
+<table class="w-full">
+<thead>
+<tr class="border-b bg-muted/40 sticky top-0 z-10">
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Run ID</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Started</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Duration</th>
+<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Actions</th>
 </tr>
 </thead>
-<tbody class="divide-y">
-{#each runs as r}
-<tr class="hover:bg-muted/40 cursor-pointer" onclick={() => goto(`/automation/runs/${r.id}`)}>
-<td class="py-2 font-mono text-xs">{r.id.slice(0, 8)}…</td>
-<td class="py-2"><Badge class={statusColors[r.status] ?? ''} variant="outline">{r.status}</Badge></td>
-<td class="py-2">{fmt(r.started_at)}</td>
-<td class="py-2 text-muted-foreground">{duration(r.started_at, r.completed_at) ?? '—'}</td>
+<tbody>
+{#each runs as r, i (r.id)}
+<tr class="border-b transition-colors hover:bg-muted/50 group {i % 2 === 0 ? '' : 'bg-muted/15'} {r.status === 'failed' ? 'bg-destructive/[0.03]' : ''}">
+<td class="px-3 py-2 align-top font-mono text-xs">{r.id.slice(0, 8)}…</td>
+<td class="px-3 py-2 align-top"><Badge variant="outline" class="text-[10px] {statusColors[r.status] ?? ''}">{r.status}</Badge></td>
+<td class="px-3 py-2 align-top text-sm">{fmt(r.started_at)}</td>
+<td class="px-3 py-2 align-top text-sm text-muted-foreground">{duration(r.started_at, r.completed_at) ?? '—'}</td>
+<td class="px-3 py-2">
+<div class="flex items-center justify-end gap-1">
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="View" onclick={() => goto(`/automation/runs/${r.id}`)}>
+<Eye class="h-3.5 w-3.5" />
+</Button>
+</div>
+</td>
 </tr>
 {/each}
 </tbody>
 </table>
+</div>
+</div>
+
+<!-- Cards (mobile) -->
+<div class="md:hidden space-y-3 p-3">
+{#each runs as r (r.id)}
+<div class="border rounded-lg p-3 bg-card">
+<div class="flex items-start justify-between gap-2 mb-2">
+<button class="font-mono text-xs hover:underline" onclick={() => goto(`/automation/runs/${r.id}`)}>{r.id.slice(0, 8)}…</button>
+<Badge variant="outline" class="shrink-0 text-[10px] {statusColors[r.status] ?? ''}">{r.status}</Badge>
+</div>
+<div class="text-xs text-muted-foreground space-y-0.5">
+<div>Started: {fmt(r.started_at)}</div>
+<div>Duration: {duration(r.started_at, r.completed_at) ?? '—'}</div>
+</div>
+<div class="flex items-center justify-end gap-1 border-t pt-2 mt-2">
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="View" onclick={() => goto(`/automation/runs/${r.id}`)}>
+<Eye class="h-3.5 w-3.5" />
+</Button>
+</div>
+</div>
+{/each}
+</div>
+
 {#if runsPages > 1}
-<div class="flex justify-center gap-2 pt-4">
+<div class="flex justify-center gap-2 p-4 border-t">
 <Button variant="outline" size="sm" disabled={runsPage <= 1} onclick={async () => { runsPage--; const r = await listPipelineRuns(id, runsPage); runs = r.items; runsTotal = r.total; runsPages = r.pages; }}>
 <ChevronLeft class="h-4 w-4" />
 </Button>

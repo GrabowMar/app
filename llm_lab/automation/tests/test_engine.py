@@ -38,7 +38,9 @@ from llm_lab.users.tests.factories import UserFactory
 
 
 def _wait_for_run(
-    run_id, timeout=10, expected_statuses=("succeeded", "failed", "cancelled"),
+    run_id,
+    timeout=10,
+    expected_statuses=("succeeded", "failed", "cancelled"),
 ):
     """Poll until run reaches a terminal status."""
     deadline = time.monotonic() + timeout
@@ -478,7 +480,10 @@ class TestBatchExpansion:
         user = UserFactory()
         pipeline = PipelineFactory(owner=user)
         PipelineStepFactory(
-            pipeline=pipeline, name="w", kind="wait", config={"seconds": 0},
+            pipeline=pipeline,
+            name="w",
+            kind="wait",
+            config={"seconds": 0},
         )
 
         batch = BatchFactory(
@@ -501,7 +506,10 @@ class TestBatchExpansion:
         user = UserFactory()
         pipeline = PipelineFactory(owner=user)
         PipelineStepFactory(
-            pipeline=pipeline, name="w", kind="wait", config={"seconds": 0},
+            pipeline=pipeline,
+            name="w",
+            kind="wait",
+            config={"seconds": 0},
         )
 
         batch = BatchFactory(

@@ -86,15 +86,13 @@
 	<title>Reports — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight">Reports</h1>
-			<p class="text-sm text-muted-foreground">
-				Generated insights across models, templates and analysis tools
-			</p>
+<div class="space-y-6">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<div class="page-header min-w-0">
+			<h1>Reports</h1>
+			<p>Generated insights across models, templates and analysis tools</p>
 		</div>
-		<div class="flex gap-2">
+		<div class="flex flex-wrap gap-2">
 			<Button variant="outline" size="sm" onclick={load}>
 				<RefreshCw class="mr-2 h-4 w-4" />Refresh
 			</Button>
@@ -138,15 +136,19 @@
 	</Card.Root>
 
 	{#if loading}
-		<div class="flex items-center justify-center py-16 text-muted-foreground">
-			<LoaderCircle class="mr-2 h-5 w-5 animate-spin" />Loading reports…
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
-		<Card.Root><Card.Content class="p-6 text-red-400 text-sm">{error}</Card.Content></Card.Root>
+		<Card.Root><Card.Content class="p-6 text-destructive text-sm" style="font-family: var(--font-mono);"><span class="font-semibold">error:</span> {error}</Card.Content></Card.Root>
 	{:else if reports.length === 0}
 		<Card.Root>
-			<Card.Content class="p-10 text-center text-sm text-muted-foreground">
-				<p class="mb-3">No reports yet.</p>
+			<Card.Content class="py-16 text-center">
+				<GitCompareArrows class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+				<h3 class="text-lg font-medium mb-1">No reports yet</h3>
+				<p class="text-sm text-muted-foreground mb-4">Generate your first report to get insights across models, templates and tools.</p>
 				<Button size="sm" onclick={() => goto('/reports/create')}>
 					<Plus class="mr-2 h-4 w-4" />Generate your first report
 				</Button>

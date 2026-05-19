@@ -16,6 +16,7 @@ class ContainerInstanceSchema(ModelSchema):
     id: UUID
     generation_job_id: UUID | None = None
     created_by_id: int | None = None
+    last_error: str = ""
 
     class Meta:
         model = ContainerInstance
@@ -33,6 +34,16 @@ class ContainerInstanceSchema(ModelSchema):
             "created_at",
             "updated_at",
         )
+
+    @staticmethod
+    def resolve_last_error(obj: ContainerInstance) -> str:
+        last_failed = (
+            obj.actions.filter(status=ContainerAction.Status.FAILED)
+            .order_by("-created_at")
+            .values_list("error_message", flat=True)
+            .first()
+        )
+        return last_failed or ""
 
 
 class ContainerActionSchema(ModelSchema):
@@ -79,6 +90,30 @@ class ContainerHealthResponse(Schema):
     last_check: datetime | None
 
 
+class ContainerInspectResponse(Schema):
+    image: str = ""
+    command: list[str] = []
+    state: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+    env: dict[str, str] = {}
+    mounts: list[dict] = []
+    ports: dict = {}
+    error: str = ""
+
+
+class ContainerExecRequest(Schema):
+    action: str  # whitelisted key
+
+
+class ContainerExecResponse(Schema):
+    action: str
+    cmd: list[str]
+    exit_code: int
+    output: str
+    error: str = ""
+
+
 class GenericResponse(Schema):
     success: bool
     message: str = ""
@@ -87,7 +122,10 @@ class GenericResponse(Schema):
 __all__ = [
     "ActionListResponse",
     "ContainerActionSchema",
+    "ContainerExecRequest",
+    "ContainerExecResponse",
     "ContainerHealthResponse",
+    "ContainerInspectResponse",
     "ContainerInstanceSchema",
     "ContainerListResponse",
     "DockerInfo",

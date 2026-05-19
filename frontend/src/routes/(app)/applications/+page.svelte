@@ -206,11 +206,11 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div class="page-header">
+		<div class="page-header min-w-0">
 			<h1>Applications</h1>
 			<p>Generated web applications from LLM models.</p>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<Button variant="outline" size="sm" onclick={refresh} disabled={refreshing}>
 				<RefreshCw class="mr-2 h-3.5 w-3.5 {refreshing ? 'animate-spin' : ''}" />
 				Refresh
@@ -300,8 +300,7 @@
 	{#if loading}
 		<Card.Root>
 			<Card.Content class="flex items-center justify-center py-20">
-				<LoaderCircle class="h-6 w-6 animate-spin text-muted-foreground" />
-				<span class="ml-2 text-sm text-muted-foreground">Loading applications...</span>
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
 			</Card.Content>
 		</Card.Root>
 	{:else if filteredItems.length === 0}
@@ -329,21 +328,23 @@
 					<div class="overflow-x-auto">
 						<table class="w-full">
 							<thead>
-								<tr class="border-b bg-muted/30">
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Mode</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Model</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Template</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Duration</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+								<tr class="border-b bg-muted/40 sticky top-0 z-10">
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Mode</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Model</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Template</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Duration</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Created</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Actions</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y">
-								{#each filteredItems as job (job.id)}
-									<tr class="transition-colors hover:bg-muted/30">
+							<tbody>
+								{#each filteredItems as job, i (job.id)}
+									<tr class="border-b transition-colors hover:bg-muted/50 group
+										{i % 2 === 0 ? '' : 'bg-muted/15'}
+										{job.status === 'failed' ? 'bg-destructive/[0.03]' : ''}">
 										<!-- Mode -->
-										<td class="px-4 py-3">
+										<td class="px-3 py-2 align-top">
 											<Badge variant="outline" class="gap-1 text-[10px] {modeColors[job.mode] ?? ''}">
 												{#if job.mode === 'custom'}
 													<Pencil class="h-3 w-3" />
@@ -357,25 +358,32 @@
 										</td>
 
 										<!-- Model -->
-										<td class="px-4 py-3">
-											<div class="flex flex-col gap-0.5">
-												<span class="text-sm font-medium">{job.model_name ?? '—'}</span>
-												<span class="text-xs text-muted-foreground font-mono">{job.model_id_str ?? ''}</span>
+										<td class="px-3 py-2">
+											<div class="flex items-center gap-2.5">
+												<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted group-hover:bg-primary/10 transition-colors">
+													<Bot class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+												</div>
+												<div class="min-w-0">
+													<span class="text-sm font-medium block truncate max-w-[220px]">{job.model_name ?? '—'}</span>
+													{#if job.model_id_str}
+														<span class="text-[11px] text-muted-foreground font-mono block truncate max-w-[220px]">{job.model_id_str}</span>
+													{/if}
+												</div>
 											</div>
 										</td>
 
 										<!-- Template -->
-										<td class="px-4 py-3">
-											<div class="flex flex-col gap-0.5">
-												<span class="text-sm">{getDescription(job)}</span>
+										<td class="px-3 py-2">
+											<div class="flex flex-col gap-0.5 min-w-0 max-w-[260px]">
+												<span class="text-sm truncate">{getDescription(job)}</span>
 												{#if job.scaffolding_name && job.template_name}
-													<span class="text-xs text-muted-foreground">{job.scaffolding_name}</span>
+													<span class="text-[11px] text-muted-foreground truncate">{job.scaffolding_name}</span>
 												{/if}
 											</div>
 										</td>
 
 										<!-- Status -->
-										<td class="px-4 py-3">
+										<td class="px-3 py-2 align-top">
 											<Badge variant="outline" class="text-[10px] {statusColors[job.status] ?? ''}">
 												{#if job.status === 'running'}
 													<span class="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
@@ -391,28 +399,28 @@
 											</Badge>
 											{#if job.error_message}
 												<div class="mt-1 flex items-center gap-1">
-													<AlertTriangle class="h-3 w-3 text-red-400 shrink-0" />
-													<span class="text-xs text-red-400 truncate max-w-[200px]">{job.error_message}</span>
+													<AlertTriangle class="h-3 w-3 text-destructive shrink-0" />
+													<span class="text-[11px] text-destructive truncate max-w-[200px]" title={job.error_message}>{job.error_message}</span>
 												</div>
 											{/if}
 										</td>
 
 										<!-- Duration -->
-										<td class="px-4 py-3 text-sm font-mono text-muted-foreground">
-											{formatDuration(job.duration_seconds)}
+										<td class="px-3 py-2 text-right">
+											<span class="text-sm font-mono tabular-nums text-muted-foreground">{formatDuration(job.duration_seconds)}</span>
 										</td>
 
 										<!-- Created -->
-										<td class="px-4 py-3">
+										<td class="px-3 py-2">
 											<div class="flex flex-col gap-0.5">
-												<span class="text-sm text-muted-foreground">{timeAgo(job.created_at)}</span>
-												<span class="text-xs text-muted-foreground/70">{new Date(job.created_at).toLocaleString()}</span>
+												<span class="text-sm text-foreground">{timeAgo(job.created_at)}</span>
+												<span class="text-[11px] text-muted-foreground/70 font-mono tabular-nums">{new Date(job.created_at).toLocaleString()}</span>
 											</div>
 										</td>
 
 										<!-- Actions -->
-										<td class="px-4 py-3">
-											<div class="flex items-center gap-1">
+										<td class="px-3 py-2">
+											<div class="flex items-center justify-end gap-1">
 												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}" title="View details">
 													<Eye class="h-3.5 w-3.5" />
 												</Button>
@@ -423,7 +431,7 @@
 												{/if}
 												{#if job.status === 'failed'}
 													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/applications/{job.id}/failure" title="Failure details">
-														<AlertTriangle class="h-3.5 w-3.5 text-red-400" />
+														<AlertTriangle class="h-3.5 w-3.5 text-destructive" />
 													</Button>
 												{/if}
 												{#if job.status === 'pending' || job.status === 'running'}
@@ -436,7 +444,7 @@
 												</Button>
 												{#if job.status !== 'running'}
 													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Delete" onclick={() => handleDelete(job.id)}>
-														<Trash2 class="h-3.5 w-3.5 text-red-400" />
+														<Trash2 class="h-3.5 w-3.5 text-destructive" />
 													</Button>
 												{/if}
 											</div>

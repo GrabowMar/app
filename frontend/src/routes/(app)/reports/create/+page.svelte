@@ -111,7 +111,7 @@
 	<title>New report — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 max-w-3xl space-y-6">
+<div class="max-w-3xl space-y-6">
 	<div class="flex items-center gap-3">
 		<Button variant="ghost" size="sm" onclick={() => (step === 1 ? goto('/reports') : (step = 1))}>
 			<ArrowLeft class="mr-1 h-4 w-4" />Back
@@ -144,17 +144,19 @@
 				<Card.Description>Configure the report and generate.</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-4">
-				<div>
+				<div class="space-y-2">
 					<label for="rep-title" class="text-sm font-medium">Title (optional)</label>
 					<Input id="rep-title" bind:value={title} placeholder="Auto-generated if blank" />
+					<p class="text-xs text-muted-foreground">Auto-generated if blank</p>
 				</div>
-				<div>
+				<div class="space-y-2">
 					<label for="rep-desc" class="text-sm font-medium">Description (optional)</label>
 					<Input id="rep-desc" bind:value={description} />
+					<p class="text-xs text-muted-foreground">Optional description</p>
 				</div>
 
 				{#if selectedType === 'model_analysis'}
-					<div>
+					<div class="space-y-2">
 						<label for="rep-model" class="text-sm font-medium">Model</label>
 						<select
 							id="rep-model"
@@ -168,7 +170,7 @@
 						</select>
 					</div>
 				{:else if selectedType === 'template_comparison'}
-					<div>
+					<div class="space-y-2">
 						<label for="rep-tmpl" class="text-sm font-medium">Template</label>
 						<select
 							id="rep-tmpl"
@@ -182,12 +184,13 @@
 						</select>
 					</div>
 				{:else if selectedType === 'tool_analysis'}
-					<div>
+					<div class="space-y-2">
 						<label for="rep-tool" class="text-sm font-medium">Tool name (optional)</label>
 						<Input id="rep-tool" bind:value={toolName} placeholder="bandit, eslint, zap, … (blank = all)" />
+						<p class="text-xs text-muted-foreground">Leave blank to aggregate all tools</p>
 					</div>
 				{:else if selectedType === 'generation_analytics' || selectedType === 'comprehensive'}
-					<div>
+					<div class="space-y-2">
 						<label for="rep-days" class="text-sm font-medium">Window (days)</label>
 						<input
 							id="rep-days"
@@ -197,6 +200,7 @@
 							bind:value={days}
 							class="block w-full rounded-md border bg-background px-3 py-2 text-sm"
 						/>
+						<p class="text-xs text-muted-foreground">1-365 days</p>
 					</div>
 				{/if}
 

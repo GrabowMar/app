@@ -1,8 +1,8 @@
 """Celery tasks for generation jobs.
 
 These tasks are available when a Celery worker is running but are NOT required.
-The API views dispatch jobs via background threads (see _dispatch_job in views.py)
-so generation works without Celery.
+The API views dispatch jobs via background threads (see ``dispatch_job`` in
+``llm_lab.generation.services.dispatcher``) so generation works without Celery.
 """
 
 import logging

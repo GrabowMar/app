@@ -11,6 +11,7 @@
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import Activity from '@lucide/svelte/icons/activity';
 	import Code from '@lucide/svelte/icons/code';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import {
 		getStatisticsDashboard,
 		type StatisticsDashboard,
@@ -124,20 +125,20 @@
 </svelte:head>
 
 <div class="space-y-4 sm:space-y-6">
-	<div>
-		<h1 class="text-2xl font-bold tracking-tight">Statistics</h1>
-		<p class="mt-1 text-sm text-muted-foreground">
-			Platform-wide analytics and performance metrics.
-		</p>
+	<div class="page-header">
+		<h1>Statistics</h1>
+		<p>Platform-wide analytics and performance metrics.</p>
 	</div>
 
 	{#if loading}
-		<div class="rounded-lg border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
-			Loading statistics…
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
-		<div class="rounded-lg border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-400">
-			{error}
+		<div class="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive" style="font-family: var(--font-mono);">
+			<span class="font-semibold">error:</span> {error}
 		</div>
 	{:else if data}
 		<!-- System Health -->
@@ -168,22 +169,11 @@
 		<!-- KPIs -->
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			{#each kpis as kpi}
-				<Card.Root>
-					<Card.Header class="pb-2">
-						<div class="flex items-center justify-between">
-							<Card.Title class="text-sm font-medium text-muted-foreground">
-								{kpi.title}
-							</Card.Title>
-							<div class="rounded-lg p-2 {kpi.bg}">
-								<kpi.icon class="h-4 w-4 {kpi.color}" />
-							</div>
-						</div>
-					</Card.Header>
-					<Card.Content>
-						<div class="text-2xl font-bold">{kpi.value}</div>
-						<p class="text-xs text-muted-foreground">{kpi.delta}</p>
-					</Card.Content>
-				</Card.Root>
+				<div class="kpi-card">
+					<div class="text-xs text-muted-foreground uppercase tracking-wider">{kpi.title}</div>
+					<div class="text-2xl font-semibold font-mono tabular-nums">{kpi.value}</div>
+					<div class="text-xs text-muted-foreground">{kpi.delta}</div>
+				</div>
 			{/each}
 		</div>
 
@@ -256,37 +246,29 @@
 					<div class="table-scroll-wrapper">
 						<table class="w-full text-sm">
 							<thead>
-								<tr class="border-b bg-muted/30">
-									<th class="p-3 text-left text-xs font-medium text-muted-foreground">Model</th>
-									<th class="p-3 text-left text-xs font-medium text-muted-foreground">Apps</th>
-									<th class="p-3 text-left text-xs font-medium text-muted-foreground">Security</th>
-									<th class="p-3 text-left text-xs font-medium text-muted-foreground">Performance</th>
-									<th class="p-3 text-left text-xs font-medium text-muted-foreground">Quality</th>
-									<th class="p-3 text-left text-xs font-medium text-muted-foreground">MSS</th>
+								<tr class="border-b bg-muted/40 sticky top-0 z-10">
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Model</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Apps</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Security</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Performance</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Quality</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">MSS</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y">
-								{#each data.models as m}
-									<tr class="hover:bg-muted/30">
-										<td class="p-3">
+							<tbody>
+								{#each data.models as m, i}
+									<tr class="border-b transition-colors hover:bg-muted/50 group {i % 2 === 0 ? '' : 'bg-muted/15'}">
+										<td class="px-3 py-2 align-top">
 											<div>
-												<span class="font-medium">{m.name}</span>
+												<span class="font-medium text-sm">{m.name}</span>
 												<div class="text-[10px] text-muted-foreground">{m.provider}</div>
 											</div>
 										</td>
-										<td class="p-3 text-xs">{m.apps}</td>
-										<td class="p-3 font-mono text-xs {scoreColor(m.security)}">
-											{m.security.toFixed(1)}
-										</td>
-										<td class="p-3 font-mono text-xs {scoreColor(m.performance, 100)}">
-											{m.performance}
-										</td>
-										<td class="p-3 font-mono text-xs {scoreColor(m.quality)}">
-											{m.quality.toFixed(1)}
-										</td>
-										<td class="p-3 font-mono text-xs font-bold {scoreColor(m.mss, 100)}">
-											{m.mss.toFixed(1)}
-										</td>
+										<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{m.apps}</td>
+										<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor(m.security)}">{m.security.toFixed(1)}</td>
+										<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor(m.performance, 100)}">{m.performance}</td>
+										<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor(m.quality)}">{m.quality.toFixed(1)}</td>
+										<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs font-bold {scoreColor(m.mss, 100)}">{m.mss.toFixed(1)}</td>
 									</tr>
 								{/each}
 							</tbody>
@@ -310,32 +292,26 @@
 							<div class="table-scroll-wrapper">
 								<table class="w-full text-sm">
 									<thead>
-										<tr class="border-b bg-muted/30">
-											<th class="p-3 text-left text-xs font-medium text-muted-foreground">Tool</th>
-											<th class="p-3 text-left text-xs font-medium text-muted-foreground">Type</th>
-											<th class="p-3 text-left text-xs font-medium text-muted-foreground">Scans</th>
-											<th class="p-3 text-left text-xs font-medium text-muted-foreground">
-												Findings
-											</th>
-											<th class="p-3 text-left text-xs font-medium text-muted-foreground">
-												Avg/Scan
-											</th>
-											<th class="p-3 text-left text-xs font-medium text-muted-foreground">
-												Top Rule
-											</th>
+										<tr class="border-b bg-muted/40 sticky top-0 z-10">
+											<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Tool</th>
+											<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Type</th>
+											<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Scans</th>
+											<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Findings</th>
+											<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Avg/Scan</th>
+											<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Top Rule</th>
 										</tr>
 									</thead>
-									<tbody class="divide-y">
-										{#each data.tools as t}
-											<tr class="hover:bg-muted/30">
-												<td class="p-3 text-xs font-medium">{t.name}</td>
-												<td class="p-3">
+									<tbody>
+										{#each data.tools as t, i}
+											<tr class="border-b transition-colors hover:bg-muted/50 group {i % 2 === 0 ? '' : 'bg-muted/15'}">
+												<td class="px-3 py-2 align-top text-xs font-medium">{t.name}</td>
+												<td class="px-3 py-2 align-top">
 													<Badge variant="secondary" class="text-[10px] capitalize">{t.type}</Badge>
 												</td>
-												<td class="p-3 font-mono text-xs">{t.scans}</td>
-												<td class="p-3 font-mono text-xs">{t.findings}</td>
-												<td class="p-3 font-mono text-xs">{t.avg_per_scan.toFixed(1)}</td>
-												<td class="p-3 font-mono text-[10px] text-muted-foreground">
+												<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{t.scans}</td>
+												<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{t.findings}</td>
+												<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{t.avg_per_scan.toFixed(1)}</td>
+												<td class="px-3 py-2 align-top font-mono text-[10px] text-muted-foreground">
 													{t.top_rule || '—'}
 												</td>
 											</tr>
@@ -390,9 +366,9 @@
 						{@const cg = data.code_generation}
 						<div class="grid gap-4 sm:grid-cols-3">
 							{#each [{ label: 'Total Apps Generated', value: fmtNumber(cg.total_apps) }, { label: 'Success Rate', value: `${cg.success_rate}%` }, { label: 'Avg Gen Time', value: fmtDuration(cg.avg_duration_seconds) }, { label: 'Lines of Code', value: fmtNumber(cg.total_lines_of_code) }, { label: 'Total Tokens', value: fmtNumber(cg.total_tokens) }, { label: 'Total Cost', value: fmtCost(cg.total_cost_usd) }] as stat}
-								<div class="rounded-lg border p-3 text-center">
-									<div class="text-lg font-bold">{stat.value}</div>
-									<div class="text-[10px] text-muted-foreground">{stat.label}</div>
+								<div class="kpi-card">
+									<div class="text-xs text-muted-foreground uppercase tracking-wider">{stat.label}</div>
+									<div class="text-2xl font-semibold font-mono tabular-nums">{stat.value}</div>
 								</div>
 							{/each}
 						</div>

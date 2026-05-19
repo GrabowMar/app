@@ -1,5 +1,8 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte';
+import * as Card from '$lib/components/ui/card';
+import { Button } from '$lib/components/ui/button';
+import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 import {
 getMe,
 getSystemSnapshot,
@@ -138,10 +141,10 @@ return `${m}m`;
 
 function statusBadgeClass(status: string): string {
 const s = status.toLowerCase();
-if (s === 'running') return 'bg-green-100 text-green-800';
-if (s === 'exited' || s === 'stopped' || s === 'dead') return 'bg-red-100 text-red-800';
-if (s === 'paused') return 'bg-yellow-100 text-yellow-800';
-return 'bg-gray-100 text-gray-800';
+if (s === 'running') return 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30';
+if (s === 'exited' || s === 'stopped' || s === 'dead') return 'bg-red-500/15 text-red-400 border border-red-500/30';
+if (s === 'paused') return 'bg-amber-500/15 text-amber-500 border border-amber-500/30';
+return 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30';
 }
 
 const modelSections = [
@@ -180,10 +183,10 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 </script>
 
 <div class="space-y-6">
-<div class="flex items-center justify-between">
-<div>
-<h1 class="text-2xl font-semibold tracking-tight">System Monitor</h1>
-<p class="text-sm text-muted-foreground">Real-time metrics and maintenance tools</p>
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div class="page-header">
+<h1>System Monitor</h1>
+<p>Real-time metrics and maintenance tools</p>
 </div>
 {#if snapshot}
 <span class="text-xs text-muted-foreground animate-pulse">Auto-refreshing every 10s</span>
@@ -191,9 +194,11 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 </div>
 
 {#if loading}
-<div class="flex items-center justify-center py-20">
-<div class="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-</div>
+<Card.Root>
+<Card.Content class="flex items-center justify-center py-20">
+<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+</Card.Content>
+</Card.Root>
 {:else if !isStaff}
 <div class="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-center">
 <p class="text-lg font-semibold text-destructive">403 — Staff access required</p>
@@ -205,8 +210,9 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 </div>
 {:else if snapshot}
 <!-- HOST METRICS -->
-<section class="rounded-lg border bg-card p-5 space-y-4">
-<h2 class="text-base font-semibold">Host Metrics</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Host Metrics</Card.Title></Card.Header>
+<Card.Content class="space-y-4">
 <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
 <div class="space-y-1">
 <p class="text-xs text-muted-foreground">CPU</p>
@@ -251,47 +257,51 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 </div>
 </div>
 {/if}
-</section>
+</Card.Content>
+</Card.Root>
 
 <!-- CONTAINERS -->
-<section class="rounded-lg border bg-card p-5 space-y-3">
-<h2 class="text-base font-semibold">Containers</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Containers</Card.Title></Card.Header>
+<Card.Content class="space-y-3">
 {#if containers().length === 0}
 <p class="text-sm text-muted-foreground">No containers found.</p>
 {:else}
 <div class="overflow-x-auto">
 <table class="w-full text-sm">
 <thead>
-<tr class="border-b text-left text-xs text-muted-foreground">
-<th class="pb-2 pr-4">Name</th>
-<th class="pb-2 pr-4">Image</th>
-<th class="pb-2 pr-4">Status</th>
-<th class="pb-2">Health</th>
+<tr class="border-b bg-muted/40 sticky top-0 z-10">
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Name</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Image</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Health</th>
 </tr>
 </thead>
 <tbody>
-{#each containers() as c}
-<tr class="border-b last:border-0">
-<td class="py-2 pr-4 font-mono text-xs">{c.name}</td>
-<td class="py-2 pr-4 text-xs text-muted-foreground">{c.image}</td>
-<td class="py-2 pr-4">
+{#each containers() as c, i}
+<tr class="border-b transition-colors hover:bg-muted/50 {i % 2 === 0 ? '' : 'bg-muted/15'}">
+<td class="px-3 py-2 align-top font-mono text-xs">{c.name}</td>
+<td class="px-3 py-2 align-top text-xs text-muted-foreground">{c.image}</td>
+<td class="px-3 py-2 align-top">
 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusBadgeClass(c.status as string)}">
 {c.status}
 </span>
 </td>
-<td class="py-2 text-xs text-muted-foreground">{c.health}</td>
+<td class="px-3 py-2 align-top text-xs text-muted-foreground">{c.health}</td>
 </tr>
 {/each}
 </tbody>
 </table>
 </div>
 {/if}
-</section>
+</Card.Content>
+</Card.Root>
 
 <!-- REDIS + CELERY -->
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-<section class="rounded-lg border bg-card p-5 space-y-3">
-<h2 class="text-base font-semibold">Redis</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Redis</Card.Title></Card.Header>
+<Card.Content class="space-y-3">
 {#if redis().reachable}
 <dl class="space-y-1 text-sm">
 <div class="flex justify-between"><dt class="text-muted-foreground">Latency</dt><dd>{redis().ping_latency_ms} ms</dd></div>
@@ -303,10 +313,12 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 {:else}
 <p class="text-sm text-destructive">Unreachable: {redis().error}</p>
 {/if}
-</section>
+</Card.Content>
+</Card.Root>
 
-<section class="rounded-lg border bg-card p-5 space-y-3">
-<h2 class="text-base font-semibold">Celery</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Celery</Card.Title></Card.Header>
+<Card.Content class="space-y-3">
 {#if celery().reachable}
 <dl class="space-y-1 text-sm">
 <div class="flex justify-between"><dt class="text-muted-foreground">Workers</dt><dd>{celery().worker_count}</dd></div>
@@ -325,28 +337,30 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 {:else}
 <p class="text-sm text-muted-foreground">No workers reachable</p>
 {/if}
-</section>
+</Card.Content>
+</Card.Root>
 </div>
 
 <!-- DB STATS -->
-<section class="rounded-lg border bg-card p-5 space-y-3">
-<h2 class="text-base font-semibold">Database</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Database</Card.Title></Card.Header>
+<Card.Content class="space-y-3">
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-<div class="rounded-md bg-muted/50 p-3">
-<p class="text-xs text-muted-foreground">Backends</p>
-<p class="text-xl font-bold">{dbStats().numbackends}</p>
+<div class="kpi-card">
+<div class="text-xs text-muted-foreground uppercase tracking-wider">Backends</div>
+<div class="text-2xl font-semibold font-mono tabular-nums">{dbStats().numbackends}</div>
 </div>
-<div class="rounded-md bg-muted/50 p-3">
-<p class="text-xs text-muted-foreground">Commits</p>
-<p class="text-xl font-bold">{dbStats().xact_commit?.toLocaleString()}</p>
+<div class="kpi-card">
+<div class="text-xs text-muted-foreground uppercase tracking-wider">Commits</div>
+<div class="text-2xl font-semibold font-mono tabular-nums">{dbStats().xact_commit?.toLocaleString()}</div>
 </div>
-<div class="rounded-md bg-muted/50 p-3">
-<p class="text-xs text-muted-foreground">Rollbacks</p>
-<p class="text-xl font-bold">{dbStats().xact_rollback}</p>
+<div class="kpi-card">
+<div class="text-xs text-muted-foreground uppercase tracking-wider">Rollbacks</div>
+<div class="text-2xl font-semibold font-mono tabular-nums">{dbStats().xact_rollback}</div>
 </div>
-<div class="rounded-md bg-muted/50 p-3">
-<p class="text-xs text-muted-foreground">Deadlocks</p>
-<p class="text-xl font-bold {dbStats().deadlocks > 0 ? 'text-destructive' : ''}">{dbStats().deadlocks}</p>
+<div class="kpi-card">
+<div class="text-xs text-muted-foreground uppercase tracking-wider">Deadlocks</div>
+<div class="text-2xl font-semibold font-mono tabular-nums {dbStats().deadlocks > 0 ? 'text-destructive' : ''}">{dbStats().deadlocks}</div>
 </div>
 </div>
 {#if topTables().length > 0}
@@ -362,11 +376,13 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 </div>
 </div>
 {/if}
-</section>
+</Card.Content>
+</Card.Root>
 
 <!-- APP STATS -->
-<section class="rounded-lg border bg-card p-5 space-y-3">
-<h2 class="text-base font-semibold">Application Stats</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Application Stats</Card.Title></Card.Header>
+<Card.Content class="space-y-3">
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 {#each modelSections as model}
 <div class="rounded-md border p-3 space-y-2">
@@ -386,11 +402,13 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 </div>
 {/each}
 </div>
-</section>
+</Card.Content>
+</Card.Root>
 
 <!-- MAINTENANCE -->
-<section class="rounded-lg border bg-card p-5 space-y-4">
-<h2 class="text-base font-semibold">Maintenance Actions</h2>
+<Card.Root>
+<Card.Header class="pb-2"><Card.Title>Maintenance Actions</Card.Title></Card.Header>
+<Card.Content class="space-y-4">
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 {#each maintenanceActions as action}
 <div class="rounded-md border p-4 space-y-2">
@@ -403,31 +421,20 @@ fn: () => clearCaches() as Promise<Record<string, unknown>>,
 {/if}
 {#if confirmPending === action.id}
 <div class="flex gap-2">
-<button
-onclick={() => runMaintenance(action.id, action.fn)}
-class="flex-1 rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90"
->
+<Button variant="destructive" size="sm" class="flex-1" onclick={() => runMaintenance(action.id, action.fn)}>
 {maintLoading[action.id] ? 'Running…' : 'Confirm'}
-</button>
-<button
-onclick={cancelConfirm}
-class="flex-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
->
-Cancel
-</button>
+</Button>
+<Button variant="outline" size="sm" class="flex-1" onclick={cancelConfirm}>Cancel</Button>
 </div>
 {:else}
-<button
-onclick={() => confirmAction(action.id)}
-disabled={maintLoading[action.id]}
-class="w-full rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
->
+<Button variant="outline" size="sm" class="w-full" onclick={() => confirmAction(action.id)} disabled={maintLoading[action.id]}>
 {maintLoading[action.id] ? 'Running…' : 'Run Action'}
-</button>
+</Button>
 {/if}
 </div>
 {/each}
 </div>
-</section>
+</Card.Content>
+</Card.Root>
 {/if}
 </div>

@@ -6,7 +6,7 @@
 </script>
 
 <span
-	class={cn('relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full', className)}
+	class={cn('relative flex h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border', className)}
 	{...restProps}
 >
 	{#if children}{@render children()}{/if}

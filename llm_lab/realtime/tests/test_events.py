@@ -91,7 +91,7 @@ class TestBuildSse:
         payload = {"type": "result", "analyzer": "mypy", "finding_count": 3}
         msg = _build_sse("result", payload)
         data_line = next(line for line in msg.splitlines() if line.startswith("data: "))
-        parsed = json.loads(data_line[len("data: "):])
+        parsed = json.loads(data_line[len("data: ") :])
         assert parsed["analyzer"] == "mypy"
         assert parsed["finding_count"] == pytest.approx(3)
 

@@ -59,24 +59,44 @@ onMount(async () => {
 
 <svelte:head><title>Batch — LLM Eval Lab</title></svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
-	<div class="flex items-center justify-between">
-		<div class="flex items-center gap-3">
-			<Button variant="ghost" size="icon" onclick={() => goto('/automation/batches')}><ArrowLeft class="h-4 w-4" /></Button>
-			<h1 class="text-2xl font-bold tracking-tight">{batch?.name ?? 'Batch'}</h1>
-			{#if batch}<Badge class={statusColors[batch.status] ?? ''} variant="outline">{batch.status}</Badge>{/if}
+<div class="space-y-6">
+	<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted-foreground">
+		<a href="/automation" class="hover:text-foreground transition-colors flex items-center gap-1">
+			<ArrowLeft class="h-3.5 w-3.5" />
+			<span class="font-medium text-foreground">Automation</span>
+		</a>
+		<span>/</span>
+		<a href="/automation/batches" class="hover:text-foreground transition-colors">Batches</a>
+		<span>/</span>
+		<span class="truncate max-w-[300px]">{batch?.name ?? 'Batch'}</span>
+	</nav>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+		<div class="page-header">
+			<h1>
+				{batch?.name ?? 'Batch'}
+				{#if batch}<Badge class={statusColors[batch.status] ?? ''} variant="outline">{batch.status}</Badge>{/if}
+			</h1>
+			<p class="font-mono text-xs">{id}</p>
 		</div>
 		{#if batch && (batch.status === 'pending' || batch.status === 'running')}
-			<Button variant="destructive" size="sm" onclick={cancel} disabled={cancelling}>
-				<XCircle class="mr-2 h-4 w-4" />{cancelling ? 'Cancelling...' : 'Cancel Batch'}
-			</Button>
+			<div class="flex items-center gap-2 flex-wrap">
+				<Button variant="destructive" size="sm" onclick={cancel} disabled={cancelling}>
+					<XCircle class="mr-2 h-4 w-4" />{cancelling ? 'Cancelling...' : 'Cancel Batch'}
+				</Button>
+			</div>
 		{/if}
 	</div>
 
 	{#if loading}
-		<div class="flex justify-center py-12"><LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" /></div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
-		<p class="text-destructive">{error}</p>
+		<Card.Root>
+			<Card.Content class="pt-6 text-center text-destructive">{error}</Card.Content>
+		</Card.Root>
 	{:else if batch}
 		<Card.Root>
 			<Card.Header><Card.Title>Details</Card.Title></Card.Header>
@@ -99,29 +119,57 @@ onMount(async () => {
 		</Card.Root>
 		<Card.Root>
 			<Card.Header><Card.Title>Items ({batch.items.length})</Card.Title></Card.Header>
-			<Card.Content>
+			<Card.Content class={batch.items.length === 0 ? '' : 'p-0'}>
 				{#if batch.items.length === 0}
 					<p class="text-sm text-muted-foreground">No items.</p>
 				{:else}
-					<table class="w-full text-sm">
-						<thead class="border-b"><tr class="text-left text-muted-foreground">
-							<th class="pb-2">Item ID</th><th class="pb-2">Status</th><th class="pb-2">Run</th><th class="pb-2">Created</th>
-						</tr></thead>
-						<tbody class="divide-y">
-							{#each batch.items as item}
-								<tr class="hover:bg-muted/40">
-									<td class="py-2 font-mono text-xs">{item.id.slice(0, 8)}…</td>
-									<td class="py-2"><Badge class={statusColors[item.status] ?? ''} variant="outline">{item.status}</Badge></td>
-									<td class="py-2">
-										{#if item.pipeline_run_id}
-											<button class="hover:underline text-xs font-mono text-primary" onclick={() => goto(`/automation/runs/${item.pipeline_run_id}`)}>{item.pipeline_run_id.slice(0, 8)}…</button>
-										{:else}—{/if}
-									</td>
-									<td class="py-2">{fmt(item.created_at)}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
+					<!-- Table (desktop) -->
+					<div class="hidden md:block">
+						<div class="overflow-x-auto">
+							<table class="w-full">
+								<thead>
+									<tr class="border-b bg-muted/40 sticky top-0 z-10">
+										<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Item ID</th>
+										<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+										<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Run</th>
+										<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Created</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each batch.items as item, i (item.id)}
+										<tr class="border-b transition-colors hover:bg-muted/50 group {i % 2 === 0 ? '' : 'bg-muted/15'} {item.status === 'failed' ? 'bg-destructive/[0.03]' : ''}">
+											<td class="px-3 py-2 align-top font-mono text-xs">{item.id.slice(0, 8)}…</td>
+											<td class="px-3 py-2 align-top"><Badge variant="outline" class="text-[10px] {statusColors[item.status] ?? ''}">{item.status}</Badge></td>
+											<td class="px-3 py-2 align-top">
+												{#if item.pipeline_run_id}
+													<button class="hover:underline text-xs font-mono text-primary" onclick={() => goto(`/automation/runs/${item.pipeline_run_id}`)}>{item.pipeline_run_id.slice(0, 8)}…</button>
+												{:else}—{/if}
+											</td>
+											<td class="px-3 py-2 align-top text-sm text-muted-foreground">{fmt(item.created_at)}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Cards (mobile) -->
+					<div class="md:hidden space-y-3 p-3">
+						{#each batch.items as item (item.id)}
+							<div class="border rounded-lg p-3 bg-card">
+								<div class="flex items-start justify-between gap-2 mb-2">
+									<span class="font-mono text-xs">{item.id.slice(0, 8)}…</span>
+									<Badge variant="outline" class="shrink-0 text-[10px] {statusColors[item.status] ?? ''}">{item.status}</Badge>
+								</div>
+								<div class="text-xs text-muted-foreground space-y-0.5">
+									<div>Created: {fmt(item.created_at)}</div>
+									{#if item.pipeline_run_id}
+										<div>Run: <button class="hover:underline font-mono text-primary" onclick={() => goto(`/automation/runs/${item.pipeline_run_id}`)}>{item.pipeline_run_id.slice(0, 8)}…</button></div>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
 				{/if}
 			</Card.Content>
 		</Card.Root>

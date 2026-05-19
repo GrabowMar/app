@@ -179,11 +179,11 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div class="page-header">
+		<div class="page-header min-w-0">
 			<h1>Analysis Hub</h1>
 			<p>Run and monitor analysis tasks across your applications.</p>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<Button variant="outline" size="sm" onclick={handleRefresh} disabled={refreshing}>
 				<RefreshCw class="mr-2 h-3.5 w-3.5 {refreshing ? 'animate-spin' : ''}" />
 				Refresh
@@ -278,9 +278,11 @@
 
 	<!-- Loading -->
 	{#if loading}
-		<div class="flex items-center justify-center py-20">
-			<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
 		<!-- Error -->
 		<Card.Root>
@@ -293,9 +295,10 @@
 	{:else if tasks.length === 0}
 		<!-- Empty -->
 		<Card.Root>
-			<Card.Content class="flex flex-col items-center gap-3 py-16">
-				<Microscope class="h-10 w-10 text-muted-foreground" />
-				<p class="text-sm text-muted-foreground">
+			<Card.Content class="py-16 text-center">
+				<Microscope class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+				<h3 class="text-lg font-medium mb-1">No analysis tasks found</h3>
+				<p class="text-sm text-muted-foreground mb-4">
 					{searchQuery || statusFilter ? 'No tasks match your filters.' : 'No analysis tasks yet.'}
 				</p>
 				{#if !searchQuery && !statusFilter}
@@ -314,31 +317,38 @@
 					<div class="overflow-x-auto">
 						<table class="w-full">
 							<thead>
-								<tr class="border-b bg-muted/30">
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Findings</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Duration</th>
-									<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+								<tr class="border-b bg-muted/40 sticky top-0 z-10">
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Name</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Findings</th>
+									<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Created</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Duration</th>
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Actions</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y">
-								{#each tasks as task (task.id)}
+							<tbody>
+								{#each tasks as task, i (task.id)}
 									<tr
-										class="transition-colors hover:bg-muted/30 cursor-pointer"
+										class="border-b transition-colors hover:bg-muted/50 group cursor-pointer
+											{i % 2 === 0 ? '' : 'bg-muted/15'}
+											{task.status === 'failed' ? 'bg-destructive/[0.03]' : ''}"
 										onclick={() => window.location.href = `/analysis/${task.id}`}
 										onkeydown={(e) => { if (e.key === 'Enter') window.location.href = `/analysis/${task.id}`; }}
 										tabindex="0"
 										role="link"
 									>
-										<td class="px-4 py-3">
-											<div class="flex flex-col gap-0.5">
-												<span class="text-sm font-medium">{taskDisplayName(task)}</span>
-												<span class="text-xs text-muted-foreground font-mono">{task.id.slice(0, 8)}</span>
+										<td class="px-3 py-2 align-top">
+											<div class="flex items-center gap-2.5">
+												<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted group-hover:bg-primary/10 transition-colors">
+													<Microscope class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+												</div>
+												<div class="min-w-0">
+													<span class="text-sm font-medium block truncate max-w-[220px]">{taskDisplayName(task)}</span>
+													<span class="text-[11px] text-muted-foreground font-mono block">{task.id.slice(0, 8)}</span>
+												</div>
 											</div>
 										</td>
-										<td class="px-4 py-3">
+										<td class="px-3 py-2 align-top">
 											<Badge variant="outline" class="text-[10px] {statusColors[task.status] ?? ''}">
 												{#if task.status === 'running'}
 													<LoaderCircle class="mr-1 h-3 w-3 animate-spin" />
@@ -356,7 +366,7 @@
 												{statusLabel(task.status)}
 											</Badge>
 										</td>
-										<td class="px-4 py-3">
+										<td class="px-3 py-2 align-top">
 											{#if getSeverityBreakdown(task).length > 0}
 												<div class="flex flex-wrap gap-1">
 													{#each getSeverityBreakdown(task) as [sev, count]}
@@ -367,20 +377,20 @@
 												<span class="text-xs text-muted-foreground">—</span>
 											{/if}
 										</td>
-										<td class="px-4 py-3 text-sm text-muted-foreground">
-											{formatDate(task.created_at)}
+										<td class="px-3 py-2">
+											<div class="flex flex-col gap-0.5">
+												<span class="text-sm text-foreground">{formatDate(task.created_at)}</span>
+											</div>
 										</td>
-										<td class="px-4 py-3 text-sm text-muted-foreground">
-											{formatDuration(task.duration_seconds)}
+										<td class="px-3 py-2 text-right">
+											<span class="text-sm font-mono tabular-nums text-muted-foreground">{formatDuration(task.duration_seconds)}</span>
 										</td>
-										<td class="px-4 py-3">
+										<td class="px-3 py-2">
 											<!-- svelte-ignore a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
-											<div class="flex items-center gap-1" onclick={(e) => e.stopPropagation()}>
-												{#if task.status === 'completed' || task.status === 'partial'}
-													<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/analysis/{task.id}" title="View results">
-														<Eye class="h-3.5 w-3.5" />
-													</Button>
-												{/if}
+											<div class="flex items-center justify-end gap-1" onclick={(e) => e.stopPropagation()}>
+												<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/analysis/{task.id}" title="View results">
+													<Eye class="h-3.5 w-3.5" />
+												</Button>
 												{#if task.status === 'running' || task.status === 'pending'}
 													<Button
 														variant="ghost"
@@ -393,15 +403,15 @@
 														{#if cancellingIds.has(task.id)}
 															<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
 														{:else}
-															<StopCircle class="h-3.5 w-3.5" />
+															<StopCircle class="h-3.5 w-3.5 text-amber-400" />
 														{/if}
 													</Button>
 												{/if}
-												{#if task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled'}
+												{#if task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'partial'}
 													<Button
 														variant="ghost"
 														size="sm"
-														class="h-7 w-7 p-0 text-red-400 hover:text-red-300"
+														class="h-7 w-7 p-0"
 														title="Delete"
 														disabled={deletingIds.has(task.id)}
 														onclick={() => handleDelete(task.id)}
@@ -409,7 +419,7 @@
 														{#if deletingIds.has(task.id)}
 															<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
 														{:else}
-															<Trash2 class="h-3.5 w-3.5" />
+															<Trash2 class="h-3.5 w-3.5 text-destructive" />
 														{/if}
 													</Button>
 												{/if}
@@ -469,6 +479,9 @@
 						</div>
 						<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 						<div class="flex items-center gap-1" onclick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+							<Button variant="ghost" size="sm" class="h-7 w-7 p-0" href="/analysis/{task.id}" title="View results">
+								<Eye class="h-3.5 w-3.5" />
+							</Button>
 							{#if task.status === 'running' || task.status === 'pending'}
 								<Button
 									variant="ghost"
@@ -481,7 +494,23 @@
 									{#if cancellingIds.has(task.id)}
 										<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
 									{:else}
-										<StopCircle class="h-3.5 w-3.5" />
+										<StopCircle class="h-3.5 w-3.5 text-amber-400" />
+									{/if}
+								</Button>
+							{/if}
+							{#if task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'partial'}
+								<Button
+									variant="ghost"
+									size="sm"
+									class="h-7 w-7 p-0"
+									title="Delete"
+									disabled={deletingIds.has(task.id)}
+									onclick={() => handleDelete(task.id)}
+								>
+									{#if deletingIds.has(task.id)}
+										<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
+									{:else}
+										<Trash2 class="h-3.5 w-3.5 text-destructive" />
 									{/if}
 								</Button>
 							{/if}

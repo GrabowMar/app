@@ -20,22 +20,20 @@
 
 <div class="max-w-5xl mx-auto space-y-6">
 	<!-- Header -->
-	<Card.Root>
-		<Card.Content class="pt-6">
-			<div class="flex items-center gap-4 mb-4">
-				<div class="flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shrink-0">
-					<ShieldHalf class="size-7" />
-				</div>
-				<div>
-					<h1 class="text-3xl font-bold tracking-tight">Privacy Policy & Data Usage</h1>
-					<p class="text-muted-foreground">Last updated: January 2026</p>
-				</div>
+	<div class="page-header">
+		<div class="flex items-center gap-4">
+			<div class="flex size-12 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0 border border-primary/20">
+				<ShieldHalf class="size-6" />
 			</div>
-			<div class="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-				<strong>Your Privacy Matters:</strong> This document explains what data we collect, how we use it, and how you can control your privacy settings.
+			<div>
+				<h1>Privacy Policy &amp; Data Usage</h1>
+				<p>Last updated: January 2026</p>
 			</div>
-		</Card.Content>
-	</Card.Root>
+		</div>
+	</div>
+	<div class="rounded-md border border-primary/30 bg-primary/[0.05] px-4 py-3 text-sm text-foreground">
+		<strong class="text-primary">Your Privacy Matters:</strong> This document explains what data we collect, how we use it, and how you can control your privacy settings.
+	</div>
 
 	<!-- Quick Summary -->
 	<Card.Root class="border-primary">

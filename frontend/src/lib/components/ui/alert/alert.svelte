@@ -7,15 +7,15 @@
 	let { class: className, variant = 'default', children, ...restProps }: HTMLAttributes<HTMLDivElement> & { variant?: AlertVariant; children?: import('svelte').Snippet } = $props();
 
 	const variantClasses: Record<AlertVariant, string> = {
-		default: 'bg-background text-foreground',
-		destructive: 'border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive',
+		default: 'bg-card text-foreground border-border',
+		destructive: 'border-l-4 border-l-destructive border-y border-r border-y-border border-r-border bg-[color:var(--destructive)]/5 text-foreground [&>svg]:text-destructive',
 	};
 </script>
 
 <div
 	role="alert"
 	class={cn(
-		'relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7',
+		'relative w-full rounded-md border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-3.5 [&>svg]:size-4 [&>svg~*]:pl-7',
 		variantClasses[variant],
 		className
 	)}

@@ -8,6 +8,7 @@ import * as Card from '$lib/components/ui/card';
 import FileText from '@lucide/svelte/icons/file-text';
 import Folder from '@lucide/svelte/icons/folder';
 import BookOpen from '@lucide/svelte/icons/book-open';
+import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
 let tree: DocNode[] = $state([]);
 
@@ -27,16 +28,22 @@ tree = await getDocsTree();
 </svelte:head>
 
 <div class="space-y-6">
-<div class="flex items-center justify-between">
+<div class="page-header">
+<div class="flex items-start justify-between gap-3">
 <div>
-<h1 class="text-2xl font-bold tracking-tight">Documentation</h1>
-<p class="mt-1 text-sm text-muted-foreground">Browse guides, references, and technical documentation.</p>
+<h1>Documentation</h1>
+<p>Browse guides, references, and technical documentation.</p>
 </div>
-<Badge variant="outline" class="text-xs">{allDocs.length} docs</Badge>
+<Badge variant="outline" class="text-xs shrink-0">{allDocs.length} docs</Badge>
+</div>
 </div>
 
 {#if tree.length === 0}
-<p class="text-sm text-muted-foreground">Loading…</p>
+<Card.Root>
+	<Card.Content class="flex items-center justify-center py-20">
+		<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+	</Card.Content>
+</Card.Root>
 {:else}
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 {#each tree as node (node.slug)}

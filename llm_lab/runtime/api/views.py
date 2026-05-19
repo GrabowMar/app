@@ -12,7 +12,10 @@ from llm_lab.common.pagination import paginate_queryset
 from llm_lab.generation.models import GenerationJob
 from llm_lab.runtime.api.schema import ActionListResponse
 from llm_lab.runtime.api.schema import ContainerActionSchema
+from llm_lab.runtime.api.schema import ContainerExecRequest
+from llm_lab.runtime.api.schema import ContainerExecResponse
 from llm_lab.runtime.api.schema import ContainerHealthResponse
+from llm_lab.runtime.api.schema import ContainerInspectResponse
 from llm_lab.runtime.api.schema import ContainerInstanceSchema
 from llm_lab.runtime.api.schema import ContainerListResponse
 from llm_lab.runtime.api.schema import DockerInfo
@@ -106,13 +109,35 @@ def build_container_for_job(request: HttpRequest, job_id: str):
 
 @router.post(
     "/containers/{container_id}/start/",
-    response={200: ContainerActionSchema, 503: GenericResponse},
+    response={200: ContainerActionSchema, 409: GenericResponse, 503: GenericResponse},
 )
 def start_container(request: HttpRequest, container_id: str):
     """Start a stopped container."""
     if not docker_manager.ping():
         return 503, GenericResponse(success=False, message="Docker daemon unavailable")
     instance = get_object_or_404(ContainerInstance, id=container_id)
+    if instance.status == ContainerInstance.Status.FAILED:
+        last_err = (
+            instance.actions.filter(status="failed")
+            .order_by("-created_at")
+            .values_list("error_message", flat=True)
+            .first()
+        )
+        return 409, GenericResponse(
+            success=False,
+            message=(
+                "Container is in a failed state. Rebuild it before starting."
+                + (f" Last error: {last_err}" if last_err else "")
+            ),
+        )
+    if instance.status in (
+        ContainerInstance.Status.PENDING,
+        ContainerInstance.Status.BUILDING,
+    ):
+        return 409, GenericResponse(
+            success=False,
+            message=f"Container is {instance.status}; wait for build to complete.",
+        )
     action = container_service.start_instance(instance, request.user)
     return 200, action
 
@@ -132,13 +157,18 @@ def stop_container(request: HttpRequest, container_id: str):
 
 @router.post(
     "/containers/{container_id}/restart/",
-    response={200: ContainerActionSchema, 503: GenericResponse},
+    response={200: ContainerActionSchema, 409: GenericResponse, 503: GenericResponse},
 )
 def restart_container(request: HttpRequest, container_id: str):
     """Restart a container."""
     if not docker_manager.ping():
         return 503, GenericResponse(success=False, message="Docker daemon unavailable")
     instance = get_object_or_404(ContainerInstance, id=container_id)
+    if instance.status == ContainerInstance.Status.FAILED:
+        return 409, GenericResponse(
+            success=False,
+            message="Container is in a failed state. Rebuild it before restarting.",
+        )
     action = container_service.restart_instance(instance, request.user)
     return 200, action
 
@@ -229,3 +259,84 @@ def get_action(request: HttpRequest, action_id: str):
     """Return detail for a single ContainerAction."""
     action = get_object_or_404(ContainerAction, action_id=action_id)
     return 200, action
+
+
+# ---- whitelisted exec commands ----
+_SENSITIVE_ENV_PATTERNS = (
+    "KEY", "SECRET", "TOKEN", "PASSWORD", "PASS", "DSN", "API",
+)
+_EXEC_WHITELIST: dict[str, list[str]] = {
+    "health": ["sh", "-c", "curl -sf http://127.0.0.1:8000/health 2>/dev/null || curl -sf http://127.0.0.1:5000/health 2>/dev/null || echo 'no /health endpoint'"],
+    "structure": ["sh", "-c", "ls -la /app 2>/dev/null || ls -la /code 2>/dev/null || ls -la /"],
+    "disk": ["sh", "-c", "df -h / && echo --- && du -sh /app/* 2>/dev/null | head -20"],
+    "environment": ["sh", "-c", "env | sort"],
+    "processes": ["sh", "-c", "ps aux 2>/dev/null || ps -ef"],
+}
+
+
+def _mask_env(env_list: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for entry in env_list or []:
+        if "=" not in entry:
+            continue
+        k, _, v = entry.partition("=")
+        key_upper = k.upper()
+        if any(p in key_upper for p in _SENSITIVE_ENV_PATTERNS):
+            out[k] = "••••••••" if v else ""
+        else:
+            out[k] = v
+    return out
+
+
+@router.get(
+    "/containers/{container_id}/inspect/",
+    response={200: ContainerInspectResponse, 503: GenericResponse},
+)
+def inspect_container(request: HttpRequest, container_id: str):
+    """Return image, command, masked env, mounts, ports for a container."""
+    if not docker_manager.ping():
+        return 503, GenericResponse(success=False, message="Docker daemon unavailable")
+    instance = get_object_or_404(ContainerInstance, id=container_id)
+    data = docker_manager.inspect(instance.name)
+    if "error" in data:
+        return 200, ContainerInspectResponse(error=str(data["error"]))
+    config = data.get("Config") or {}
+    state = data.get("State") or {}
+    network = data.get("NetworkSettings") or {}
+    return 200, ContainerInspectResponse(
+        image=config.get("Image", "") or "",
+        command=list(config.get("Cmd") or []),
+        state=state.get("Status", "") or "",
+        started_at=state.get("StartedAt", "") or "",
+        finished_at=state.get("FinishedAt", "") or "",
+        env=_mask_env(list(config.get("Env") or [])),
+        mounts=list(data.get("Mounts") or []),
+        ports=dict(network.get("Ports") or {}),
+    )
+
+
+@router.post(
+    "/containers/{container_id}/exec/",
+    response={200: ContainerExecResponse, 400: GenericResponse, 503: GenericResponse},
+)
+def exec_container_command(
+    request: HttpRequest, container_id: str, payload: ContainerExecRequest,
+):
+    """Run a whitelisted diagnostic command inside the container."""
+    if not docker_manager.ping():
+        return 503, GenericResponse(success=False, message="Docker daemon unavailable")
+    cmd = _EXEC_WHITELIST.get(payload.action)
+    if not cmd:
+        return 400, GenericResponse(
+            success=False,
+            message=f"Unknown action; allowed: {sorted(_EXEC_WHITELIST)}",
+        )
+    instance = get_object_or_404(ContainerInstance, id=container_id)
+    result = docker_manager.exec_in(instance.name, cmd, timeout_s=10)
+    return 200, ContainerExecResponse(
+        action=payload.action,
+        cmd=cmd,
+        exit_code=int(result.get("exit_code", -1)),
+        output=str(result.get("output", "")),
+        error=str(result.get("error", "")),
+    )

@@ -34,7 +34,9 @@ _CS = "llm_lab.runtime.services.container_service"
 
 
 def _make_task(
-    *, live_target: bool = True, extra_config: dict | None = None,
+    *,
+    live_target: bool = True,
+    extra_config: dict | None = None,
 ) -> AnalysisTask:
     """Create an AnalysisTask with minimal valid configuration."""
     user = UserFactory()
@@ -62,7 +64,8 @@ def _make_task(
 
 
 def _mock_analyzer(
-    name: str = "bandit", output: AnalyzerOutput | None = None,
+    name: str = "bandit",
+    output: AnalyzerOutput | None = None,
 ) -> MagicMock:
     """Return a mock analyzer instance."""
     analyzer = MagicMock()
@@ -97,7 +100,9 @@ class TestValidateLiveTargetUrl:
         assert valid, err
 
     def test_allows_localhost_on_runtime_port(self):
-        valid, err = validate_live_target_url(f"http://localhost:{LIVE_TARGET_PORT_MAX}")
+        valid, err = validate_live_target_url(
+            f"http://localhost:{LIVE_TARGET_PORT_MAX}",
+        )
         assert valid, err
 
     def test_blocks_loopback_outside_runtime_port_range(self):
@@ -114,7 +119,9 @@ class TestValidateLiveTargetUrl:
         assert valid, err
 
     def test_blocks_invalid_scheme(self):
-        valid, _err = validate_live_target_url(f"ftp://127.0.0.1:{LIVE_TARGET_PORT_MIN}")
+        valid, _err = validate_live_target_url(
+            f"ftp://127.0.0.1:{LIVE_TARGET_PORT_MIN}",
+        )
         assert not valid
 
 

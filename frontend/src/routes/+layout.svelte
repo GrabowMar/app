@@ -23,7 +23,7 @@
 	<meta http-equiv="Expires" content="0" />
 </svelte:head>
 
-<ModeWatcher />
+<ModeWatcher defaultMode="dark" />
 
 <div class="min-h-screen">
 	{@render children()}

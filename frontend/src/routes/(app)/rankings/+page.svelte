@@ -12,6 +12,7 @@
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import {
 		getRankings,
 		exportRankingsUrl,
@@ -114,11 +115,11 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight">Model Rankings</h1>
-			<p class="mt-1 text-xs sm:text-sm text-muted-foreground">Compare model performance using the Model Scoring System (MSS).</p>
+		<div class="page-header min-w-0">
+			<h1>Model Rankings</h1>
+			<p>Compare model performance using the Model Scoring System (MSS).</p>
 		</div>
-		<div class="flex gap-2">
+		<div class="flex flex-wrap gap-2">
 			<Button variant="outline" size="sm" onclick={load} disabled={loading}>
 				<RefreshCw class="mr-1.5 h-3.5 w-3.5 {loading ? 'animate-spin' : ''}" />
 				Refresh
@@ -135,30 +136,22 @@
 	<!-- Stats summary -->
 	{#if data}
 		<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-			<Card.Root>
-				<Card.Content class="p-3">
-					<div class="text-[10px] text-muted-foreground uppercase">Total Models</div>
-					<div class="text-xl font-bold">{data.statistics.total_models}</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root>
-				<Card.Content class="p-3">
-					<div class="text-[10px] text-muted-foreground uppercase">With Benchmarks</div>
-					<div class="text-xl font-bold">{data.statistics.with_benchmarks}</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root>
-				<Card.Content class="p-3">
-					<div class="text-[10px] text-muted-foreground uppercase">Free Models</div>
-					<div class="text-xl font-bold">{data.statistics.free_models}</div>
-				</Card.Content>
-			</Card.Root>
-			<Card.Root>
-				<Card.Content class="p-3">
-					<div class="text-[10px] text-muted-foreground uppercase">Avg MSS</div>
-					<div class="text-xl font-bold">{(data.statistics.avg_mss * 100).toFixed(1)}</div>
-				</Card.Content>
-			</Card.Root>
+			<div class="kpi-card">
+				<div class="text-xs text-muted-foreground uppercase tracking-wider">Total Models</div>
+				<div class="text-2xl font-semibold font-mono tabular-nums">{data.statistics.total_models}</div>
+			</div>
+			<div class="kpi-card">
+				<div class="text-xs text-muted-foreground uppercase tracking-wider">With Benchmarks</div>
+				<div class="text-2xl font-semibold font-mono tabular-nums">{data.statistics.with_benchmarks}</div>
+			</div>
+			<div class="kpi-card">
+				<div class="text-xs text-muted-foreground uppercase tracking-wider">Free Models</div>
+				<div class="text-2xl font-semibold font-mono tabular-nums">{data.statistics.free_models}</div>
+			</div>
+			<div class="kpi-card">
+				<div class="text-xs text-muted-foreground uppercase tracking-wider">Avg MSS</div>
+				<div class="text-2xl font-semibold font-mono tabular-nums">{(data.statistics.avg_mss * 100).toFixed(1)}</div>
+			</div>
 		</div>
 	{/if}
 
@@ -237,16 +230,18 @@
 			{#if error}
 				<div class="p-4 text-sm text-red-500">Error: {error}</div>
 			{:else if loading && !data}
-				<div class="p-4 text-sm text-muted-foreground">Loading…</div>
+				<div class="flex items-center justify-center py-20">
+					<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+				</div>
 			{:else if data}
 				<!-- Desktop table (768px+) -->
 				<div class="hidden md:block overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-b bg-muted/30">
-								<th class="w-10 px-3 py-2"></th>
-								<th class="w-14 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rank</th>
-								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Model</th>
+							<tr class="border-b bg-muted/40 sticky top-0 z-10">
+								<th class="w-10 px-3 py-2.5"></th>
+								<th class="w-14 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Rank</th>
+								<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Model</th>
 								{#each [
 									{ key: 'mss' as SortKey, label: 'MSS' },
 									{ key: 'adoption' as SortKey, label: 'Adoption' },
@@ -254,27 +249,27 @@
 									{ key: 'cost_efficiency' as SortKey, label: 'Cost-Eff.' },
 									{ key: 'accessibility' as SortKey, label: 'Access.' },
 								] as col}
-									<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+									<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">
 										<button class="inline-flex items-center gap-1 hover:text-foreground" onclick={() => toggleSort(col.key)}>
 											{col.label}
 											<ArrowUpDown class="h-3 w-3 {sortBy === col.key ? 'text-foreground' : ''}" />
 										</button>
 									</th>
 								{/each}
-								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">HumanEval</th>
-								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">MBPP</th>
-								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">SWE-bench</th>
-								<th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Apps</th>
+								<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">HumanEval</th>
+								<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">MBPP</th>
+								<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">SWE-bench</th>
+								<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Apps</th>
 							</tr>
 						</thead>
-						<tbody class="divide-y">
+						<tbody>
 							{#each data.rankings as model, i}
 								{@const rank = indexOnPage(i)}
-								<tr class="hover:bg-muted/30 {rank <= 3 ? 'bg-amber-500/5' : ''} {selectedModels.has(model.model_id) ? 'ring-1 ring-inset ring-primary/40' : ''}">
-									<td class="px-3 py-2">
+								<tr class="border-b transition-colors hover:bg-muted/50 group {rank <= 3 ? 'bg-amber-500/[0.05]' : (i % 2 === 0 ? '' : 'bg-muted/15')} {selectedModels.has(model.model_id) ? 'ring-1 ring-inset ring-primary/40' : ''}">
+									<td class="px-3 py-2 align-top">
 										<input type="checkbox" checked={selectedModels.has(model.model_id)} onchange={() => toggleSelect(model.model_id)} class="rounded" />
 									</td>
-									<td class="px-3 py-2">
+									<td class="px-3 py-2 align-top">
 										<div class="flex items-center gap-1.5">
 											{#if rank <= 3}
 												<Medal class="h-4 w-4 {rank === 1 ? 'text-amber-500' : rank === 2 ? 'text-slate-400' : 'text-amber-700'}" />
@@ -282,7 +277,7 @@
 											<span class="text-xs font-semibold">#{rank}</span>
 										</div>
 									</td>
-									<td class="px-3 py-2">
+									<td class="px-3 py-2 align-top">
 										<div>
 											<a href="/models/{encodeURIComponent(model.model_id)}" class="font-medium hover:underline">{model.model_name}</a>
 											<div class="text-[10px] text-muted-foreground">
@@ -291,15 +286,15 @@
 											</div>
 										</div>
 									</td>
-									<td class="px-3 py-2 font-mono font-bold {scoreColor01(model.mss_score)}">{pct(model.mss_score)}</td>
-									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.adoption_score)}">{pct(model.adoption_score)}</td>
-									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.benchmark_score)}">{pct(model.benchmark_score)}</td>
-									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.cost_efficiency_score)}">{pct(model.cost_efficiency_score)}</td>
-									<td class="px-3 py-2 font-mono text-xs {scoreColor01(model.accessibility_score)}">{pct(model.accessibility_score)}</td>
-									<td class="px-3 py-2 font-mono text-xs">{fmtBench(model, 'humaneval')}</td>
-									<td class="px-3 py-2 font-mono text-xs">{fmtBench(model, 'mbpp')}</td>
-									<td class="px-3 py-2 font-mono text-xs">{fmtBench(model, 'swebench')}</td>
-									<td class="px-3 py-2 text-xs text-muted-foreground">{model.apps}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums font-bold {scoreColor01(model.mss_score)}">{pct(model.mss_score)}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor01(model.adoption_score)}">{pct(model.adoption_score)}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor01(model.benchmark_score)}">{pct(model.benchmark_score)}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor01(model.cost_efficiency_score)}">{pct(model.cost_efficiency_score)}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs {scoreColor01(model.accessibility_score)}">{pct(model.accessibility_score)}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{fmtBench(model, 'humaneval')}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{fmtBench(model, 'mbpp')}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs">{fmtBench(model, 'swebench')}</td>
+									<td class="px-3 py-2 text-right align-top font-mono tabular-nums text-xs text-muted-foreground">{model.apps}</td>
 								</tr>
 							{/each}
 						</tbody>

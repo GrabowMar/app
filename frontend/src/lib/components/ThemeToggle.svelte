@@ -6,12 +6,12 @@
 
 <button
 	onclick={toggleMode}
-	class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+	class="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
 	aria-label="Toggle theme"
 >
 	{#if mode.current === 'dark'}
-		<Sun class="h-4 w-4" />
+		<Sun class="h-3.5 w-3.5" />
 	{:else}
-		<Moon class="h-4 w-4" />
+		<Moon class="h-3.5 w-3.5" />
 	{/if}
 </button>

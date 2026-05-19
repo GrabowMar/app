@@ -11,6 +11,7 @@
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import Layers from '@lucide/svelte/icons/layers';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleX from '@lucide/svelte/icons/circle-x';
 	import {
@@ -87,33 +88,33 @@
 	<title>Runtime — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight">Runtime</h1>
-			<p class="text-sm text-muted-foreground">Docker container management</p>
+<div class="space-y-6">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<div class="page-header min-w-0">
+			<h1>Runtime</h1>
+			<p>Docker container management</p>
 		</div>
-		<Button variant="outline" size="sm" onclick={load}>
+		<Button variant="outline" size="sm" onclick={load} class="self-start">
 			<RefreshCw class="mr-2 h-4 w-4" />Refresh
 		</Button>
 	</div>
 
 	{#if dockerInfo}
 		<Card.Root>
-			<Card.Content class="p-4 flex items-center gap-4 text-sm">
+			<Card.Content class="p-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
 				{#if dockerInfo.daemon_available}
-					<CircleCheck class="h-4 w-4 text-emerald-500" />
+					<CircleCheck class="h-4 w-4 text-emerald-500 shrink-0" />
 					<span class="text-emerald-500 font-medium">Docker daemon online</span>
 					{#if dockerInfo.version}
 						<span class="text-muted-foreground">v{dockerInfo.version}</span>
 					{/if}
 					{#if dockerInfo.containers_running !== null}
-						<span class="text-muted-foreground ml-auto">
+						<span class="text-muted-foreground sm:ml-auto">
 							{dockerInfo.containers_running} running · {dockerInfo.containers_stopped} stopped · {dockerInfo.images} images
 						</span>
 					{/if}
 				{:else}
-					<CircleX class="h-4 w-4 text-red-400" />
+					<CircleX class="h-4 w-4 text-red-400 shrink-0" />
 					<span class="text-red-400 font-medium">Docker daemon unavailable</span>
 				{/if}
 			</Card.Content>
@@ -138,15 +139,19 @@
 	</Card.Root>
 
 	{#if loading}
-		<div class="flex items-center justify-center py-16 text-muted-foreground">
-			<LoaderCircle class="mr-2 h-5 w-5 animate-spin" />Loading containers…
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
 		<Card.Root><Card.Content class="p-6 text-red-400 text-sm">{error}</Card.Content></Card.Root>
 	{:else if containers.length === 0}
 		<Card.Root>
-			<Card.Content class="p-10 text-center text-sm text-muted-foreground">
-				No containers found. Containers are created automatically when generation jobs run.
+			<Card.Content class="py-16 text-center">
+				<Layers class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+				<h3 class="text-lg font-medium mb-1">No containers found</h3>
+				<p class="text-sm text-muted-foreground mb-4">Containers are created automatically when generation jobs run.</p>
 			</Card.Content>
 		</Card.Root>
 	{:else}

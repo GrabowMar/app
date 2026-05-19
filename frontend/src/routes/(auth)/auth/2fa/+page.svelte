@@ -36,7 +36,7 @@
 </svelte:head>
 
 <div class="flex min-h-[50vh] items-center justify-center sm:min-h-[60vh]">
-	<div class="w-full max-w-md sm:rounded-xl sm:border sm:bg-card sm:py-6 sm:shadow-sm">
+	<div class="w-full max-w-md sm:rounded-md sm:border sm:border-border sm:bg-card sm:py-6 sm:shadow-sm">
 		<div class="space-y-1.5 sm:px-6">
 			<h2 class="text-xl font-semibold leading-none tracking-tight sm:text-2xl">Two-Factor Authentication</h2>
 			<p class="text-xs text-muted-foreground sm:text-sm">Enter the code from your authenticator app.</p>

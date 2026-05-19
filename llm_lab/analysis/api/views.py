@@ -30,13 +30,14 @@ router = Router(tags=["analysis"])
 def _dispatch_task(task: AnalysisTask) -> None:
     """Run an analysis task in a background thread."""
     import logging  # noqa: PLC0415
-    import threading  # noqa: PLC0415
 
     from llm_lab.analysis.services.analysis_service import (  # noqa: PLC0415
         AnalysisService,
     )
+    from llm_lab.common.threading import dispatch_in_thread  # noqa: PLC0415
 
     _logger = logging.getLogger(__name__)
+    task_id = task.id
 
     def _run() -> None:
         try:
@@ -45,18 +46,17 @@ def _dispatch_task(task: AnalysisTask) -> None:
                 AnalysisTask.objects.select_related(
                     "generation_job",
                     "created_by",
-                ).get(id=task.id),
+                ).get(id=task_id),
             )
         except AnalysisTask.DoesNotExist:
-            _logger.warning("Analysis task %s no longer exists", task.id)
+            _logger.warning("Analysis task %s no longer exists", task_id)
         except Exception:
             _logger.exception(
                 "Unhandled error dispatching analysis task %s",
-                task.id,
+                task_id,
             )
 
-    thread = threading.Thread(target=_run, daemon=True)
-    thread.start()
+    dispatch_in_thread(_run)
 
 
 # -- Tasks -----------------------------------------------------------------
@@ -115,6 +115,7 @@ def list_tasks(
     per_page: int = Query(25, ge=1, le=100),
     status: str = Query(""),
     search: str = Query(""),
+    generation_job_id: str = Query(""),
 ):
     """List analysis tasks with pagination and filters."""
     qs = (
@@ -129,6 +130,8 @@ def list_tasks(
         qs = qs.filter(status=status)
     if search:
         qs = qs.filter(name__icontains=search)
+    if generation_job_id:
+        qs = qs.filter(generation_job_id=generation_job_id)
 
     page_qs, total, page, pages = paginate_queryset(qs, page, per_page)
 

@@ -106,24 +106,37 @@ onMount(async () => {
 
 <svelte:head><title>New Batch — LLM Eval Lab</title></svelte:head>
 
-<div class="container mx-auto p-6 max-w-2xl space-y-6">
-	<div class="flex items-center gap-3">
-		<Button variant="ghost" size="icon" onclick={() => goto('/automation/batches')}><ArrowLeft class="h-4 w-4" /></Button>
-		<h1 class="text-2xl font-bold tracking-tight">New Batch</h1>
+<div class="space-y-6 max-w-2xl">
+	<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted-foreground">
+		<a href="/automation" class="hover:text-foreground transition-colors flex items-center gap-1">
+			<ArrowLeft class="h-3.5 w-3.5" />
+			<span class="font-medium text-foreground">Automation</span>
+		</a>
+		<span>/</span>
+		<a href="/automation/batches" class="hover:text-foreground transition-colors">Batches</a>
+		<span>/</span>
+		<span>New Batch</span>
+	</nav>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<div class="page-header">
+			<h1>New Batch</h1>
+			<p>Run a pipeline across a matrix of models and templates.</p>
+		</div>
 	</div>
 	<Card.Root>
 		<Card.Content class="pt-6 space-y-4">
-			<div class="space-y-1">
+			<div class="space-y-2">
 				<Label for="pipeline">Pipeline *</Label>
 				<select id="pipeline" bind:value={pipelineId} class="w-full rounded-md border bg-background px-3 py-2 text-sm">
 					{#each pipelines as p}<option value={p.id}>{p.name}</option>{/each}
 				</select>
+				<p class="text-xs text-muted-foreground">Pipeline to expand into per-cell runs.</p>
 			</div>
-			<div class="space-y-1">
+			<div class="space-y-2">
 				<Label for="name">Batch Name *</Label>
 				<Input id="name" bind:value={name} placeholder="My Batch Run" />
 			</div>
-			<div class="space-y-1">
+			<div class="space-y-2">
 				<Label for="desc">Description</Label>
 				<Textarea id="desc" bind:value={description} rows={2} />
 			</div>

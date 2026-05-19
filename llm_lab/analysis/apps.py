@@ -11,5 +11,5 @@ class AnalysisConfig(AppConfig):
     def ready(self) -> None:
         import llm_lab.analysis.services.ai_analyzers  # noqa: PLC0415
         import llm_lab.analysis.services.dynamic_analyzers  # noqa: PLC0415
-        import llm_lab.analysis.services.performance_analyzers  # noqa: PLC0415
+        import llm_lab.analysis.services.performance  # noqa: PLC0415
         import llm_lab.analysis.services.static_analyzers  # noqa: F401, PLC0415

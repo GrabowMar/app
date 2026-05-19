@@ -85,7 +85,7 @@
 	<title>{report?.title ?? 'Report'} — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 space-y-6 max-w-5xl">
+<div class="max-w-5xl space-y-6">
 	<div class="flex items-center justify-between">
 		<Button variant="ghost" size="sm" onclick={() => goto('/reports')}>
 			<ArrowLeft class="mr-1 h-4 w-4" />Back to reports
@@ -101,9 +101,11 @@
 	</div>
 
 	{#if loading}
-		<div class="flex items-center justify-center py-16 text-muted-foreground">
-			<LoaderCircle class="mr-2 h-5 w-5 animate-spin" />Loading…
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
 		<Card.Root><Card.Content class="p-6 text-red-400 text-sm">{error}</Card.Content></Card.Root>
 	{:else if report}
@@ -186,18 +188,18 @@
 								<div class="overflow-auto">
 									<table class="min-w-full text-xs">
 										<thead>
-											<tr class="border-b">
+											<tr class="border-b bg-muted/40 sticky top-0 z-10">
 												{#each cols as c (c)}
-													<th class="text-left p-2 font-medium capitalize">{c.replace(/_/g, ' ')}</th>
+													<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap capitalize">{c.replace(/_/g, ' ')}</th>
 												{/each}
 											</tr>
 										</thead>
 										<tbody>
 											{#each value as row, i (i)}
 												{@const r = row as Record<string, unknown>}
-												<tr class="border-b last:border-0">
+												<tr class="border-b transition-colors hover:bg-muted/50 {i % 2 === 0 ? '' : 'bg-muted/15'}">
 													{#each cols as c (c)}
-														<td class="p-2">{fmtValue(r[c])}</td>
+														<td class="px-3 py-2 align-top text-xs {typeof r[c] === 'number' ? 'font-mono tabular-nums' : ''}">{fmtValue(r[c])}</td>
 													{/each}
 												</tr>
 											{/each}

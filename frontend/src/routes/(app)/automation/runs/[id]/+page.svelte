@@ -133,24 +133,33 @@ $effect(() => {
 
 <svelte:head><title>Run Detail — LLM Eval Lab</title></svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
-	<div class="flex items-center justify-between">
-		<div class="flex items-center gap-3">
-			<Button variant="ghost" size="icon" onclick={() => history.back()}>
-				<ArrowLeft class="h-4 w-4" />
-			</Button>
-			<div>
-				<h1 class="text-2xl font-bold tracking-tight">Run Detail</h1>
-				<p class="text-xs text-muted-foreground font-mono">{id}</p>
-			</div>
-			{#if run}
-				<Badge class={statusColors[run.status] ?? ''} variant="outline">{run.status}</Badge>
-				{#if run.status === 'running'}
-					<LoaderCircle class="h-4 w-4 animate-spin text-blue-400" />
+<div class="space-y-6">
+	<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted-foreground">
+		<a href="/automation" class="hover:text-foreground transition-colors flex items-center gap-1">
+			<ArrowLeft class="h-3.5 w-3.5" />
+			<span class="font-medium text-foreground">Automation</span>
+		</a>
+		<span>/</span>
+		{#if run}
+			<a href="/automation/{run.pipeline_id}" class="hover:text-foreground transition-colors">Pipeline</a>
+			<span>/</span>
+		{/if}
+		<span class="truncate max-w-[300px]">Run</span>
+	</nav>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+		<div class="page-header">
+			<h1>
+				Run Detail
+				{#if run}
+					<Badge class={statusColors[run.status] ?? ''} variant="outline">{run.status}</Badge>
+					{#if run.status === 'running'}
+						<LoaderCircle class="h-4 w-4 animate-spin text-blue-400 inline" />
+					{/if}
 				{/if}
-			{/if}
+			</h1>
+			<p class="font-mono text-xs">{id}</p>
 		</div>
-		<div class="flex gap-2">
+		<div class="flex items-center gap-2 flex-wrap">
 			<Button variant="outline" size="sm" onclick={load}><RefreshCw class="mr-2 h-4 w-4" />Refresh</Button>
 			{#if run && (run.status === 'failed' || run.status === 'cancelled')}
 				<Button variant="outline" size="sm" onclick={retry} disabled={retrying}>
@@ -164,11 +173,15 @@ $effect(() => {
 	</div>
 
 	{#if loading}
-		<div class="flex justify-center py-12">
-			<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
-		<p class="text-destructive">{error}</p>
+		<Card.Root>
+			<Card.Content class="pt-6 text-center text-destructive">{error}</Card.Content>
+		</Card.Root>
 	{:else if run}
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<Card.Root>

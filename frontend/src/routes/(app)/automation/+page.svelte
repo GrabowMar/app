@@ -109,13 +109,13 @@ onMount(load);
 <title>Automation — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
-<div class="flex items-center justify-between">
-<div>
-<h1 class="text-2xl font-bold tracking-tight">Automation Pipelines</h1>
-<p class="text-sm text-muted-foreground">{total} pipeline{total !== 1 ? 's' : ''}</p>
+<div class="space-y-6">
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div class="page-header min-w-0">
+<h1>Automation Pipelines</h1>
+<p>{total} pipeline{total !== 1 ? 's' : ''}</p>
 </div>
-<div class="flex gap-2">
+<div class="flex flex-wrap items-center gap-2">
 <Button variant="outline" size="sm" onclick={() => goto('/automation/batches')}>
 <Layers class="mr-2 h-4 w-4" />Batches
 </Button>
@@ -132,8 +132,8 @@ onMount(load);
 </div>
 
 <!-- Filters -->
-<div class="flex gap-3">
-<Input placeholder="Search pipelines..." bind:value={search} class="max-w-xs" />
+<div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
+<Input placeholder="Search pipelines..." bind:value={search} class="sm:max-w-xs" />
 <select
 bind:value={statusFilter}
 class="rounded-md border bg-background px-3 py-2 text-sm"
@@ -146,71 +146,78 @@ class="rounded-md border bg-background px-3 py-2 text-sm"
 </div>
 
 {#if loading}
-<div class="flex justify-center py-12">
+<Card.Root>
+<Card.Content class="flex items-center justify-center py-20">
 <LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
-</div>
+</Card.Content>
+</Card.Root>
 {:else if error}
 <Card.Root>
 <Card.Content class="pt-6 text-center text-destructive">{error}</Card.Content>
 </Card.Root>
 {:else if pipelines.length === 0}
 <Card.Root>
-<Card.Content class="pt-6 text-center text-muted-foreground">
-No pipelines found.
-<Button variant="link" onclick={() => goto('/automation/create')}>Create one</Button>
+<Card.Content class="py-16 text-center">
+<Layers class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+<h3 class="text-lg font-medium mb-1">No pipelines found</h3>
+<p class="text-sm text-muted-foreground mb-4">Create your first automation pipeline to get started.</p>
+<Button size="sm" href="/automation/create">Create Pipeline</Button>
 </Card.Content>
 </Card.Root>
 {:else}
+<!-- Table (desktop) -->
+<div class="hidden md:block">
 <Card.Root>
+<Card.Content class="p-0">
 <div class="overflow-x-auto">
-<table class="w-full text-sm">
-<thead class="border-b">
-<tr class="text-left text-muted-foreground">
-<th class="px-4 py-3 font-medium">Name</th>
-<th class="px-4 py-3 font-medium">Status</th>
-<th class="px-4 py-3 font-medium">Version</th>
-<th class="px-4 py-3 font-medium">Tags</th>
-<th class="px-4 py-3 font-medium">Updated</th>
-<th class="px-4 py-3 font-medium">Actions</th>
+<table class="w-full">
+<thead>
+<tr class="border-b bg-muted/40 sticky top-0 z-10">
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Name</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Version</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Tags</th>
+<th class="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Updated</th>
+<th class="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Actions</th>
 </tr>
 </thead>
-<tbody class="divide-y">
-{#each pipelines as p}
-<tr class="hover:bg-muted/40">
-<td class="px-4 py-3 font-medium">
+<tbody>
+{#each pipelines as p, i (p.id)}
+<tr class="border-b transition-colors hover:bg-muted/50 group {i % 2 === 0 ? '' : 'bg-muted/15'}">
+<td class="px-3 py-2 align-top">
 <button
-class="text-left hover:underline"
+class="text-left text-sm font-medium hover:underline"
 onclick={() => goto(`/automation/${p.id}`)}
 >{p.name}</button>
 </td>
-<td class="px-4 py-3">
-<Badge class={statusColors[p.status] ?? ''} variant="outline">{p.status}</Badge>
+<td class="px-3 py-2 align-top">
+<Badge variant="outline" class="text-[10px] {statusColors[p.status] ?? ''}">{p.status}</Badge>
 </td>
-<td class="px-4 py-3 text-muted-foreground">v{p.version}</td>
-<td class="px-4 py-3">
+<td class="px-3 py-2 align-top text-sm text-muted-foreground">v{p.version}</td>
+<td class="px-3 py-2 align-top">
 <div class="flex flex-wrap gap-1">
 {#each p.tags as tag}
-<Badge variant="secondary" class="text-xs">{tag}</Badge>
+<Badge variant="secondary" class="text-[10px]">{tag}</Badge>
 {/each}
 </div>
 </td>
-<td class="px-4 py-3 text-muted-foreground">{formatDate(p.updated_at)}</td>
-<td class="px-4 py-3">
-<div class="flex gap-1">
-<Button size="icon" variant="ghost" onclick={() => goto(`/automation/${p.id}`)}>
-<Eye class="h-4 w-4" />
+<td class="px-3 py-2 align-top text-sm text-muted-foreground">{formatDate(p.updated_at)}</td>
+<td class="px-3 py-2">
+<div class="flex items-center justify-end gap-1">
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="View" onclick={() => goto(`/automation/${p.id}`)}>
+<Eye class="h-3.5 w-3.5" />
 </Button>
-<Button size="icon" variant="ghost" onclick={() => goto(`/automation/${p.id}/edit`)}>
-<Edit class="h-4 w-4" />
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Edit" onclick={() => goto(`/automation/${p.id}/edit`)}>
+<Edit class="h-3.5 w-3.5" />
 </Button>
-<Button size="icon" variant="ghost" onclick={() => clone(p.id, p.name)}>
-<Copy class="h-4 w-4" />
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Clone" onclick={() => clone(p.id, p.name)}>
+<Copy class="h-3.5 w-3.5" />
 </Button>
-<Button size="icon" variant="ghost" onclick={() => run(p.id)}>
-<Play class="h-4 w-4" />
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Run" onclick={() => run(p.id)}>
+<Play class="h-3.5 w-3.5" />
 </Button>
-<Button size="icon" variant="ghost" class="text-destructive" onclick={() => remove(p.id)}>
-<Trash2 class="h-4 w-4" />
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Delete" onclick={() => remove(p.id)}>
+<Trash2 class="h-3.5 w-3.5 text-destructive" />
 </Button>
 </div>
 </td>
@@ -219,7 +226,48 @@ onclick={() => goto(`/automation/${p.id}`)}
 </tbody>
 </table>
 </div>
+</Card.Content>
 </Card.Root>
+</div>
+
+<!-- Cards (mobile) -->
+<div class="md:hidden space-y-3">
+{#each pipelines as p (p.id)}
+<div class="border rounded-lg p-3 bg-card">
+<div class="flex items-start justify-between gap-2 mb-2">
+<button class="text-left text-sm font-medium hover:underline truncate" onclick={() => goto(`/automation/${p.id}`)}>{p.name}</button>
+<Badge variant="outline" class="shrink-0 text-[10px] {statusColors[p.status] ?? ''}">{p.status}</Badge>
+</div>
+<div class="flex items-center justify-between text-xs text-muted-foreground mb-2">
+<span>v{p.version} · {formatDate(p.updated_at)}</span>
+</div>
+{#if p.tags.length > 0}
+<div class="flex flex-wrap gap-1 mb-2">
+{#each p.tags as tag}
+<Badge variant="secondary" class="text-[10px]">{tag}</Badge>
+{/each}
+</div>
+{/if}
+<div class="flex items-center justify-end gap-1 border-t pt-2">
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="View" onclick={() => goto(`/automation/${p.id}`)}>
+<Eye class="h-3.5 w-3.5" />
+</Button>
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Edit" onclick={() => goto(`/automation/${p.id}/edit`)}>
+<Edit class="h-3.5 w-3.5" />
+</Button>
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Clone" onclick={() => clone(p.id, p.name)}>
+<Copy class="h-3.5 w-3.5" />
+</Button>
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Run" onclick={() => run(p.id)}>
+<Play class="h-3.5 w-3.5" />
+</Button>
+<Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="Delete" onclick={() => remove(p.id)}>
+<Trash2 class="h-3.5 w-3.5 text-destructive" />
+</Button>
+</div>
+</div>
+{/each}
+</div>
 
 <!-- Pagination -->
 {#if pages > 1}

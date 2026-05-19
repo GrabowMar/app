@@ -177,6 +177,23 @@ def inspect(name: str) -> dict[str, Any]:
         return container.attrs or {}
 
 
+def exec_in(name: str, cmd: list[str], timeout_s: int = 10) -> dict[str, Any]:
+    """Run a short command inside a running container; return exit_code + output."""
+    try:
+        c = client()
+        if c is None:
+            return {"error": "Docker daemon unavailable", "exit_code": -1, "output": ""}
+        container = c.containers.get(name)
+        result = container.exec_run(cmd, demux=False, tty=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("exec_in(%s, %s) failed: %s", name, cmd, exc)
+        return {"error": str(exc), "exit_code": -1, "output": ""}
+    out = result.output
+    if isinstance(out, bytes):
+        out = out.decode("utf-8", errors="replace")
+    return {"exit_code": int(result.exit_code or 0), "output": out or ""}
+
+
 def health(name: str) -> dict[str, Any]:
     """Return container health state."""
     try:

@@ -196,27 +196,27 @@
 <svelte:window onclick={handleWindowClick} onkeydown={handleKeydown} />
 
 <header
-	class="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4 md:gap-4 md:px-6"
+	class="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-background/65 sm:px-4 md:gap-4 md:px-5"
 >
 	<!-- Mobile sidebar trigger -->
 	<Sheet.Root bind:open={mobileMenuOpen}>
 		<Sheet.Trigger
-			class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden touch-mobile-show"
+			class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden cursor-pointer transition-colors"
 		>
 			<PanelLeft class="h-5 w-5" />
 			<span class="sr-only">Toggle menu</span>
 		</Sheet.Trigger>
-		<Sheet.Content side="left" class="w-72 p-0" showClose={false}>
+		<Sheet.Content side="left" class="w-72 p-0 bg-sidebar text-sidebar-foreground border-sidebar-border" showClose={false}>
 			<!-- Mobile nav header -->
-			<div class="flex h-14 items-center justify-between border-b px-4">
+			<div class="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
 				<a href="/" class="flex items-center gap-2" onclick={() => (mobileMenuOpen = false)}>
-					<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-						<FlaskConical class="h-4 w-4" />
+					<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+						<FlaskConical class="h-3.5 w-3.5" />
 					</div>
-					<span class="font-semibold">LLM Lab</span>
+					<span class="font-semibold text-sm" style="font-family: var(--font-display);">LLM<span class="text-sidebar-primary">_</span>Lab</span>
 				</a>
 				<button
-					class="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+					class="inline-flex h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors"
 					onclick={() => (mobileMenuOpen = false)}
 				>
 					<X class="h-4 w-4" />
@@ -224,26 +224,26 @@
 			</div>
 
 			<!-- Mobile nav sections -->
-			<nav class="flex-1 overflow-y-auto py-3">
+			<nav class="flex-1 overflow-y-auto py-2">
 				{#each navSections as section (section.title)}
-					<div class="px-4 pt-4 pb-1.5">
-						<span class="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/60">
+					<div class="px-3 pt-3 pb-1">
+						<span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/35" style="font-family: var(--font-mono);">
 							{section.title}
 						</span>
 					</div>
-					<div class="flex flex-col gap-0.5 px-3">
+					<div class="flex flex-col gap-px px-2">
 						{#each section.items as item (item.href)}
 							<a
 								href={item.href}
 								class={cn(
-									'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+									'flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] transition-colors',
 									isActive(item.href)
-										? 'bg-accent text-accent-foreground font-medium'
-										: 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+										? 'bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-sidebar-primary -ml-px pl-[calc(0.625rem-1px)]'
+										: 'text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
 								)}
 								onclick={() => (mobileMenuOpen = false)}
 							>
-								<item.icon class="h-4 w-4 shrink-0" />
+								<item.icon class="h-3.5 w-3.5 shrink-0" />
 								{item.label}
 							</a>
 						{/each}
@@ -252,14 +252,14 @@
 			</nav>
 
 			<!-- Mobile nav footer -->
-			<div class="border-t px-4 py-3">
+			<div class="border-t border-sidebar-border px-3 py-2.5">
 				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2.5">
-						<div class="relative flex h-2 w-2 shrink-0">
-							<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-							<span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+					<div class="flex items-center gap-2">
+						<div class="relative flex h-1.5 w-1.5 shrink-0">
+							<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[color:var(--success)] opacity-60"></span>
+							<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--success)]"></span>
 						</div>
-						<span class="text-xs text-muted-foreground">System Online</span>
+						<span class="text-[11px] text-sidebar-foreground/70">System online</span>
 					</div>
 					<ThemeToggle />
 				</div>
@@ -267,22 +267,22 @@
 		</Sheet.Content>
 	</Sheet.Root>
 
-	<a href="/" class="flex items-center gap-2 font-semibold">
-		<FlaskConical class="h-5 w-5 text-primary" />
-		<span class="hidden md:inline touch-mobile-hide-text">LLM Lab</span>
+	<a href="/" class="flex items-center gap-2 font-semibold text-sm min-w-0" style="font-family: var(--font-display);">
+		<FlaskConical class="h-4 w-4 text-primary shrink-0" />
+		<span class="truncate">LLM<span class="text-primary">_</span>Lab</span>
 	</a>
 
 	{#if breadcrumbSegments.length > 0}
-		<nav aria-label="Breadcrumb" class="hidden items-center gap-1 text-sm text-muted-foreground md:flex touch-mobile-hide-nav">
-			<ChevronRight class="h-4 w-4" />
+		<nav aria-label="Breadcrumb" class="hidden items-center gap-1 text-xs text-muted-foreground md:flex touch-mobile-hide-nav" style="font-family: var(--font-mono);">
+			<span class="text-muted-foreground/40">/</span>
 			{#each breadcrumbSegments as segment, i}
 				{#if i > 0}
-					<ChevronRight class="h-4 w-4" />
+					<span class="text-muted-foreground/40">/</span>
 				{/if}
 				{#if i === breadcrumbSegments.length - 1}
 					<span class="font-medium text-foreground">{segment.label}</span>
 				{:else}
-					<a href={segment.href} class="hover:text-foreground transition-colors">{segment.label}</a>
+					<a href={segment.href} class="hover:text-primary transition-colors">{segment.label}</a>
 				{/if}
 			{/each}
 		</nav>
@@ -290,21 +290,22 @@
 
 	<div class="flex-1"></div>
 
-	<div class="flex items-center gap-2">
+	<div class="flex items-center gap-1.5">
 		<ThemeToggle />
 
 		{#if auth.isAuthenticated && auth.user}
-			<Separator orientation="vertical" class="mx-1 h-6" />
+			<Separator orientation="vertical" class="mx-1 h-5 bg-border/70" />
 
 			<div class="relative" data-user-menu>
 				<button
-					class="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					class="flex items-center gap-2 rounded-md p-0.5 hover:ring-2 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer"
 					onclick={toggleDropdown}
 					aria-expanded={dropdownOpen}
 					aria-haspopup="true"
 				>
 					<div
-						class="{avatarBgClass} flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white"
+						class="{avatarBgClass} flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold text-white shadow-sm"
+						style="font-family: var(--font-mono);"
 					>
 						{userInitial}
 					</div>
@@ -312,54 +313,52 @@
 
 				{#if dropdownOpen}
 					<div
-						class="absolute right-0 top-full mt-2 w-56 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-lg"
+						class="absolute right-0 top-full mt-1.5 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-xl"
 						role="menu"
 					>
-						<div class="px-3 py-2">
-							<p class="text-sm font-medium">{userDisplayName}</p>
+						<div class="px-2.5 py-2 border-b border-border/60 mb-1">
+							<p class="text-sm font-medium truncate">{userDisplayName}</p>
 							{#if auth.user.display || auth.user.name}
-								<p class="text-xs text-muted-foreground">{auth.user.email}</p>
+								<p class="text-xs text-muted-foreground truncate" style="font-family: var(--font-mono);">{auth.user.email}</p>
 							{/if}
 						</div>
 
-						<div role="separator" class="my-1 h-[1px] bg-border"></div>
-
 						<a
 							href="/users/settings#profile"
-							class="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+							class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
 							role="menuitem"
 							onclick={closeDropdown}
 						>
-							<User class="h-4 w-4" />
+							<User class="h-3.5 w-3.5" />
 							Profile
 						</a>
 						<a
 							href="/users/settings#general"
-							class="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+							class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
 							role="menuitem"
 							onclick={closeDropdown}
 						>
-							<Settings class="h-4 w-4" />
+							<Settings class="h-3.5 w-3.5" />
 							Settings
 						</a>
 						<a
 							href="/users/settings#api"
-							class="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+							class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
 							role="menuitem"
 							onclick={closeDropdown}
 						>
-							<Key class="h-4 w-4" />
+							<Key class="h-3.5 w-3.5" />
 							API Access
 						</a>
 
-						<div role="separator" class="my-1 h-[1px] bg-border"></div>
+						<div role="separator" class="my-1 h-px bg-border/60"></div>
 
 						<button
-							class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-accent"
+							class="flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm text-destructive hover:bg-[color:var(--destructive)]/10 transition-colors"
 							role="menuitem"
 							onclick={handleLogout}
 						>
-							<LogOut class="h-4 w-4" />
+							<LogOut class="h-3.5 w-3.5" />
 							Logout
 						</button>
 					</div>

@@ -26,9 +26,9 @@
 </script>
 
 {#if visible}
-	<div class="fixed bottom-0 left-0 right-0 z-50 border-t bg-card p-3 shadow-lg sm:bottom-4 sm:left-auto sm:right-6 sm:max-w-md sm:rounded-lg sm:border sm:border-t sm:p-4">
+	<div class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur p-3 shadow-2xl sm:bottom-4 sm:left-auto sm:right-6 sm:max-w-md sm:rounded-md sm:border sm:p-4">
 		<div class="flex items-start gap-3">
-			<Cookie class="mt-0.5 hidden h-5 w-5 shrink-0 text-muted-foreground sm:block" />
+			<Cookie class="mt-0.5 hidden h-4 w-4 shrink-0 text-primary sm:block" />
 			<div class="flex-1 space-y-2">
 				<p class="text-xs sm:text-sm">
 					We use cookies for essential functionality. By continuing, you agree to our use of cookies.
@@ -40,7 +40,7 @@
 					</Button>
 				</div>
 			</div>
-			<button class="text-muted-foreground hover:text-foreground" onclick={dismiss}>
+			<button class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer" onclick={dismiss}>
 				<X class="h-4 w-4" />
 				<span class="sr-only">Close</span>
 			</button>

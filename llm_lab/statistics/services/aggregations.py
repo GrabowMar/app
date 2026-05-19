@@ -1,25 +1,13 @@
-"""Aggregation queries for platform-wide statistics.
-
-Replaces the SQLAlchemy-based ``statistics_service`` from the old Flask app
-(~999 LOC) with focused Django ORM queries.
-
-Each function returns a JSON-ready ``dict``/``list``.  Functions accept an
-optional ``user`` argument so callers can scope results to a single user;
-pass ``None`` for global/admin views.
-"""
+"""Aggregation queries for KPIs, severity, model comparison, and tools."""
 
 from __future__ import annotations
 
-from datetime import UTC
-from datetime import datetime
-from datetime import timedelta
 from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db.models import Avg
 from django.db.models import Count
 from django.db.models import Q
-from django.db.models.functions import TruncDate
 
 from llm_lab.analysis.models import AnalysisResult
 from llm_lab.analysis.models import AnalysisTask
@@ -27,36 +15,11 @@ from llm_lab.analysis.models import Finding
 from llm_lab.analysis.services.base import AnalyzerRegistry
 from llm_lab.generation.models import GenerationJob
 from llm_lab.llm_models.models import LLMModel
+from llm_lab.statistics.services.helpers import _percent
+from llm_lab.statistics.services.helpers import _scoped
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractBaseUser
-    from django.db.models import QuerySet
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _scoped(
-    qs: QuerySet[Any],
-    user: AbstractBaseUser | None,
-    field: str,
-) -> QuerySet[Any]:
-    if user is None or not getattr(user, "is_authenticated", False):
-        return qs
-    return qs.filter(**{field: user})
-
-
-def _percent(numerator: int, denominator: int) -> float:
-    if denominator <= 0:
-        return 0.0
-    return round((numerator / denominator) * 100, 1)
-
-
-# ---------------------------------------------------------------------------
-# System overview (KPIs)
-# ---------------------------------------------------------------------------
 
 
 def get_system_overview(user: AbstractBaseUser | None = None) -> dict[str, Any]:
@@ -124,11 +87,6 @@ def get_system_overview(user: AbstractBaseUser | None = None) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Severity distribution
-# ---------------------------------------------------------------------------
-
-
 def get_severity_distribution(
     user: AbstractBaseUser | None = None,
 ) -> dict[str, Any]:
@@ -155,78 +113,6 @@ def get_severity_distribution(
         for s in severities
     ]
     return {"total": total, "distribution": distribution}
-
-
-# ---------------------------------------------------------------------------
-# Trends (time series)
-# ---------------------------------------------------------------------------
-
-
-def get_analysis_trends(
-    days: int = 7,
-    user: AbstractBaseUser | None = None,
-) -> dict[str, Any]:
-    """Daily analysis counts for the last *days* days."""
-
-    days = max(1, min(days, 90))
-    start = datetime.now(tz=UTC) - timedelta(days=days - 1)
-    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    tasks = _scoped(AnalysisTask.objects.all(), user, "created_by").filter(
-        created_at__gte=start,
-    )
-    rows = (
-        tasks.annotate(d=TruncDate("created_at"))
-        .values("d")
-        .annotate(
-            total=Count("id"),
-            completed=Count("id", filter=Q(status="completed")),
-            failed=Count("id", filter=Q(status="failed")),
-        )
-        .order_by("d")
-    )
-    bucket: dict[str, dict[str, int]] = {}
-    for r in rows:
-        key = r["d"].isoformat() if r["d"] else ""
-        if key:
-            bucket[key] = {
-                "total": int(r["total"]),
-                "completed": int(r["completed"]),
-                "failed": int(r["failed"]),
-            }
-
-    series: list[dict[str, Any]] = []
-    cursor = start
-    today = datetime.now(tz=UTC).replace(
-        hour=0,
-        minute=0,
-        second=0,
-        microsecond=0,
-    )
-    while cursor <= today:
-        key = cursor.date().isoformat()
-        row = bucket.get(key, {"total": 0, "completed": 0, "failed": 0})
-        series.append(
-            {
-                "date": key,
-                "label": cursor.strftime("%a"),
-                "total": row["total"],
-                "completed": row["completed"],
-                "failed": row["failed"],
-            },
-        )
-        cursor += timedelta(days=1)
-
-    return {
-        "days": days,
-        "total": sum(p["total"] for p in series),
-        "series": series,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Model comparison / leaderboard
-# ---------------------------------------------------------------------------
 
 
 def get_model_comparison(
@@ -320,11 +206,6 @@ def get_model_comparison(
     return rows
 
 
-# ---------------------------------------------------------------------------
-# Tool effectiveness (per-analyzer)
-# ---------------------------------------------------------------------------
-
-
 def get_tool_effectiveness(
     user: AbstractBaseUser | None = None,
 ) -> list[dict[str, Any]]:
@@ -371,11 +252,6 @@ def get_tool_effectiveness(
     return rows
 
 
-# ---------------------------------------------------------------------------
-# Top findings
-# ---------------------------------------------------------------------------
-
-
 def get_top_findings(
     limit: int = 10,
     user: AbstractBaseUser | None = None,
@@ -398,59 +274,6 @@ def get_top_findings(
         }
         for r in rows
     ]
-
-
-# ---------------------------------------------------------------------------
-# Recent activity
-# ---------------------------------------------------------------------------
-
-
-def get_recent_activity(
-    limit: int = 20,
-    user: AbstractBaseUser | None = None,
-) -> list[dict[str, Any]]:
-    limit = max(1, min(limit, 100))
-
-    jobs = (
-        _scoped(GenerationJob.objects.all(), user, "created_by")
-        .select_related("model")
-        .order_by("-created_at")[:limit]
-    )
-    tasks = _scoped(AnalysisTask.objects.all(), user, "created_by").order_by(
-        "-created_at",
-    )[:limit]
-
-    items: list[dict[str, Any]] = [
-        {
-            "kind": "generation",
-            "id": str(j.id),
-            "title": (
-                f"Generation {j.mode} job — "
-                f"{j.model.model_name if j.model else 'no model'}"
-            ),
-            "status": j.status,
-            "created_at": j.created_at.isoformat(),
-        }
-        for j in jobs
-    ]
-    items.extend(
-        {
-            "kind": "analysis",
-            "id": str(t.id),
-            "title": t.name or f"Analysis {str(t.id)[:8]}",
-            "status": t.status,
-            "created_at": t.created_at.isoformat(),
-        }
-        for t in tasks
-    )
-
-    items.sort(key=lambda i: i["created_at"], reverse=True)
-    return items[:limit]
-
-
-# ---------------------------------------------------------------------------
-# Code generation stats
-# ---------------------------------------------------------------------------
 
 
 def get_code_generation_stats(
@@ -503,11 +326,6 @@ def get_code_generation_stats(
     }
 
 
-# ---------------------------------------------------------------------------
-# Analyzer / system health
-# ---------------------------------------------------------------------------
-
-
 def get_analyzer_health() -> dict[str, Any]:
     analyzers = AnalyzerRegistry.list_available()
     online = sum(1 for a in analyzers if a.get("available"))
@@ -535,25 +353,4 @@ def get_analyzer_health() -> dict[str, Any]:
             }
             for a in analyzers
         ],
-    }
-
-
-# ---------------------------------------------------------------------------
-# Composite dashboard payload
-# ---------------------------------------------------------------------------
-
-
-def get_dashboard(user: AbstractBaseUser | None = None) -> dict[str, Any]:
-    """Single payload powering the Statistics page in one round-trip."""
-
-    return {
-        "overview": get_system_overview(user),
-        "severity": get_severity_distribution(user),
-        "trends": get_analysis_trends(7, user),
-        "models": get_model_comparison(user, limit=10),
-        "tools": get_tool_effectiveness(user),
-        "top_findings": get_top_findings(5, user),
-        "code_generation": get_code_generation_stats(user),
-        "analyzer_health": get_analyzer_health(),
-        "recent_activity": get_recent_activity(15, user),
     }

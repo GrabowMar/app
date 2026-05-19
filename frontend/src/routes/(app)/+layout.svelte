@@ -34,27 +34,27 @@
 </script>
 
 {#if auth.isLoading}
-	<div class="flex min-h-screen items-center justify-center">
+	<div class="flex min-h-dvh items-center justify-center bg-background">
 		{#if loadingTooLong}
 			<div class="flex flex-col items-center gap-4 text-center">
 				<p class="text-muted-foreground">Loading is taking longer than expected.</p>
 				<button
 					onclick={forceReload}
-					class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+					class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer transition-colors"
 				>
 					Reload Page
 				</button>
 			</div>
 		{:else}
-			<LoaderCircle class="size-8 animate-spin text-muted-foreground" />
+			<LoaderCircle class="size-7 animate-spin text-primary" />
 		{/if}
 	</div>
 {:else if auth.isAuthenticated}
 	<Sidebar.Provider>
 		<AppSidebar />
-		<Sidebar.Inset class="bg-muted/40 min-w-0">
+		<Sidebar.Inset class="bg-background min-w-0">
 			<AppHeader {auth} />
-			<div class="flex min-h-[calc(100vh-5.5rem)] flex-1 flex-col p-3 sm:p-4 md:p-6 min-w-0 overflow-x-clip">
+			<div class="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col p-3 sm:p-4 md:p-5 min-w-0 overflow-x-clip">
 				{@render children()}
 			</div>
 			<AppFooter />

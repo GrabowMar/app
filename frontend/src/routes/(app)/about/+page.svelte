@@ -13,15 +13,17 @@
 </svelte:head>
 
 <div class="max-w-3xl mx-auto space-y-8">
-	<div class="flex items-center gap-4">
-		<div class="flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-			<FlaskConical class="size-7" />
+	<div class="page-header">
+		<div class="flex items-center gap-4">
+			<div class="flex size-12 items-center justify-center rounded-md bg-primary/10 text-primary border border-primary/20 shrink-0">
+				<FlaskConical class="size-6" />
+			</div>
+			<div class="flex-1 min-w-0">
+				<h1>LLM Lab</h1>
+				<p>Research Platform for LLM Evaluation</p>
+			</div>
+			<Badge variant="outline" class="font-mono text-xs">v0.1.0</Badge>
 		</div>
-		<div>
-			<h1 class="text-3xl font-bold tracking-tight">LLM Lab</h1>
-			<p class="text-muted-foreground">Research Platform for LLM Evaluation</p>
-		</div>
-		<Badge variant="secondary" class="ml-auto">v0.1.0</Badge>
 	</div>
 
 	<Card.Root>

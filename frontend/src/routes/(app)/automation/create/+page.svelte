@@ -65,37 +65,49 @@ async function save() {
 
 <svelte:head><title>New Pipeline — LLM Eval Lab</title></svelte:head>
 
-<div class="container mx-auto p-6 max-w-3xl space-y-6">
-	<div class="flex items-center gap-3">
-		<Button variant="ghost" size="icon" onclick={() => goto('/automation')}>
-			<ArrowLeft class="h-4 w-4" />
-		</Button>
-		<h1 class="text-2xl font-bold tracking-tight">New Pipeline</h1>
+<div class="space-y-6 max-w-3xl">
+	<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted-foreground">
+		<a href="/automation" class="hover:text-foreground transition-colors flex items-center gap-1">
+			<ArrowLeft class="h-3.5 w-3.5" />
+			<span class="font-medium text-foreground">Automation</span>
+		</a>
+		<span>/</span>
+		<span class="truncate max-w-[300px]">New Pipeline</span>
+	</nav>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<div class="page-header">
+			<h1>New Pipeline</h1>
+			<p>Define steps and configuration for a new automation pipeline.</p>
+		</div>
 	</div>
 
 	<Card.Root>
 		<Card.Content class="pt-6 space-y-4">
 			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-1 col-span-2 md:col-span-1">
+				<div class="space-y-2 col-span-2 md:col-span-1">
 					<Label for="name">Name *</Label>
 					<Input id="name" bind:value={name} placeholder="My Pipeline" />
+					<p class="text-xs text-muted-foreground">A short, human-readable name.</p>
 				</div>
-				<div class="space-y-1">
+				<div class="space-y-2">
 					<Label for="status">Status</Label>
 					<select id="status" bind:value={status} class="w-full rounded-md border bg-background px-3 py-2 text-sm">
 						<option value="draft">Draft</option>
 						<option value="active">Active</option>
 						<option value="archived">Archived</option>
 					</select>
+					<p class="text-xs text-muted-foreground">Only active pipelines can be triggered.</p>
 				</div>
 			</div>
-			<div class="space-y-1">
+			<div class="space-y-2">
 				<Label for="desc">Description</Label>
 				<Textarea id="desc" bind:value={description} rows={2} placeholder="What does this pipeline do?" />
+				<p class="text-xs text-muted-foreground">Optional summary shown in lists and detail pages.</p>
 			</div>
-			<div class="space-y-1">
+			<div class="space-y-2">
 				<Label for="tags">Tags (comma-separated)</Label>
 				<Input id="tags" bind:value={tags} placeholder="ci, nightly, prod" />
+				<p class="text-xs text-muted-foreground">Used for filtering and grouping pipelines.</p>
 			</div>
 
 			<!-- Builder / JSON toggle -->

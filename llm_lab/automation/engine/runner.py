@@ -89,7 +89,8 @@ def _collect_prior_outputs(run_id: Any) -> dict[str, dict[str, Any]]:
 
     result: dict[str, dict[str, Any]] = {}
     for sr in PipelineStepRun.objects.filter(
-        run_id=run_id, status="succeeded",
+        run_id=run_id,
+        status="succeeded",
     ).select_related("step"):
         if sr.step and sr.step.name:
             result[sr.step.name] = {"output": sr.output or {}}

@@ -49,7 +49,7 @@
 </svelte:head>
 
 <!-- Mobile: borderless inline form. Desktop: bordered card -->
-<div class="w-full sm:rounded-xl sm:border sm:bg-card sm:py-6 sm:shadow-sm">
+<div class="w-full sm:rounded-md sm:border sm:border-border sm:bg-card sm:py-6 sm:shadow-sm">
 		<div class="space-y-1.5 sm:px-6">
 			<h2 class="text-xl font-semibold leading-none tracking-tight sm:text-2xl">Create Account</h2>
 			<p class="text-xs text-muted-foreground sm:text-sm">Enter your email and choose a password.</p>

@@ -27,6 +27,7 @@
 		type ActionStatus
 	} from '$lib/api/client';
 	import { subscribe } from '$lib/api/sse';
+	import { toast } from 'svelte-sonner';
 
 	const containerId = page.params.id;
 
@@ -100,6 +101,12 @@
 			} else {
 				await load();
 			}
+		} catch (e) {
+			const msg =
+				(e && typeof e === 'object' && 'message' in e && typeof (e as any).message === 'string')
+					? (e as any).message
+					: (e instanceof Error ? e.message : 'unknown error');
+			toast.error(`${action} failed: ${msg}`);
 		} finally {
 			actionLoading = false;
 		}
@@ -140,7 +147,7 @@
 	<title>Container — LLM Eval Lab</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 space-y-6">
+<div class="space-y-6">
 	<div class="flex items-center gap-3">
 		<Button variant="ghost" size="sm" onclick={() => goto('/runtime')}>
 			<ArrowLeft class="mr-1 h-4 w-4" />Back
@@ -153,10 +160,15 @@
 			<Button variant="outline" size="sm" onclick={load}>
 				<RefreshCw class="mr-1 h-4 w-4" />Refresh
 			</Button>
-			{#if container?.status === 'stopped' || container?.status === 'failed'}
+			{#if container?.status === 'stopped'}
 				<Button size="sm" variant="outline" onclick={() => act('start')} disabled={actionLoading}>
 					<Play class="mr-1 h-3 w-3" />Start
 				</Button>
+			{/if}
+			{#if container?.status === 'failed'}
+				<span class="text-xs text-red-400 self-center" title={container.last_error || container.error_message}>
+					⚠ Build failed{(container.last_error || container.error_message) ? `: ${container.last_error || container.error_message}` : ''}
+				</span>
 			{/if}
 			{#if container?.status === 'running'}
 				<Button size="sm" variant="outline" onclick={() => act('stop')} disabled={actionLoading}>
@@ -175,9 +187,11 @@
 	</div>
 
 	{#if loading}
-		<div class="flex items-center justify-center py-16 text-muted-foreground">
-			<LoaderCircle class="mr-2 h-5 w-5 animate-spin" />Loading…
-		</div>
+		<Card.Root>
+			<Card.Content class="flex items-center justify-center py-20">
+				<LoaderCircle class="h-8 w-8 animate-spin text-muted-foreground" />
+			</Card.Content>
+		</Card.Root>
 	{:else if error}
 		<Card.Root><Card.Content class="p-6 text-red-400 text-sm">{error}</Card.Content></Card.Root>
 	{:else if container}
@@ -261,7 +275,10 @@
 		{:else if activeTab === 'actions'}
 			{#if actions.length === 0}
 				<Card.Root>
-					<Card.Content class="p-8 text-center text-sm text-muted-foreground">No actions recorded.</Card.Content>
+					<Card.Content class="py-16 text-center">
+						<h3 class="text-lg font-medium mb-1">No actions recorded</h3>
+						<p class="text-sm text-muted-foreground">Container lifecycle actions will appear here.</p>
+					</Card.Content>
 				</Card.Root>
 			{:else}
 				<div class="space-y-3">

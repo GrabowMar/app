@@ -51,7 +51,7 @@ def test_retrieve_current_user(client: Client, user: User):
         "email": user.email,
         "name": user.name,
         "url": f"/api/users/{user.pk}/",
-            "is_staff": user.is_staff,
+        "is_staff": user.is_staff,
     }
 
 
@@ -67,7 +67,7 @@ def test_retrieve_user(client: Client, user: User):
         "email": user.email,
         "name": user.name,
         "url": f"/api/users/{user.pk}/",
-            "is_staff": user.is_staff,
+        "is_staff": user.is_staff,
     }
 
 
@@ -98,7 +98,7 @@ def test_update_current_user(client: Client):
         "email": user.email,
         "name": "New Name",
         "url": f"/api/users/{user.pk}/",
-            "is_staff": user.is_staff,
+        "is_staff": user.is_staff,
     }
 
 
@@ -117,5 +117,5 @@ def test_update_user(client: Client):
         "email": user.email,
         "name": "New Name",
         "url": f"/api/users/{user.pk}/",
-            "is_staff": user.is_staff,
+        "is_staff": user.is_staff,
     }

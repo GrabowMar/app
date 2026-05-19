@@ -16,9 +16,9 @@ from ninja.errors import HttpError
 
 from llm_lab.common.pagination import paginate_queryset
 from llm_lab.llm_models.api.schema import LLMModelListSchema
+from llm_lab.llm_models.api.schema import LLMModelSchema
 from llm_lab.llm_models.api.schema import ModelComparisonSchema
 from llm_lab.llm_models.api.schema import ModelImportResultSchema
-from llm_lab.llm_models.api.schema import LLMModelSchema
 from llm_lab.llm_models.api.schema import PaginatedModelsSchema
 from llm_lab.llm_models.api.schema import StatsSchema
 from llm_lab.llm_models.api.schema import SyncResultSchema
@@ -89,7 +89,9 @@ def _resolve_model_queryset(identifier: str):
 
 
 def _get_model_by_identifier(identifier: str) -> LLMModel:
-    return get_object_or_404(_resolve_model_queryset(identifier).order_by("canonical_slug"))
+    return get_object_or_404(
+        _resolve_model_queryset(identifier).order_by("canonical_slug"),
+    )
 
 
 def _serialize_export_model(model: LLMModel) -> dict:
@@ -126,22 +128,28 @@ def _build_csv_export(models: list[LLMModel]) -> HttpResponse:
     writer.writeheader()
 
     for model in models:
-        writer.writerow({
-            "provider": model.provider,
-            "model_name": model.model_name,
-            "model_id": model.model_id,
-            "canonical_slug": model.canonical_slug,
-            "context_window": model.context_window,
-            "max_output_tokens": model.max_output_tokens,
-            "input_price_per_million": round(model.input_price_per_token * 1_000_000, 4),
-            "output_price_per_million": round(model.output_price_per_token * 1_000_000, 4),
-            "is_free": model.is_free,
-            "supports_function_calling": model.supports_function_calling,
-            "supports_vision": model.supports_vision,
-            "supports_streaming": model.supports_streaming,
-            "supports_json_mode": model.supports_json_mode,
-            "cost_efficiency": round(model.cost_efficiency, 6),
-        })
+        writer.writerow(
+            {
+                "provider": model.provider,
+                "model_name": model.model_name,
+                "model_id": model.model_id,
+                "canonical_slug": model.canonical_slug,
+                "context_window": model.context_window,
+                "max_output_tokens": model.max_output_tokens,
+                "input_price_per_million": round(
+                    model.input_price_per_token * 1_000_000, 4,
+                ),
+                "output_price_per_million": round(
+                    model.output_price_per_token * 1_000_000, 4,
+                ),
+                "is_free": model.is_free,
+                "supports_function_calling": model.supports_function_calling,
+                "supports_vision": model.supports_vision,
+                "supports_streaming": model.supports_streaming,
+                "supports_json_mode": model.supports_json_mode,
+                "cost_efficiency": round(model.cost_efficiency, 6),
+            },
+        )
 
     response = HttpResponse(buffer.getvalue(), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="models_export.csv"'
