@@ -274,9 +274,15 @@ llm_lab/media/
 
 .pytest_cache/
 .ipython/
+# Environment files — only *.example templates are committed.
 .env
 .envs/*
 !.envs/.local/
+!.envs/.production/
+.envs/.local/*
+.envs/.production/*
+!.envs/.local/*.example
+!.envs/.production/*.example
 
 # Vite dev-server cache (top-level + frontend)
 .vite/

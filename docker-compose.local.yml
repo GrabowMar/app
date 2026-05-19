@@ -85,7 +85,7 @@ services:
       - /app/frontend/node_modules
     environment:
       - API_TARGET=http://django:8000
-      - ORIGIN=https://grabowmar.ovh
+      - ORIGIN=${FRONTEND_ORIGIN:-http://localhost:8000}
       - PORT=8080
       - HOST=0.0.0.0
       - NODE_ENV=production

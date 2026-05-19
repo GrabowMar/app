@@ -35,13 +35,13 @@ def _update_or_create_site_with_sequence(site_model, connection, domain, name):
 
 
 def update_site_forward(apps, schema_editor):
-    """Set site domain and name."""
+    """Set site domain and name from settings."""
     Site = apps.get_model("sites", "Site")
     _update_or_create_site_with_sequence(
         Site,
         schema_editor.connection,
-        "grabowmar.ovh",
-        "LLM Eval Lab",
+        getattr(settings, "DJANGO_DOMAIN", "example.com"),
+        getattr(settings, "SITE_NAME", "LLM Eval Lab"),
     )
 
 

@@ -78,7 +78,7 @@ class OpenRouterClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://llm-lab.grabowmar.ovh",
+            "HTTP-Referer": settings.OPENROUTER_HTTP_REFERER,
             "X-Title": "LLM Eval Lab",
         }
 

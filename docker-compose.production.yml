@@ -41,6 +41,8 @@ services:
     image: llm_lab_production_traefik
     depends_on:
       - django
+    env_file:
+      - ./.envs/.production/.django
     volumes:
       - production_traefik:/etc/traefik/acme
     ports:

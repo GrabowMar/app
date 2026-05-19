@@ -9,6 +9,10 @@ export COMPOSE_FILE := "docker-compose.local.yml"
 default:
     @just --list
 
+# bootstrap: Create local .env files from templates and generate secrets.
+bootstrap:
+    @./scripts/bootstrap.sh
+
 # build: Build python image.
 build *args:
     @echo "Building python image..."

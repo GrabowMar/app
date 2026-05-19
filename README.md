@@ -30,13 +30,18 @@ You need Docker, Docker Compose, and [`just`](https://github.com/casey/just).
 Everything else lives in containers.
 
 ```bash
-# 1. Bring the full stack up (Django, Postgres, Redis, Celery, Mailpit, Frontend)
+# 1. Generate local .env files with random secrets
+just bootstrap
+
+# 2. (optional) Edit .envs/.local/.django to set OPENROUTER_API_KEY
+
+# 3. Bring the full stack up (Django, Postgres, Redis, Celery, Mailpit, Frontend)
 just up
 
-# 2. Apply migrations
+# 4. Apply migrations
 just manage migrate
 
-# 3. Create a superuser
+# 5. Create a superuser
 just manage createsuperuser
 ```
 
@@ -55,9 +60,28 @@ Then open:
 
 ---
 
+## Secrets & environment
+
+All env files live under `.envs/{.local,.production}/`. Only the `*.example`
+templates are committed; real env files are **gitignored**.
+
+- `just bootstrap` copies the local templates to real files and generates
+  fresh random `POSTGRES_USER`, `POSTGRES_PASSWORD`, `CELERY_FLOWER_USER`,
+  and `CELERY_FLOWER_PASSWORD` values.
+- Fill in `OPENROUTER_API_KEY` yourself — get one at
+  <https://openrouter.ai/keys>.
+- For production, copy the `.envs/.production/*.example` files to real
+  files on the deployment host and fill them in manually. Never commit them.
+
+Maintained as a single contributor today (see [SECURITY.md](SECURITY.md) for
+how to report issues privately).
+
+---
+
 ## Common tasks
 
 ```bash
+just bootstrap              # generate local .env files (idempotent)
 just up                     # start everything
 just down                   # stop everything
 just logs                   # tail container logs

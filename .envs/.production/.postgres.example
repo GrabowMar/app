@@ -1,7 +1,8 @@
-# PostgreSQL
+# Production PostgreSQL.
+# Copy to `.envs/.production/.postgres` and fill in real values.
 # ------------------------------------------------------------------------------
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 POSTGRES_DB=llm_lab
-POSTGRES_USER=BjcxTWQgPWpdEWtHOCTJnbgXdgevdVcv
-POSTGRES_PASSWORD=gTfx0YnMXRjd56mjY7YLd8A5UsqcKKkdqBzZuHHFZ8dpzHEvV5zYl02cVLgqvSly
+POSTGRES_USER=
+POSTGRES_PASSWORD=

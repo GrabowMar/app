@@ -119,7 +119,9 @@ export default defineConfig({
 		],
 	},
 	server: {
-		allowedHosts: ['.grabowmar.ovh'],
+		allowedHosts: process.env.VITE_ALLOWED_HOSTS
+			? process.env.VITE_ALLOWED_HOSTS.split(',').map((h) => h.trim()).filter(Boolean)
+			: true,
 		hmr: {
 			overlay: false,
 		},

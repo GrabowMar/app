@@ -345,5 +345,14 @@ HEADLESS_FRONTEND_URLS = {
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+# Public domain for this deployment. Drives the django_sites entry and the
+# `HTTP-Referer` we send to OpenRouter. Override in env per environment.
+DJANGO_DOMAIN = env("DJANGO_DOMAIN", default="example.com")
+SITE_NAME = env("SITE_NAME", default="LLM Eval Lab")
+
 OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default="")
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/models"
+OPENROUTER_HTTP_REFERER = env(
+    "OPENROUTER_HTTP_REFERER",
+    default=f"https://{DJANGO_DOMAIN}",
+)
