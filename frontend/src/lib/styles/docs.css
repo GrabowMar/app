@@ -237,10 +237,6 @@
 	position: relative;
 	max-height: 28rem;
 	overflow: auto;
-	background: var(--shiki-light-bg, transparent);
-}
-:where([data-theme='dark']) .docs-article .code-block__body {
-	background: var(--shiki-dark-bg, transparent);
 }
 
 .docs-article .code-block pre.shiki {
@@ -250,6 +246,10 @@
 	line-height: 1.6;
 	background: transparent !important;
 	tab-size: 4;
+	/* Collapse the literal "\n" text nodes Shiki emits between <span class="line">
+	   elements (those caused a blank visual line between every code line).
+	   Lines themselves still preserve whitespace via .line { white-space: pre }. */
+	white-space: normal;
 }
 .docs-article .code-block pre.shiki code {
 	display: block;
@@ -258,11 +258,34 @@
 	padding: 0;
 	border: 0;
 	min-width: max-content;
+	white-space: normal;
 }
 .docs-article .code-block pre.shiki .line {
 	display: block;
-	padding: 0 1rem;
+	padding: 0 1rem 0 3.5rem;
 	min-height: 1.6em;
+	white-space: pre;
+	position: relative;
+	counter-increment: docs-line;
+}
+/* Line-number gutter (always on) --------------------------------------- */
+.docs-article .code-block pre.shiki {
+	counter-reset: docs-line;
+}
+.docs-article .code-block pre.shiki .line::before {
+	content: counter(docs-line);
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 2.75rem;
+	padding-right: 0.6rem;
+	text-align: right;
+	color: hsl(var(--muted-foreground) / 0.55);
+	font-variant-numeric: tabular-nums;
+	user-select: none;
+	font-size: 0.75rem;
+	line-height: 1.6;
+	border-right: 1px solid hsl(var(--border) / 0.5);
 }
 
 /* Highlighted lines + diff lines from transformers --------------------- */
@@ -278,17 +301,22 @@
 	background: hsl(0 84% 60% / 0.12);
 	box-shadow: inset 2px 0 0 hsl(0 84% 60%);
 }
-.docs-article .code-block pre.shiki .line.diff.add::before {
+.docs-article .code-block pre.shiki .line.diff.add::after,
+.docs-article .code-block pre.shiki .line.diff.remove::after {
+	position: absolute;
+	left: 2.85rem;
+	top: 0;
+	width: 0.6rem;
+	text-align: center;
+	font-weight: 600;
+}
+.docs-article .code-block pre.shiki .line.diff.add::after {
 	content: '+';
 	color: hsl(142 71% 35%);
-	margin-right: 0.5rem;
-	margin-left: -0.4rem;
 }
-.docs-article .code-block pre.shiki .line.diff.remove::before {
+.docs-article .code-block pre.shiki .line.diff.remove::after {
 	content: '-';
 	color: hsl(0 70% 45%);
-	margin-right: 0.5rem;
-	margin-left: -0.4rem;
 }
 /* Focus dim (notation focus): non-focused lines fade out */
 .docs-article .code-block pre.shiki.has-focused .line:not(.focused) {
@@ -301,28 +329,9 @@
 	filter: none;
 }
 
-/* Line numbers (opt-in via showLineNumbers / numbers flag) ------------- */
-.docs-article .code-block pre.shiki.has-line-numbers {
-	counter-reset: docs-line;
-}
+/* Line numbers always on now — opt-in flag no-op for backwards compat. */
 .docs-article .code-block pre.shiki.has-line-numbers .line {
-	padding-left: 3.25rem;
-	position: relative;
-}
-.docs-article .code-block pre.shiki.has-line-numbers .line::after {
-	counter-increment: docs-line;
-	content: counter(docs-line);
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 2.5rem;
-	padding-right: 0.6rem;
-	text-align: right;
-	color: hsl(var(--muted-foreground) / 0.6);
-	font-variant-numeric: tabular-nums;
-	user-select: none;
-	font-size: 0.75rem;
-	line-height: 1.6;
+	/* same as default */
 }
 
 /* Soft wrap (opt-in via wrap flag) ------------------------------------- */
@@ -336,19 +345,24 @@
 
 /* Shiki dual-theme variable swap --------------------------------------- */
 .docs-article pre.shiki {
-	background-color: var(--shiki-light-bg) !important;
+	/* Slightly off from the Shiki default bg so the block stands apart from the
+	   surrounding card/page surface. */
+	background-color: hsl(220 14% 96%) !important;
 	color: var(--shiki-light) !important;
 }
 .docs-article pre.shiki span {
 	color: var(--shiki-light) !important;
 }
 :where([data-theme='dark']) .docs-article pre.shiki {
-	background-color: var(--shiki-dark-bg) !important;
+	background-color: hsl(220 13% 11%) !important;
 	color: var(--shiki-dark) !important;
 }
 :where([data-theme='dark']) .docs-article pre.shiki span {
 	color: var(--shiki-dark) !important;
 }
+/* Match the scroll container so the bg extends behind the gutter cleanly. */
+.docs-article .code-block__body { background: hsl(220 14% 96%); }
+:where([data-theme='dark']) .docs-article .code-block__body { background: hsl(220 13% 11%); }
 
 /* Tables ---------------------------------------------------------------- */
 .docs-article table {
