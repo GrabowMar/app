@@ -137,10 +137,12 @@ def _build_csv_export(models: list[LLMModel]) -> HttpResponse:
                 "context_window": model.context_window,
                 "max_output_tokens": model.max_output_tokens,
                 "input_price_per_million": round(
-                    model.input_price_per_token * 1_000_000, 4,
+                    model.input_price_per_token * 1_000_000,
+                    4,
                 ),
                 "output_price_per_million": round(
-                    model.output_price_per_token * 1_000_000, 4,
+                    model.output_price_per_token * 1_000_000,
+                    4,
                 ),
                 "is_free": model.is_free,
                 "supports_function_calling": model.supports_function_calling,
@@ -214,14 +216,14 @@ def _apply_sorting(qs, sort_by: str, sort_dir: str):
 
 
 @router.get("/", response=PaginatedModelsSchema)
-def list_models(  # noqa: PLR0913
+def list_models(
     request,
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     search: str = Query(""),
     provider: str = Query(""),
     capability: str = Query(""),
-    free_only: bool = Query(False),  # noqa: FBT001, FBT003
+    free_only: bool = Query(False),  # noqa: FBT003
     sort_by: str = Query(""),
     sort_dir: str = Query("asc"),
     price_range: str = Query(""),
@@ -279,9 +281,7 @@ def get_stats(request):
 def list_providers(request):
     """Return distinct provider names."""
     return list(
-        LLMModel.objects.values_list("provider", flat=True)
-        .distinct()
-        .order_by("provider"),
+        LLMModel.objects.values_list("provider", flat=True).distinct().order_by("provider"),
     )
 
 

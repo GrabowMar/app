@@ -39,7 +39,7 @@ def test_list_containers_authenticated(auth_client):
     assert resp.status_code == HTTPStatus.OK
     data = resp.json()
     assert "containers" in data
-    assert data["pagination"]["total"] >= 3  # noqa: PLR2004
+    assert data["pagination"]["total"] >= 3
 
 
 @pytest.mark.django_db

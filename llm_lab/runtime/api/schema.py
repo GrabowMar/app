@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID  # noqa: TC003
+from uuid import UUID
 
 from ninja import ModelSchema
 from ninja import Schema

@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import datetime  # noqa: TC003
+from datetime import datetime
 
 from django.http import HttpResponse
 from django.http import StreamingHttpResponse
@@ -31,7 +31,7 @@ def _auth_check(request: object) -> bool:
 # ── Findings ─────────────────────────────────────────────────────────────────
 
 
-def _findings_qs(  # noqa: PLR0913
+def _findings_qs(
     request: object,
     task_id: str,
     analyzer: str,
@@ -82,7 +82,7 @@ def _stream_findings_csv(qs: object):
 
 
 @router.get("/findings.csv", auth=None, include_in_schema=True)
-def findings_csv(  # noqa: PLR0913
+def findings_csv(
     request,
     task_id: str = Query(""),
     analyzer: str = Query(""),
@@ -106,7 +106,7 @@ def findings_csv(  # noqa: PLR0913
 
 
 @router.get("/findings.json", auth=None, include_in_schema=True)
-def findings_json(  # noqa: PLR0913
+def findings_json(
     request,
     task_id: str = Query(""),
     analyzer: str = Query(""),
@@ -122,7 +122,7 @@ def findings_json(  # noqa: PLR0913
 
 
 @router.get("/findings.sarif", auth=None, include_in_schema=True)
-def findings_sarif(  # noqa: PLR0913
+def findings_sarif(
     request,
     task_id: str = Query(""),
     analyzer: str = Query(""),

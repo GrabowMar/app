@@ -1,4 +1,4 @@
-"""Automation models: Pipeline, PipelineStep, PipelineRun, PipelineStepRun, Batch, BatchItem, Schedule."""  # noqa: E501
+"""Automation models: Pipeline, PipelineStep, PipelineRun, PipelineStepRun, Batch, BatchItem, Schedule."""
 
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ class PipelineRun(models.Model):
     status = models.CharField(
         _("status"),
         max_length=20,
-        choices=RunStatus.choices,
+        choices=RunStatus,
         default=RunStatus.PENDING,
     )
     started_at = models.DateTimeField(_("started at"), null=True, blank=True)
@@ -149,7 +149,7 @@ class PipelineStepRun(models.Model):
     status = models.CharField(
         _("status"),
         max_length=20,
-        choices=RunStatus.choices,
+        choices=RunStatus,
         default=RunStatus.PENDING,
     )
     started_at = models.DateTimeField(_("started at"), null=True, blank=True)

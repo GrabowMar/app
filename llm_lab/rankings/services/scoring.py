@@ -82,13 +82,13 @@ def compute_adoption_score(entry: dict[str, Any]) -> float:  # noqa: PLR0911
     rank = entry.get("openrouter_programming_rank")
     if rank:
         rank = int(rank)
-        if rank <= 5:  # noqa: PLR2004
+        if rank <= 5:
             return 1.0 - (rank - 1) * 0.04
-        if rank <= 10:  # noqa: PLR2004
+        if rank <= 10:
             return 0.8 - (rank - 6) * 0.04
-        if rank <= 20:  # noqa: PLR2004
+        if rank <= 20:
             return 0.6 - (rank - 11) * 0.02
-        if rank <= 50:  # noqa: PLR2004
+        if rank <= 50:
             return 0.4 - (rank - 21) * 0.00667
         return max(0.0, 0.2 - (rank - 51) * 0.004)
 

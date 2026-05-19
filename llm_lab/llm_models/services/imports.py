@@ -40,13 +40,10 @@ def upsert_imported_models(models_payload: list[dict[str, Any]]) -> int:
             str(model_data.get("canonical_slug") or ""),
         )
         provider = str(
-            model_data.get("provider")
-            or (model_id.split("/", 1)[0] if "/" in model_id else "unknown"),
+            model_data.get("provider") or (model_id.split("/", 1)[0] if "/" in model_id else "unknown"),
         ).strip()
         model_name = str(
-            model_data.get("model_name")
-            or model_data.get("name")
-            or model_id.split("/", 1)[-1],
+            model_data.get("model_name") or model_data.get("name") or model_id.split("/", 1)[-1],
         ).strip()
         description = str(model_data.get("description") or "")
 
@@ -56,16 +53,12 @@ def upsert_imported_models(models_payload: list[dict[str, Any]]) -> int:
             None,
             "",
         ):
-            input_price = (
-                _coerce_float(model_data.get("input_price_per_million")) / 1_000_000
-            )
+            input_price = _coerce_float(model_data.get("input_price_per_million")) / 1_000_000
         if output_price == 0 and model_data.get("output_price_per_million") not in (
             None,
             "",
         ):
-            output_price = (
-                _coerce_float(model_data.get("output_price_per_million")) / 1_000_000
-            )
+            output_price = _coerce_float(model_data.get("output_price_per_million")) / 1_000_000
 
         context_window = _coerce_int(model_data.get("context_window"))
         max_output_tokens = _coerce_int(model_data.get("max_output_tokens"))

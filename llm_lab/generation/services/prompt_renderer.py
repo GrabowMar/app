@@ -218,9 +218,7 @@ class PromptRenderer:
         """Render system + user messages for frontend generation."""
         context = self._build_context(app_requirement)
         # Use scanner output if available, otherwise fall back to regex extraction
-        context["backend_api_context"] = (
-            api_context_override or self._extract_api_context(backend_code)
-        )
+        context["backend_api_context"] = api_context_override or self._extract_api_context(backend_code)
 
         system_content = self._get_template_content(
             prompt_template_system,
@@ -291,10 +289,7 @@ class PromptRenderer:
 
         if not context_parts:
             # Fallback: include a summary of the code
-            return (
-                f"Backend code generated ({len(lines)} lines). "
-                "Use `/api/` prefix for all API calls."
-            )
+            return f"Backend code generated ({len(lines)} lines). Use `/api/` prefix for all API calls."
 
         return "\n\n".join(context_parts)
 

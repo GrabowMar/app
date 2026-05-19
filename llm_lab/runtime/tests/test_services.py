@@ -208,7 +208,7 @@ def test_idempotency_guard_skips_non_pending():
     """An action already in RUNNING state should be skipped by _execute."""
     action = ContainerActionFactory(status=ContainerAction.Status.RUNNING)
     original_started_at = action.started_at
-    container_service._execute(action.id)  # noqa: SLF001
+    container_service._execute(action.id)
     action.refresh_from_db()
     assert action.status == ContainerAction.Status.RUNNING
     assert action.started_at == original_started_at

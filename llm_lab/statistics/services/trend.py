@@ -101,10 +101,7 @@ def get_recent_activity(
         {
             "kind": "generation",
             "id": str(j.id),
-            "title": (
-                f"Generation {j.mode} job — "
-                f"{j.model.model_name if j.model else 'no model'}"
-            ),
+            "title": (f"Generation {j.mode} job — {j.model.model_name if j.model else 'no model'}"),
             "status": j.status,
             "created_at": j.created_at.isoformat(),
         }

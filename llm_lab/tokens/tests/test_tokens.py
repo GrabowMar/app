@@ -178,7 +178,7 @@ def test_list_tokens_after_create(auth_client):
     services.generate_token(user=user, name="t2")
     res = client.get("/api/tokens/")
     assert res.status_code == HTTPStatus.OK
-    assert len(res.json()) == 2  # noqa: PLR2004
+    assert len(res.json()) == 2
 
 
 def test_list_tokens_excludes_other_users(auth_client):

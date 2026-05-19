@@ -182,8 +182,7 @@ def extract_frontend_code(raw_content: str) -> str:
         if lang in ("jsx", "tsx", "javascript", "js", "html", "css", "svelte") or (
             block["filename"]
             and any(
-                block["filename"].lower().endswith(ext)
-                for ext in (".jsx", ".tsx", ".js", ".html", ".css", ".svelte")
+                block["filename"].lower().endswith(ext) for ext in (".jsx", ".tsx", ".js", ".html", ".css", ".svelte")
             )
         ):
             frontend_blocks.append(block)
@@ -313,9 +312,7 @@ def _looks_like_python(content: str) -> bool:
         r"^\s*@\w+\.\w+",
         r"app\s*=\s*Flask\(",
     ]
-    matches = sum(
-        1 for pattern in indicators if re.search(pattern, content, re.MULTILINE)
-    )
+    matches = sum(1 for pattern in indicators if re.search(pattern, content, re.MULTILINE))
     return matches >= 2
 
 

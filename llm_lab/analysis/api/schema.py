@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003
+from datetime import datetime
 from typing import Any
-from uuid import UUID  # noqa: TC003
+from uuid import UUID
 
 from ninja import ModelSchema
 from ninja import Schema

@@ -31,7 +31,7 @@ def validate_live_target_url(url: str) -> tuple[bool, str]:
     (LIVE_TARGET_PORT_MIN - LIVE_TARGET_PORT_MAX).  All other addresses
     fall back to the standard SSRF guard.
     """
-    from urllib.parse import urlparse  # noqa: PLC0415
+    from urllib.parse import urlparse
 
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
@@ -45,10 +45,9 @@ def validate_live_target_url(url: str) -> tuple[bool, str]:
             return True, ""
         return (
             False,
-            f"Loopback port {port} is not in the allowed runtime range "
-            f"{LIVE_TARGET_PORT_MIN}-{LIVE_TARGET_PORT_MAX}.",
+            f"Loopback port {port} is not in the allowed runtime range {LIVE_TARGET_PORT_MIN}-{LIVE_TARGET_PORT_MAX}.",
         )
-    from llm_lab.analysis.services.base import validate_target_url  # noqa: PLC0415
+    from llm_lab.analysis.services.base import validate_target_url
 
     return validate_target_url(url)
 
@@ -64,7 +63,7 @@ def _tcp_probe(host: str, port: int, timeout: float = 3.0) -> bool:
 
 def _http_probe(url: str, timeout: float = 5.0) -> bool:
     """Return True if an HTTP GET to *url* receives any response (including 4xx/5xx)."""
-    import urllib.error  # noqa: PLC0415
+    import urllib.error
 
     try:
         req = urllib.request.Request(url, method="GET")  # noqa: S310
@@ -95,9 +94,9 @@ def prepare_live_target(
         Saves ``container_instance_id`` into ``task.configuration`` so it
         survives even if the caller raises before we return.
     """
-    from llm_lab.generation.models import GenerationJob  # noqa: PLC0415
-    from llm_lab.runtime.models import ContainerInstance  # noqa: PLC0415
-    from llm_lab.runtime.services import container_service  # noqa: PLC0415
+    from llm_lab.generation.models import GenerationJob
+    from llm_lab.runtime.models import ContainerInstance
+    from llm_lab.runtime.services import container_service
 
     job = GenerationJob.objects.get(id=generation_job_id)
     instance = container_service.build_for_job(job, user=None)
@@ -122,10 +121,7 @@ def prepare_live_target(
             raise RuntimeError(msg)
         time.sleep(POLL_INTERVAL_SECONDS)
     else:
-        msg = (
-            f"Container {instance.name} did not reach running status "
-            f"within {POLL_TIMEOUT_SECONDS}s."
-        )
+        msg = f"Container {instance.name} did not reach running status within {POLL_TIMEOUT_SECONDS}s."
         raise TimeoutError(msg)
 
     # Prefer frontend_port for web-facing analysis; fallback to backend_port.
@@ -158,7 +154,7 @@ def teardown_live_target(instance: ContainerInstance) -> None:
     Errors are logged but not re-raised so that the caller's finally block
     cannot be interrupted.
     """
-    from llm_lab.runtime.services import container_service  # noqa: PLC0415
+    from llm_lab.runtime.services import container_service
 
     try:
         container_service.stop_instance(instance, user=None)

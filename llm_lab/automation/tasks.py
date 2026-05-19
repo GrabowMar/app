@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, acks_late=True, max_retries=3, default_retry_delay=10)
 def run_pipeline_task(self, run_id: str) -> dict:
     """Execute a pipeline run.  Wraps ``engine.runner.execute_run``."""
-    from llm_lab.automation.engine.runner import execute_run  # noqa: PLC0415
+    from llm_lab.automation.engine.runner import execute_run
 
     logger.info("Celery run_pipeline_task: run_id=%s", run_id)
     try:
@@ -35,7 +35,7 @@ def run_pipeline_task(self, run_id: str) -> dict:
 @shared_task
 def run_scheduler_tick() -> dict:
     """Trigger all due schedules. Intended for use as a Celery beat task."""
-    from llm_lab.automation.engine.scheduler import tick  # noqa: PLC0415
+    from llm_lab.automation.engine.scheduler import tick
 
     fired = tick()
     logger.info("Scheduler tick: %d schedules fired", fired)

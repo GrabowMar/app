@@ -16,7 +16,7 @@ router = Router(tags=["rankings"])
 
 
 @router.get("/", response=RankingsResponse)
-def list_rankings(  # noqa: PLR0913
+def list_rankings(
     request,
     page: int = 1,
     per_page: int = 25,
@@ -27,8 +27,8 @@ def list_rankings(  # noqa: PLR0913
     max_price: float | None = None,
     min_context: int | None = None,
     min_composite: float | None = None,
-    include_free: bool = True,  # noqa: FBT001, FBT002
-    has_benchmarks: bool = False,  # noqa: FBT001, FBT002
+    include_free: bool = True,
+    has_benchmarks: bool = False,
 ):
     per_page = min(max(per_page, 10), 100)
     page = max(page, 1)
@@ -99,8 +99,8 @@ def refresh(request):
 def export_csv(request):
     """Export current rankings as CSV."""
 
-    import csv  # noqa: PLC0415
-    import io  # noqa: PLC0415
+    import csv
+    import io
 
     rankings = services.aggregate_rankings()
     buf = io.StringIO()

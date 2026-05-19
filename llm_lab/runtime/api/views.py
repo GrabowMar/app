@@ -263,11 +263,29 @@ def get_action(request: HttpRequest, action_id: str):
 
 # ---- whitelisted exec commands ----
 _SENSITIVE_ENV_PATTERNS = (
-    "KEY", "SECRET", "TOKEN", "PASSWORD", "PASS", "DSN", "API",
+    "KEY",
+    "SECRET",
+    "TOKEN",
+    "PASSWORD",
+    "PASS",
+    "DSN",
+    "API",
 )
 _EXEC_WHITELIST: dict[str, list[str]] = {
-    "health": ["sh", "-c", "curl -sf http://127.0.0.1:8000/health 2>/dev/null || curl -sf http://127.0.0.1:5000/health 2>/dev/null || echo 'no /health endpoint'"],
-    "structure": ["sh", "-c", "ls -la /app 2>/dev/null || ls -la /code 2>/dev/null || ls -la /"],
+    "health": [
+        "sh",
+        "-c",
+        (
+            "curl -sf http://127.0.0.1:8000/health 2>/dev/null "
+            "|| curl -sf http://127.0.0.1:5000/health 2>/dev/null "
+            "|| echo 'no /health endpoint'"
+        ),
+    ],
+    "structure": [
+        "sh",
+        "-c",
+        "ls -la /app 2>/dev/null || ls -la /code 2>/dev/null || ls -la /",
+    ],
     "disk": ["sh", "-c", "df -h / && echo --- && du -sh /app/* 2>/dev/null | head -20"],
     "environment": ["sh", "-c", "env | sort"],
     "processes": ["sh", "-c", "ps aux 2>/dev/null || ps -ef"],
@@ -320,7 +338,9 @@ def inspect_container(request: HttpRequest, container_id: str):
     response={200: ContainerExecResponse, 400: GenericResponse, 503: GenericResponse},
 )
 def exec_container_command(
-    request: HttpRequest, container_id: str, payload: ContainerExecRequest,
+    request: HttpRequest,
+    container_id: str,
+    payload: ContainerExecRequest,
 ):
     """Run a whitelisted diagnostic command inside the container."""
     if not docker_manager.ping():

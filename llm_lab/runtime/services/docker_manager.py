@@ -16,7 +16,7 @@ def client():
     if _docker_client is not None:
         return _docker_client
     try:
-        import docker  # noqa: PLC0415
+        import docker
 
         _docker_client = docker.from_env()
     except Exception as exc:  # noqa: BLE001
@@ -33,7 +33,7 @@ def ping() -> bool:
         if c is None:
             return False
         c.ping()
-        return True  # noqa: TRY300
+        return True
     except Exception:  # noqa: BLE001
         return False
 

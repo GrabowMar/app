@@ -39,9 +39,7 @@ def _local_app_stats() -> dict[str, dict[str, Any]]:
         out[row["model__model_id"]] = {
             "apps": int(row["apps"]),
             "apps_completed": int(row["apps_completed"]),
-            "avg_duration": (
-                round(row["avg_duration"], 1) if row["avg_duration"] else 0.0
-            ),
+            "avg_duration": (round(row["avg_duration"], 1) if row["avg_duration"] else 0.0),
             "findings": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
         }
 
@@ -87,14 +85,8 @@ def aggregate_rankings() -> list[dict[str, Any]]:
             "provider": m.provider,
             "is_free": m.is_free,
             "context_length": m.context_window,
-            "price_per_million_input": (
-                m.input_price_per_token * 1_000_000 if m.input_price_per_token else None
-            ),
-            "price_per_million_output": (
-                m.output_price_per_token * 1_000_000
-                if m.output_price_per_token
-                else None
-            ),
+            "price_per_million_input": (m.input_price_per_token * 1_000_000 if m.input_price_per_token else None),
+            "price_per_million_output": (m.output_price_per_token * 1_000_000 if m.output_price_per_token else None),
             "apps": local_row.get("apps", 0),
             "apps_completed": local_row.get("apps_completed", 0),
             "avg_duration": local_row.get("avg_duration", 0.0),
@@ -147,8 +139,6 @@ def get_status() -> dict[str, Any]:
     return {
         "benchmarks": counts,
         "total_benchmark_rows": sum(counts.values()),
-        "models_with_benchmarks": (
-            BenchmarkResult.objects.values("model_id").distinct().count()
-        ),
+        "models_with_benchmarks": (BenchmarkResult.objects.values("model_id").distinct().count()),
         "total_models": LLMModel.objects.count(),
     }

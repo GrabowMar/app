@@ -79,9 +79,7 @@ class PortScanAnalyzer(BaseAnalyzer):
     name: ClassVar[str] = "port_scanner"
     analyzer_type: ClassVar[str] = "dynamic"
     display_name: ClassVar[str] = "Port Scanner"
-    description: ClassVar[str] = (
-        "Scans for open ports and identifies potentially dangerous exposed services"
-    )
+    description: ClassVar[str] = "Scans for open ports and identifies potentially dangerous exposed services"
 
     def check_available(self) -> tuple[bool, str]:
         return True, "Available (uses Python built-in socket module)"

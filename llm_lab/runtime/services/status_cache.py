@@ -14,7 +14,7 @@ _cache: dict[str, dict[str, Any]] = {}
 
 def get(name: str) -> dict[str, Any]:
     """Return cached status, refreshing if stale or missing."""
-    from llm_lab.runtime.services import docker_manager  # noqa: PLC0415
+    from llm_lab.runtime.services import docker_manager
 
     entry = _cache.get(name)
     if entry and (time.monotonic() - entry["fetched_at"]) < _TTL:

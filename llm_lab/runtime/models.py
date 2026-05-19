@@ -147,14 +147,14 @@ class ContainerAction(models.Model):
         return f"{self.action_id} ({self.action_type})"
 
     def mark_running(self) -> None:
-        from django.utils import timezone  # noqa: PLC0415
+        from django.utils import timezone
 
         self.status = self.Status.RUNNING
         self.started_at = timezone.now()
         self.save(update_fields=["status", "started_at"])
 
     def mark_completed(self, output: str = "", exit_code: int = 0) -> None:
-        from django.utils import timezone  # noqa: PLC0415
+        from django.utils import timezone
 
         self.status = self.Status.COMPLETED
         self.output = output
@@ -172,7 +172,7 @@ class ContainerAction(models.Model):
         )
 
     def mark_failed(self, error: str) -> None:
-        from django.utils import timezone  # noqa: PLC0415
+        from django.utils import timezone
 
         self.status = self.Status.FAILED
         self.error_message = error
@@ -212,9 +212,9 @@ class PortAllocation(models.Model):
     @classmethod
     def allocate(cls) -> PortAllocation:
         """Find next free port pair and allocate it atomically."""
-        import socket  # noqa: PLC0415
+        import socket
 
-        from django.db import transaction  # noqa: PLC0415
+        from django.db import transaction
 
         base_backend = 5001
         base_frontend = 8001

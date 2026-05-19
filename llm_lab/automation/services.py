@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def _celery_available() -> bool:
     """Probe the Celery broker once at startup and cache the result."""
     try:
-        from celery import current_app  # noqa: PLC0415
+        from celery import current_app
 
         result = current_app.control.ping(timeout=1)
         return bool(result)
@@ -86,8 +86,8 @@ def validate_pipeline_dsl(config: dict[str, Any]) -> list[str]:
 
 def clone_pipeline(pipeline: Pipeline, new_name: str) -> Pipeline:
     """Deep-copy a pipeline and all its steps under a new name."""
-    from llm_lab.automation.models import Pipeline as PipelineModel  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineStep  # noqa: PLC0415
+    from llm_lab.automation.models import Pipeline as PipelineModel
+    from llm_lab.automation.models import PipelineStep
 
     new_pipeline = PipelineModel.objects.create(
         owner=pipeline.owner,
@@ -112,7 +112,7 @@ def clone_pipeline(pipeline: Pipeline, new_name: str) -> Pipeline:
 
 def next_cron_time(expr: str, after: datetime | None = None) -> datetime:
     """Return the next scheduled datetime for a cron expression."""
-    from croniter import croniter  # noqa: PLC0415
+    from croniter import croniter
 
     base = after if after is not None else datetime.now(UTC)
     return croniter(expr, base).get_next(datetime)
@@ -125,9 +125,9 @@ def trigger_run(pipeline: Pipeline, params: dict[str, Any], user: User) -> Pipel
     1. Try Celery (``run_pipeline_task.delay``).
     2. Fall back to a daemon thread if broker is unreachable.
     """
-    from llm_lab.automation.models import PipelineRun  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineStep  # noqa: PLC0415
-    from llm_lab.automation.models import PipelineStepRun  # noqa: PLC0415
+    from llm_lab.automation.models import PipelineRun
+    from llm_lab.automation.models import PipelineStep
+    from llm_lab.automation.models import PipelineStepRun
 
     run = PipelineRun.objects.create(
         pipeline=pipeline,
@@ -146,14 +146,14 @@ def trigger_run(pipeline: Pipeline, params: dict[str, Any], user: User) -> Pipel
     run_id_str = str(run.id)
 
     if _celery_available():
-        from llm_lab.automation.tasks import run_pipeline_task  # noqa: PLC0415
+        from llm_lab.automation.tasks import run_pipeline_task
 
         run_pipeline_task.delay(run_id_str)
         logger.info("Dispatched run %s via Celery", run_id_str)
     else:
-        import uuid  # noqa: PLC0415
+        import uuid
 
-        from llm_lab.automation.engine.runner import execute_run  # noqa: PLC0415
+        from llm_lab.automation.engine.runner import execute_run
 
         t = threading.Thread(
             target=execute_run,

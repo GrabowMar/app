@@ -12,11 +12,7 @@ if TYPE_CHECKING:
 def _count_lines(text: str | None, comment_prefix: str = "#") -> int:
     if not text:
         return 0
-    return sum(
-        1
-        for line in str(text).splitlines()
-        if line.strip() and not line.strip().startswith(comment_prefix)
-    )
+    return sum(1 for line in str(text).splitlines() if line.strip() and not line.strip().startswith(comment_prefix))
 
 
 def loc_from_job(job: GenerationJob) -> dict[str, int]:

@@ -347,9 +347,7 @@ class TestLLMReviewAnalyzer:
 
         mock_client = MagicMock()
         mock_client.chat_completion.return_value = llm_response
-        mock_client.extract_content.return_value = llm_response["choices"][0][
-            "message"
-        ]["content"]
+        mock_client.extract_content.return_value = llm_response["choices"][0]["message"]["content"]
         mock_client.extract_usage.return_value = llm_response["usage"]
         mock_client_cls.return_value = mock_client
 

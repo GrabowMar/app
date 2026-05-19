@@ -5,6 +5,7 @@ from importlib import reload
 import pytest
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
+from django.shortcuts import resolve_url
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects
 
@@ -48,7 +49,7 @@ class TestUserAdmin:
     def _force_allauth(self, settings):
         settings.DJANGO_ADMIN_FORCE_ALLAUTH = True
         # Reload the admin module to apply the setting change
-        import llm_lab.users.admin as users_admin  # noqa: PLC0415
+        import llm_lab.users.admin as users_admin
 
         with contextlib.suppress(admin.sites.AlreadyRegistered):  # type: ignore[attr-defined]
             reload(users_admin)
@@ -61,5 +62,5 @@ class TestUserAdmin:
         response = admin.site.login(request)
 
         # The `admin` login view should redirect to the `allauth` login view
-        target_url = reverse(settings.LOGIN_URL) + "?next=" + request.path
+        target_url = resolve_url(settings.LOGIN_URL) + "?next=" + request.path
         assertRedirects(response, target_url, fetch_redirect_response=False)

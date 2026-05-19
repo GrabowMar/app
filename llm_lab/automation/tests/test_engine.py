@@ -375,8 +375,8 @@ class TestRetries:
         run.refresh_from_db()
         assert run.status == RunStatus.SUCCEEDED
         sr.refresh_from_db()
-        assert sr.attempt == 2  # noqa: PLR2004
-        assert call_count["n"] == 2  # noqa: PLR2004
+        assert sr.attempt == 2
+        assert call_count["n"] == 2
 
     def test_exhausted_retries_fails_step(self):
         """Step fails all attempts → run fails."""
@@ -500,7 +500,7 @@ class TestBatchExpansion:
         with patch("llm_lab.automation.engine.batches.execute_run"):
             run_ids = expand_batch(batch.id)
 
-        assert len(run_ids) == 4  # noqa: PLR2004 -- 2 models x 2 templates
+        assert len(run_ids) == 4
 
     def test_matrix_creates_batch_items(self):
         user = UserFactory()
@@ -524,7 +524,7 @@ class TestBatchExpansion:
             expand_batch(batch.id)
 
         items = list(BatchItem.objects.filter(batch=batch))
-        assert len(items) == 2  # noqa: PLR2004
+        assert len(items) == 2
         item_params = [item.params for item in items]
         assert {"models": "a", "templates": "t1"} in item_params
         assert {"models": "b", "templates": "t1"} in item_params

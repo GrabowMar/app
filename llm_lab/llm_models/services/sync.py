@@ -49,7 +49,7 @@ def fetch_openrouter_models() -> list[dict]:
     return models
 
 
-def upsert_openrouter_models(models_payload: list[dict]) -> int:  # noqa: C901, PLR0912, PLR0915
+def upsert_openrouter_models(models_payload: list[dict]) -> int:
     """Upsert a list of OpenRouter model payloads into LLMModel.
 
     Returns count upserted.

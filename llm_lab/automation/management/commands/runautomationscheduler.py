@@ -41,7 +41,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from llm_lab.automation.engine.scheduler import tick  # noqa: PLC0415
+        from llm_lab.automation.engine.scheduler import tick
 
         interval = options["interval"]
         once = options["once"]

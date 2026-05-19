@@ -33,10 +33,6 @@ def validate_target_url(url: str) -> tuple[bool, str]:
     min_parts = 2
     if hostname.startswith("172."):
         parts = hostname.split(".")
-        if (
-            len(parts) >= min_parts
-            and parts[1].isdigit()
-            and min_private_172 <= int(parts[1]) <= max_private_172
-        ):
+        if len(parts) >= min_parts and parts[1].isdigit() and min_private_172 <= int(parts[1]) <= max_private_172:
             return False, f"Internal network address not allowed: {hostname}"
     return True, ""

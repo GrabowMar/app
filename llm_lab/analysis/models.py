@@ -72,9 +72,7 @@ class AnalysisTask(models.Model):
         ]
 
     def __str__(self) -> str:
-        source = self.name or (
-            f"Job {self.generation_job_id}" if self.generation_job_id else "inline code"
-        )
+        source = self.name or (f"Job {self.generation_job_id}" if self.generation_job_id else "inline code")
         return f"Analysis: {source} ({self.status})"
 
     def get_code_for_analysis(self) -> dict[str, str]:

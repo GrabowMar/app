@@ -160,9 +160,7 @@ class LLMReviewAnalyzer(BaseAnalyzer):
     name: ClassVar[str] = "llm_review"
     analyzer_type: ClassVar[str] = "ai"
     display_name: ClassVar[str] = "AI Code Review"
-    description: ClassVar[str] = (
-        "AI-powered comprehensive code review using large language models"
-    )
+    description: ClassVar[str] = "AI-powered comprehensive code review using large language models"
     default_config: ClassVar[dict[str, Any]] = {
         "model": "openai/gpt-4o-mini",
         "temperature": 0.2,
@@ -250,11 +248,7 @@ class LLMReviewAnalyzer(BaseAnalyzer):
         usage: dict[str, Any],
         raw_response: dict[str, Any],
     ) -> AnalyzerOutput:
-        findings = [
-            _normalize_finding(f)
-            for f in parsed.get("findings", [])
-            if isinstance(f, dict)
-        ]
+        findings = [_normalize_finding(f) for f in parsed.get("findings", []) if isinstance(f, dict)]
 
         llm_summary: dict[str, Any] = parsed.get("summary", {})
         summary = {

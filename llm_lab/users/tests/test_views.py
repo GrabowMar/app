@@ -8,8 +8,8 @@ from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.http import HttpRequest
 from django.http import HttpResponseRedirect
+from django.shortcuts import resolve_url
 from django.test import RequestFactory
-from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from llm_lab.users.forms import UserAdminChangeForm
@@ -94,7 +94,7 @@ class TestUserDetailView:
         request = rf.get("/fake-url/")
         request.user = AnonymousUser()
         response = user_detail_view(request, pk=user.pk)
-        login_url = reverse(settings.LOGIN_URL)
+        login_url = resolve_url(settings.LOGIN_URL)
 
         assert isinstance(response, HttpResponseRedirect)
         assert response.status_code == HTTPStatus.FOUND

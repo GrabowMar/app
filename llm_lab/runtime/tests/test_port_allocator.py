@@ -13,8 +13,8 @@ def test_allocate_first_pair():
     """First allocation should return (5001, 8001) when nothing is in DB."""
     PortAllocation.objects.all().delete()
     backend, frontend = allocate_pair()
-    assert backend == 5001  # noqa: PLR2004
-    assert frontend == 8001  # noqa: PLR2004
+    assert backend == 5001
+    assert frontend == 8001
 
 
 @pytest.mark.django_db
@@ -23,8 +23,8 @@ def test_allocate_second_pair_increments():
     PortAllocation.objects.all().delete()
     allocate_pair()
     backend, frontend = allocate_pair()
-    assert backend == 5002  # noqa: PLR2004
-    assert frontend == 8002  # noqa: PLR2004
+    assert backend == 5002
+    assert frontend == 8002
 
 
 @pytest.mark.django_db
@@ -33,8 +33,8 @@ def test_allocate_respects_existing_db_rows():
     PortAllocation.objects.all().delete()
     PortAllocation.objects.create(backend_port=5001, frontend_port=8001)
     backend, frontend = allocate_pair()
-    assert backend == 5002  # noqa: PLR2004
-    assert frontend == 8002  # noqa: PLR2004
+    assert backend == 5002
+    assert frontend == 8002
 
 
 @pytest.mark.django_db

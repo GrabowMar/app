@@ -1,97 +1,161 @@
 # LLM Eval Lab
 
-A Django platform for generating, analyzing, and benchmarking AI-generated applications across multiple LLM providers.
+A Django + SvelteKit platform for **generating, executing, and benchmarking
+AI-generated applications** across multiple LLM providers (OpenRouter, etc.).
+It runs each generated app in an isolated Docker container, streams analysis
+results in real time, and produces comparative reports across models.
 
+[![CI](https://github.com/GrabowMar/app/actions/workflows/ci.yml/badge.svg)](https://github.com/GrabowMar/app/actions/workflows/ci.yml)
 [![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-License: MIT
+---
 
-## Settings
+## Stack
 
-Moved to [settings](https://cookiecutter-django.readthedocs.io/en/latest/1-getting-started/settings.html).
+| Layer        | Technology                                                      |
+| ------------ | --------------------------------------------------------------- |
+| Backend      | Django 6 · Python 3.13 · Django Ninja (REST) · Celery · Redis   |
+| Frontend     | SvelteKit 2 · TypeScript · Tailwind CSS 4 · Vite · bits-ui      |
+| Auth         | django-allauth (headless, email-only login, MFA support)        |
+| Database     | PostgreSQL 17                                                   |
+| Infra        | Docker Compose (local + production) · `uv` · `just`             |
 
-## Basic Commands
+---
 
-### Setting Up Your Users
+## Quickstart (Docker)
 
-- To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
-
-- To create a **superuser account**, use this command:
-
-      uv run python manage.py createsuperuser
-
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
-
-### Type checks
-
-Running type checks with mypy:
-
-    uv run mypy llm_lab
-
-### Test coverage
-
-To run the tests, check your test coverage, and generate an HTML coverage report:
-
-    uv run coverage run -m pytest
-    uv run coverage html
-    uv run open htmlcov/index.html
-
-#### Running tests with pytest
-
-    uv run pytest
-
-### Live reloading and Sass CSS compilation
-
-Moved to [Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally.html#using-webpack-or-gulp).
-
-### Celery
-
-This app comes with Celery.
-
-To run a celery worker:
+You need Docker, Docker Compose, and [`just`](https://github.com/casey/just).
+Everything else lives in containers.
 
 ```bash
-cd llm_lab
-uv run celery -A config.celery_app worker -l info
+# 1. Bring the full stack up (Django, Postgres, Redis, Celery, Mailpit, Frontend)
+just up
+
+# 2. Apply migrations
+just manage migrate
+
+# 3. Create a superuser
+just manage createsuperuser
 ```
 
-Please note: For Celery's import magic to work, it is important _where_ the celery commands are run. If you are in the same folder with _manage.py_, you should be right.
+Then open:
 
-To run [periodic tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html), you'll need to start the celery beat scheduler service. You can start it as a standalone process:
+| URL                              | What                                                |
+| -------------------------------- | --------------------------------------------------- |
+| <http://localhost:8000>          | SvelteKit frontend (dev server, hot-reload)         |
+| <http://localhost:8001>          | Django app directly (admin, API, allauth headless)  |
+| <http://localhost:8001/admin/>   | Django admin                                        |
+| <http://localhost:8001/api/docs> | Django Ninja API docs (staff-only)                  |
+| <http://localhost:8025>          | Mailpit — captures dev emails                       |
+
+> The frontend container proxies `/api`, `/_allauth`, `/admin`, and `/media`
+> to the Django container, so use `http://localhost:8000` for normal browsing.
+
+---
+
+## Common tasks
 
 ```bash
-cd llm_lab
-uv run celery -A config.celery_app beat
+just up                     # start everything
+just down                   # stop everything
+just logs                   # tail container logs
+just manage <cmd>           # run any manage.py command
+just frontend-dev           # frontend dev server (foreground)
+just frontend-build         # production frontend build
+just build                  # rebuild images
+just prune                  # nuke containers + volumes
 ```
 
-or you can embed the beat service inside a worker with the `-B` option (not recommended for production use):
+### Tests
+
+The Django test suite runs inside the container against the dev Postgres:
 
 ```bash
-cd llm_lab
-uv run celery -A config.celery_app worker -B -l info
+docker exec -e DATABASE_URL="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:5432/$POSTGRES_DB" \
+  app-django-1 python -m pytest -q
 ```
 
-### Email Server
+### Lint, format, type-check
 
-In development, it is often nice to be able to see emails that are being sent from your application. For that reason local SMTP server [Mailpit](https://github.com/axllent/mailpit) with a web interface is available as docker container.
+All Python tooling is driven via `uv`:
 
-Container mailpit will start automatically when you will run all docker containers.
-Please check [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally-docker.html) for more details how to start all containers.
+```bash
+uv run pre-commit run --all-files   # ruff + djlint + django-upgrade + more
+uv run ruff check llm_lab --fix     # lint only
+uv run ruff format llm_lab          # format only
+uv run mypy llm_lab                 # type-check
+```
 
-With Mailpit running, to view messages that are sent by your application, open your browser and go to `http://127.0.0.1:8025`
+Frontend:
 
-### Sentry
+```bash
+cd frontend
+npm install
+npm run check                       # svelte-check
+npm run build                       # production build
+```
 
-Sentry is an error logging aggregator service. You can sign up for a free account at <https://sentry.io/signup/?code=cookiecutter> or download and host it yourself.
-The system is set up with reasonable defaults, including 404 logging and integration with the WSGI application.
+---
 
-You must set the DSN url in production.
+## Architecture
+
+- `config/` — Django project (settings split by env, root URLconf, Celery
+  app, Ninja API root).
+- `llm_lab/` — Django apps (one per bounded context): `users`, `llm_models`,
+  `generation`, `runtime`, `analysis`, `reports`, `rankings`, `statistics`,
+  `automation`, `realtime`, `tokens`.
+- `frontend/` — SvelteKit application; routes live under
+  `frontend/src/routes/(auth)` and `frontend/src/routes/(app)`.
+- `compose/` — Dockerfiles and entrypoints for local + production targets.
+- `docs/` — In-depth docs: see
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md),
+  [`docs/QUICKSTART.md`](docs/QUICKSTART.md),
+  [`docs/GENERATION_PROCESS.md`](docs/GENERATION_PROCESS.md),
+  [`docs/ANALYSIS_PIPELINE.md`](docs/ANALYSIS_PIPELINE.md),
+  [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+
+### API conventions (Django Ninja)
+
+APIs are function-based routers, registered in `config/api.py`:
+
+```python
+from ninja import Router
+router = Router(tags=["my-app"])
+
+@router.get("/", response=list[MySchema])
+def list_items(request):
+    ...
+```
+
+`SessionAuth` is the global default; `TokenAuth` is available for programmatic
+clients (see `llm_lab/tokens/`).
+
+### Auth
+
+`django-allauth` runs in **headless** mode — the classic
+`account_login`/`account_signup` URLs are **not** registered. The SvelteKit
+frontend talks to the headless API under `/_allauth/browser/v1/*` and renders
+auth pages at `/auth/login`, `/auth/signup`, `/auth/password/reset`,
+`/auth/2fa`, `/auth/verify-email`.
+
+---
 
 ## Deployment
 
-The following details how to deploy this application.
+Production runs via `docker-compose.production.yml` (Traefik + Nginx +
+Gunicorn/Uvicorn + Postgres + Redis). See
+[`docs/deployment-guide.md`](docs/deployment-guide.md).
 
-### Docker
+---
 
-See detailed [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/3-deployment/deployment-with-docker.html).
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the dev workflow, branch naming,
+and PR expectations. Security issues — please follow [SECURITY.md](SECURITY.md)
+instead of opening a public issue.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

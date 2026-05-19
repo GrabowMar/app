@@ -128,10 +128,7 @@ class ZAPAnalyzer(BaseAnalyzer):
     name: ClassVar[str] = "zap"
     analyzer_type: ClassVar[str] = "dynamic"
     display_name: ClassVar[str] = "OWASP ZAP Security Scanner"
-    description: ClassVar[str] = (
-        "Scans web applications for security vulnerabilities"
-        " using OWASP ZAP baseline scan"
-    )
+    description: ClassVar[str] = "Scans web applications for security vulnerabilities using OWASP ZAP baseline scan"
 
     def check_available(self) -> tuple[bool, str]:
         if shutil.which("docker") is None:
@@ -174,9 +171,7 @@ class ZAPAnalyzer(BaseAnalyzer):
             return AnalyzerOutput(error=f"ZAP unavailable: {msg}")
 
         if is_live_task:
-            from llm_lab.analysis.services.live_target import (  # noqa: PLC0415
-                validate_live_target_url,
-            )
+            from llm_lab.analysis.services.live_target import validate_live_target_url
 
             valid, err = validate_live_target_url(target_url)
         else:

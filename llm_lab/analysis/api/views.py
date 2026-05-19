@@ -29,12 +29,10 @@ router = Router(tags=["analysis"])
 
 def _dispatch_task(task: AnalysisTask) -> None:
     """Run an analysis task in a background thread."""
-    import logging  # noqa: PLC0415
+    import logging
 
-    from llm_lab.analysis.services.analysis_service import (  # noqa: PLC0415
-        AnalysisService,
-    )
-    from llm_lab.common.threading import dispatch_in_thread  # noqa: PLC0415
+    from llm_lab.analysis.services.analysis_service import AnalysisService
+    from llm_lab.common.threading import dispatch_in_thread
 
     _logger = logging.getLogger(__name__)
     task_id = task.id
@@ -65,7 +63,7 @@ def _dispatch_task(task: AnalysisTask) -> None:
 @router.post("/tasks/", response=AnalysisTaskSchema)
 def create_task(request, payload: AnalysisTaskCreateSchema):
     """Create an analysis task."""
-    from config.api import api  # noqa: PLC0415
+    from config.api import api
 
     known = {a["name"] for a in AnalyzerRegistry.list_available()}
     unknown = set(payload.analyzers) - known
@@ -92,9 +90,7 @@ def create_task(request, payload: AnalysisTaskCreateSchema):
             "analyzers": payload.analyzers,
             "settings": payload.settings,
             "live_target": payload.live_target,
-            "generation_job_id": (
-                str(payload.generation_job_id) if payload.generation_job_id else None
-            ),
+            "generation_job_id": (str(payload.generation_job_id) if payload.generation_job_id else None),
         },
         created_by=request.auth,
     )
@@ -142,16 +138,13 @@ def list_tasks(
             status=task.status,
             created_at=task.created_at,
             updated_at=task.updated_at,
-            generation_job_id=(
-                str(task.generation_job_id) if task.generation_job_id else None
-            ),
+            generation_job_id=(str(task.generation_job_id) if task.generation_job_id else None),
             created_by_email=task.created_by.email if task.created_by else "",
             results_summary=task.results_summary,
             started_at=task.started_at,
             completed_at=task.completed_at,
             duration_seconds=task.duration_seconds,
-            container_instance_id=task.configuration.get("container_instance_id")
-            or None,
+            container_instance_id=task.configuration.get("container_instance_id") or None,
             target_url=task.configuration.get("target_url") or None,
         )
         for task in page_qs
@@ -228,7 +221,7 @@ def get_result(request, task_id: str, result_id: int):
 
 
 @router.get("/tasks/{task_id}/findings/", response=PaginatedFindingsSchema)
-def list_findings(  # noqa: PLR0913
+def list_findings(
     request,
     task_id: str,
     page: int = Query(1, ge=1),
@@ -289,15 +282,11 @@ def get_stats(request):
     )
 
     severity_counts = dict(
-        findings.values_list("severity")
-        .annotate(count=Count("id"))
-        .values_list("severity", "count"),
+        findings.values_list("severity").annotate(count=Count("id")).values_list("severity", "count"),
     )
 
     category_counts = dict(
-        findings.values_list("category")
-        .annotate(count=Count("id"))
-        .values_list("category", "count"),
+        findings.values_list("category").annotate(count=Count("id")).values_list("category", "count"),
     )
 
     most_common = list(
