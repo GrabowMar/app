@@ -22,9 +22,47 @@ HTTP_408_TIMEOUT = 408
 class OpenRouterError(Exception):
     """Base error for OpenRouter API calls."""
 
-    def __init__(self, message: str, status_code: int | None = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        *,
+        user_facing_message: str | None = None,
+        remediation: str | None = None,
+    ):
         super().__init__(message)
         self.status_code = status_code
+        self.user_facing_message = user_facing_message
+        self.remediation = remediation
+
+    def display(self) -> str:
+        """Build a user-facing one-liner combining message + remediation."""
+        parts = [self.user_facing_message or str(self)]
+        if self.remediation:
+            parts.append(self.remediation)
+        return " ".join(parts)
+
+
+_AUTH_HINT_FRAGMENTS = (
+    "user not found",
+    "invalid api key",
+    "no auth credentials",
+    "no user found",
+)
+
+
+def _build_auth_error(status_code: int, body: str) -> OpenRouterError:
+    """Build a friendly :class:`OpenRouterError` for an auth failure."""
+    return OpenRouterError(
+        f"API error {status_code}: {body[:500]}",
+        status_code=status_code,
+        user_facing_message=(
+            "OpenRouter rejected the API key used for this request."
+        ),
+        remediation=(
+            "Update or rotate your OpenRouter API key in Settings → API Access."
+        ),
+    )
 
 
 class OpenRouterClient:
@@ -117,6 +155,11 @@ class OpenRouterClient:
 
                 if response.status_code != HTTP_200_OK:
                     error_body = response.text[:500]
+                    if response.status_code == 401 or (  # noqa: PLR2004
+                        response.status_code == 403  # noqa: PLR2004
+                        and any(f in error_body.lower() for f in _AUTH_HINT_FRAGMENTS)
+                    ):
+                        raise _build_auth_error(response.status_code, error_body)
                     msg = f"API error {response.status_code}: {error_body}"
                     raise OpenRouterError(
                         msg,

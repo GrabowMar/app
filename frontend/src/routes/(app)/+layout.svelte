@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getAuth } from '$lib/stores/auth.svelte';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { getPreferences } from '$lib/stores/preferences.svelte';
 	import AppSidebar from '$lib/components/AppSidebar.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import AppFooter from '$lib/components/AppFooter.svelte';
@@ -10,7 +10,12 @@
 
 	let { children } = $props();
 	const auth = getAuth();
+	const prefs = getPreferences();
 	let loadingTooLong = $state(false);
+
+	// Desktop sidebar widths — kept in sync with AppSidebar widths.
+	// Returns "0px" on mobile via media query (handled by responsive padding below).
+	let sidebarOffset = $derived(prefs.sidebarCollapsed ? '3.5rem' : '15rem');
 
 	onMount(() => {
 		const timer = setTimeout(() => {
@@ -22,7 +27,6 @@
 	});
 
 	function forceReload() {
-		// Navigate to clean URL (strips _r params) for a fresh start
 		window.location.href = window.location.pathname;
 	}
 
@@ -50,14 +54,19 @@
 		{/if}
 	</div>
 {:else if auth.isAuthenticated}
-	<Sidebar.Provider>
+	<div
+		class="flex min-h-screen bg-background"
+		style:--app-sidebar-offset={sidebarOffset}
+	>
 		<AppSidebar />
-		<Sidebar.Inset class="bg-background min-w-0">
+		<div
+			class="flex flex-1 flex-col min-w-0 transition-[padding] duration-200 ease-out motion-reduce:transition-none md:pl-[var(--app-sidebar-offset)]"
+		>
 			<AppHeader {auth} />
-			<div class="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col p-3 sm:p-4 md:p-5 min-w-0 overflow-x-clip">
+			<div class="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col p-3 sm:p-4 md:p-5 min-w-0 overflow-x-clip pt-[calc(3rem+0.75rem)] sm:pt-[calc(3rem+1rem)] md:pt-[calc(3rem+1.25rem)]">
 				{@render children()}
 			</div>
 			<AppFooter />
-		</Sidebar.Inset>
-	</Sidebar.Provider>
+		</div>
+	</div>
 {/if}

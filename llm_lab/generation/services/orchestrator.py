@@ -7,6 +7,8 @@ import time
 
 from django.utils import timezone
 
+from llm_lab.credentials.services.resolver import MissingApiKeyError
+from llm_lab.credentials.services.resolver import get_openrouter_key
 from llm_lab.generation.models import CopilotIteration
 from llm_lab.generation.models import GenerationArtifact
 from llm_lab.generation.models import GenerationJob
@@ -26,9 +28,24 @@ class GenerationService:
     """Orchestrates generation for all three modes."""
 
     def __init__(self) -> None:
-        self.client = OpenRouterClient()
         self.renderer = PromptRenderer()
         self.scanner = BackendScanner()
+        # Per-job client is constructed in ``_call_llm`` so it uses the
+        # job owner's resolved OpenRouter API key.
+        self.client: OpenRouterClient | None = None
+
+    def _build_client_for(self, job: GenerationJob) -> OpenRouterClient:
+        """Build an OpenRouterClient using ``job.created_by``'s API key."""
+        try:
+            api_key = get_openrouter_key(job.created_by)
+        except MissingApiKeyError as exc:
+            raise OpenRouterError(
+                str(exc),
+                status_code=401,
+                user_facing_message=str(exc),
+                remediation=exc.remediation,
+            ) from exc
+        return OpenRouterClient(api_key=api_key)
 
     def execute(self, job: GenerationJob) -> None:
         """Execute a generation job based on its mode."""
@@ -49,6 +66,15 @@ class GenerationService:
                 raise ValueError(msg)
 
             job.status = GenerationJob.Status.COMPLETED
+        except OpenRouterError as exc:
+            logger.exception("Job %s failed (OpenRouter)", job.id)
+            job.status = GenerationJob.Status.FAILED
+            job.error_message = exc.display()[:2000]
+            existing = job.result_data if isinstance(job.result_data, dict) else {}
+            existing["error_detail"] = str(exc)[:2000]
+            existing["error_status_code"] = exc.status_code
+            existing["error_remediation"] = exc.remediation
+            job.result_data = existing
         except Exception as exc:
             logger.exception("Job %s failed", job.id)
             job.status = GenerationJob.Status.FAILED
@@ -382,7 +408,8 @@ class GenerationService:
         }
 
         try:
-            response = self.client.chat_completion(
+            client = self._build_client_for(job)
+            response = client.chat_completion(
                 model=model_id,
                 messages=messages,
                 temperature=job.temperature,

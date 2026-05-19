@@ -180,6 +180,14 @@ Error Message
 <Copy class="h-3.5 w-3.5" />
 </Button>
 </div>
+{#if job.result_data?.error_status_code === 401 || /OpenRouter.*key/i.test(job.error_message)}
+<div class="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+<span>This job failed because OpenRouter rejected the API key.</span>
+<Button variant="outline" size="sm" href="/users/settings#api">
+Open API Access settings
+</Button>
+</div>
+{/if}
 {:else}
 <p class="text-sm text-muted-foreground">No error message recorded</p>
 {/if}

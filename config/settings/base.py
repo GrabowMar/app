@@ -83,6 +83,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     "llm_lab.users",
     "llm_lab.tokens",
+    "llm_lab.credentials",
     "llm_lab.llm_models",
     "llm_lab.generation",
     "llm_lab.analysis",
@@ -355,4 +356,11 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_HTTP_REFERER = env(
     "OPENROUTER_HTTP_REFERER",
     default=f"https://{DJANGO_DOMAIN}",
+)
+# When True, generation jobs whose users haven't configured a personal
+# OpenRouter API key fall back to ``OPENROUTER_API_KEY``. When False, those
+# jobs are rejected at submission with a "configure your key" error.
+OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK = env.bool(
+    "OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK",
+    default=True,
 )

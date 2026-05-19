@@ -12,6 +12,7 @@ api = NinjaAPI(
 
 api.add_router("/users/", "llm_lab.users.api.views.router")
 api.add_router("/tokens/", "llm_lab.tokens.api.views.router")
+api.add_router("/credentials/", "llm_lab.credentials.api.views.router")
 api.add_router("/models/", "llm_lab.llm_models.api.views.router")
 api.add_router("/generation/", "llm_lab.generation.api.views.router")
 api.add_router("/analysis/", "llm_lab.analysis.api.views.router")

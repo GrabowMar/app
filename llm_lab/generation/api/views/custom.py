@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from django.shortcuts import get_object_or_404
 
+from llm_lab.credentials.services.resolver import MissingApiKeyError
+from llm_lab.credentials.services.resolver import has_resolvable_key
 from llm_lab.generation.api.schema import BatchCreateResponseSchema
 from llm_lab.generation.api.schema import CopilotJobCreateSchema
 from llm_lab.generation.api.schema import CustomJobCreateSchema
@@ -24,9 +26,24 @@ from llm_lab.generation.services.dispatcher import dispatch_job
 from llm_lab.llm_models.models import LLMModel
 
 
-@router.post("/jobs/custom/", response=GenerationJobSchema)
+def _preflight_api_key(request) -> tuple[int, dict] | None:
+    """Return a 400 response if the user has no usable OpenRouter API key."""
+    if not has_resolvable_key(request.auth):
+        msg = "No OpenRouter API key is configured for your account."
+        return 400, {
+            "detail": msg,
+            "remediation": MissingApiKeyError(msg).remediation,
+            "code": "missing_api_key",
+        }
+    return None
+
+
+@router.post("/jobs/custom/", response={200: GenerationJobSchema, 400: dict})
 def create_custom_job(request, payload: CustomJobCreateSchema):
     """Create a custom mode generation job."""
+    err = _preflight_api_key(request)
+    if err is not None:
+        return err
     model = get_object_or_404(LLMModel, id=payload.model_id)
     job = GenerationJob.objects.create(
         mode=GenerationJob.Mode.CUSTOM,
@@ -41,9 +58,12 @@ def create_custom_job(request, payload: CustomJobCreateSchema):
     return GenerationJob.objects.get(id=job.id)
 
 
-@router.post("/jobs/scaffolding/", response=BatchCreateResponseSchema)
+@router.post("/jobs/scaffolding/", response={200: BatchCreateResponseSchema, 400: dict})
 def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
     """Create scaffolding mode jobs (templates x models)."""
+    err = _preflight_api_key(request)
+    if err is not None:
+        return err
     scaffolding = get_object_or_404(
         ScaffoldingTemplate,
         id=payload.scaffolding_template_id,
@@ -85,9 +105,12 @@ def create_scaffolding_jobs(request, payload: ScaffoldingJobCreateSchema):
     )
 
 
-@router.post("/jobs/copilot/", response=GenerationJobSchema)
+@router.post("/jobs/copilot/", response={200: GenerationJobSchema, 400: dict})
 def create_copilot_job(request, payload: CopilotJobCreateSchema):
     """Create a copilot mode generation job."""
+    err = _preflight_api_key(request)
+    if err is not None:
+        return err
     model = None
     if payload.model_id:
         model = get_object_or_404(LLMModel, id=payload.model_id)

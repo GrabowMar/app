@@ -3,9 +3,10 @@
 	import { goto } from '$app/navigation';
 	import PanelLeft from '@lucide/svelte/icons/panel-left';
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
-	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import User from '@lucide/svelte/icons/user';
-	import Settings from '@lucide/svelte/icons/settings';
+	import UserCog from '@lucide/svelte/icons/user-cog';
+	import Palette from '@lucide/svelte/icons/palette';
+	import Cookie from '@lucide/svelte/icons/cookie';
 	import Key from '@lucide/svelte/icons/key';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Boxes from '@lucide/svelte/icons/boxes';
@@ -18,7 +19,6 @@
 	import BookOpen from '@lucide/svelte/icons/book-open';
 	import Zap from '@lucide/svelte/icons/zap';
 	import Layers from '@lucide/svelte/icons/layers';
-	import Circle from '@lucide/svelte/icons/circle';
 	import X from '@lucide/svelte/icons/x';
 	import { Separator } from '$lib/components/ui/separator';
 	import * as Sheet from '$lib/components/ui/sheet';
@@ -113,6 +113,7 @@
 		'/docs': 'Docs',
 		'/about': 'About',
 		'/privacy': 'Privacy Policy',
+		'/users': 'Users',
 		'/users/settings': 'Settings'
 	};
 
@@ -129,10 +130,12 @@
 			const label = routeLabels[accumulated];
 			if (label) {
 				segments.push({ label, href: accumulated });
+			} else if (accumulated.startsWith('/users/') && accumulated !== '/users/settings') {
+				// /users/<pk> — render as "Profile"
+				segments.push({ label: 'Profile', href: accumulated });
 			}
 		}
 
-		// If no segments matched (e.g. /models/some-slug), try the first-level path
 		if (segments.length === 0) {
 			const firstLevel = '/' + parts[0];
 			const label = routeLabels[firstLevel];
@@ -141,11 +144,7 @@
 			}
 		}
 
-		// For sub-pages like /models/[slug], add the parent if not already present
-		if (segments.length === 1 && parts.length > 1) {
-			// Already have parent, which is correct for sub-page breadcrumb
-		} else if (segments.length === 0) {
-			// Unknown route — show pathname as-is
+		if (segments.length === 0) {
 			segments.push({ label: parts[parts.length - 1], href: pathname });
 		}
 
@@ -196,7 +195,7 @@
 <svelte:window onclick={handleWindowClick} onkeydown={handleKeydown} />
 
 <header
-	class="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-background/65 sm:px-4 md:gap-4 md:px-5"
+	class="fixed top-0 left-0 right-0 z-30 flex h-12 items-center gap-3 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-background/65 sm:px-4 md:gap-4 md:px-5 transition-[padding] duration-200 ease-out motion-reduce:transition-none md:pl-[calc(var(--app-sidebar-offset,0px)+1.25rem)]"
 >
 	<!-- Mobile sidebar trigger -->
 	<Sheet.Root bind:open={mobileMenuOpen}>
@@ -236,13 +235,16 @@
 							<a
 								href={item.href}
 								class={cn(
-									'flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] transition-colors',
+									'group relative flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] transition-colors duration-150 motion-reduce:transition-none',
 									isActive(item.href)
-										? 'bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-sidebar-primary -ml-px pl-[calc(0.625rem-1px)]'
+										? 'bg-sidebar-accent text-sidebar-primary font-medium'
 										: 'text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
 								)}
 								onclick={() => (mobileMenuOpen = false)}
 							>
+								{#if isActive(item.href)}
+									<span class="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r bg-sidebar-primary"></span>
+								{/if}
 								<item.icon class="h-3.5 w-3.5 shrink-0" />
 								{item.label}
 							</a>
@@ -291,6 +293,19 @@
 	<div class="flex-1"></div>
 
 	<div class="flex items-center gap-1.5">
+		<!-- System status dot (desktop) -->
+		<div
+			class="hidden md:flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground"
+			style="font-family: var(--font-mono);"
+			title="System online"
+		>
+			<span class="relative flex h-1.5 w-1.5 shrink-0">
+				<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[color:var(--success)] opacity-60 motion-reduce:hidden"></span>
+				<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--success)]"></span>
+			</span>
+			<span class="uppercase tracking-wider">online</span>
+		</div>
+
 		<ThemeToggle />
 
 		{#if auth.isAuthenticated && auth.user}
@@ -313,54 +328,92 @@
 
 				{#if dropdownOpen}
 					<div
-						class="absolute right-0 top-full mt-1.5 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-xl"
+						class="absolute right-0 top-full mt-1.5 w-64 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-xl"
 						role="menu"
 					>
-						<div class="px-2.5 py-2 border-b border-border/60 mb-1">
-							<p class="text-sm font-medium truncate">{userDisplayName}</p>
-							{#if auth.user.display || auth.user.name}
-								<p class="text-xs text-muted-foreground truncate" style="font-family: var(--font-mono);">{auth.user.email}</p>
-							{/if}
+						<!-- User identity header -->
+						<div class="flex items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2.5">
+							<div
+								class="{avatarBgClass} flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white shadow-sm"
+								style="font-family: var(--font-mono);"
+							>
+								{userInitial}
+							</div>
+							<div class="min-w-0 flex-1">
+								<p class="text-sm font-medium truncate">{userDisplayName}</p>
+								<p class="text-[11px] text-muted-foreground truncate" style="font-family: var(--font-mono);">
+									{auth.user.email}
+								</p>
+							</div>
 						</div>
 
-						<a
-							href="/users/settings#profile"
-							class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-							role="menuitem"
-							onclick={closeDropdown}
-						>
-							<User class="h-3.5 w-3.5" />
-							Profile
-						</a>
-						<a
-							href="/users/settings#general"
-							class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-							role="menuitem"
-							onclick={closeDropdown}
-						>
-							<Settings class="h-3.5 w-3.5" />
-							Settings
-						</a>
-						<a
-							href="/users/settings#api"
-							class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-							role="menuitem"
-							onclick={closeDropdown}
-						>
-							<Key class="h-3.5 w-3.5" />
-							API Access
-						</a>
+						<div class="p-1">
+							<p class="px-2 pt-1.5 pb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70" style="font-family: var(--font-mono);">
+								Profile
+							</p>
+							<a
+								href={`/users/${auth.user.id}`}
+								class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+								role="menuitem"
+								onclick={closeDropdown}
+							>
+								<User class="h-3.5 w-3.5" />
+								<span class="flex-1">View profile</span>
+								<span class="text-[10px] text-muted-foreground/70" style="font-family: var(--font-mono);">↗</span>
+							</a>
+							<a
+								href="/users/settings#account"
+								class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+								role="menuitem"
+								onclick={closeDropdown}
+							>
+								<UserCog class="h-3.5 w-3.5" />
+								Account settings
+							</a>
 
-						<div role="separator" class="my-1 h-px bg-border/60"></div>
+							<div role="separator" class="my-1 h-px bg-border/60"></div>
+							<p class="px-2 pt-0.5 pb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70" style="font-family: var(--font-mono);">
+								Preferences
+							</p>
+							<a
+								href="/users/settings#appearance"
+								class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+								role="menuitem"
+								onclick={closeDropdown}
+							>
+								<Palette class="h-3.5 w-3.5" />
+								Appearance
+							</a>
+							<a
+								href="/users/settings#privacy"
+								class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+								role="menuitem"
+								onclick={closeDropdown}
+							>
+								<Cookie class="h-3.5 w-3.5" />
+								Privacy &amp; cookies
+							</a>
+							<a
+								href="/users/settings#credentials"
+								class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+								role="menuitem"
+								onclick={closeDropdown}
+							>
+								<Key class="h-3.5 w-3.5" />
+								API credentials
+							</a>
 
-						<button
-							class="flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm text-destructive hover:bg-[color:var(--destructive)]/10 transition-colors"
-							role="menuitem"
-							onclick={handleLogout}
-						>
-							<LogOut class="h-3.5 w-3.5" />
-							Logout
-						</button>
+							<div role="separator" class="my-1 h-px bg-border/60"></div>
+
+							<button
+								class="flex w-full cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-sm text-destructive hover:bg-[color:var(--destructive)]/10 transition-colors"
+								role="menuitem"
+								onclick={handleLogout}
+							>
+								<LogOut class="h-3.5 w-3.5" />
+								Sign out
+							</button>
+						</div>
 					</div>
 				{/if}
 			</div>

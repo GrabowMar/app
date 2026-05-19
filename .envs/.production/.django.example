@@ -44,4 +44,9 @@ CELERY_FLOWER_PASSWORD=
 
 # OpenRouter — get a key at https://openrouter.ai/keys
 # ------------------------------------------------------------------------------
+# Optional global fallback key. In production we recommend leaving this empty
+# and requiring every user to add their own key via Settings → API Access
+# (stored encrypted in the DB). Set OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=False
+# to enforce per-user keys.
 OPENROUTER_API_KEY=
+OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=False

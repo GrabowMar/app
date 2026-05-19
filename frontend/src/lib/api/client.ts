@@ -5,6 +5,7 @@
 export * from './analysis';
 export * from './applications';
 export * from './automation';
+export * from './credentials';
 export * from './generation';
 export * from './models';
 export * from './rankings';

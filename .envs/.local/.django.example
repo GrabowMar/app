@@ -19,7 +19,14 @@ CELERY_FLOWER_PASSWORD=changeme
 
 # OpenRouter — get a key at https://openrouter.ai/keys
 # ------------------------------------------------------------------------------
+# Optional global fallback key. Each user can also configure their own key via
+# Settings → API Access in the web UI (stored encrypted in the DB, recommended).
+# When a job runs, the user's personal key is used if set; otherwise we fall
+# back to this global key when OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK is True.
 OPENROUTER_API_KEY=
+# Set to False to require every user to bring their own key (recommended for
+# shared deployments). Defaults to True.
+OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True
 
 # Hosts / CORS
 # Set these when accessing the app from a non-localhost domain.

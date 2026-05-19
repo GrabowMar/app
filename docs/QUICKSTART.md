@@ -35,7 +35,11 @@ cp .env.example .env
 
 Edit `.env` and set your API key:
 ```
+# Optional global fallback. Each user can also add their own key in the UI
+# under Settings → API Access (recommended).
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
+# Set to False to require every user to bring their own key.
+OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True
 SECRET_KEY=your-secret-key-here
 ```
 
@@ -250,7 +254,13 @@ Ensure Docker Desktop is running before starting analyzers.
 
 ### Missing API Key
 
-If AI analysis fails, verify `OPENROUTER_API_KEY` is set in `.env`.
+If a generation or AI analysis job fails with "OpenRouter API key not
+configured" or a 401 from OpenRouter, either:
+
+- add a personal key in the web UI under **Settings → API Access** (stored
+  encrypted per user, recommended), or
+- set the global fallback `OPENROUTER_API_KEY` in `.env` (used when
+  `OPENROUTER_ALLOW_GLOBAL_KEY_FALLBACK=True`).
 
 ## Next Steps
 

@@ -129,7 +129,9 @@
 			pollCustomJob(job.id);
 			loadHistory();
 		} catch (err: any) {
-			customError = err?.detail ?? err?.message ?? 'Failed to create job';
+			const detail = err?.detail ?? err?.message ?? 'Failed to create job';
+			const remediation = err?.remediation ? ` ${err.remediation}` : '';
+			customError = detail + remediation;
 		} finally {
 			customSubmitting = false;
 		}
@@ -181,7 +183,9 @@
 			scaffoldingResult = result;
 			loadHistory();
 		} catch (err: any) {
-			scaffoldingError = err?.detail ?? err?.message ?? 'Failed to create batch';
+			const detail = err?.detail ?? err?.message ?? 'Failed to create batch';
+			const remediation = err?.remediation ? ` ${err.remediation}` : '';
+			scaffoldingError = detail + remediation;
 		} finally {
 			scaffoldingSubmitting = false;
 		}
@@ -198,7 +202,9 @@
 			pollCopilotJob(job.id);
 			loadHistory();
 		} catch (err: any) {
-			copilotError = err?.detail ?? err?.message ?? 'Failed to create copilot job';
+			const detail = err?.detail ?? err?.message ?? 'Failed to create copilot job';
+			const remediation = err?.remediation ? ` ${err.remediation}` : '';
+			copilotError = detail + remediation;
 		} finally {
 			copilotSubmitting = false;
 		}

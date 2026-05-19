@@ -194,7 +194,15 @@ class LLMReviewAnalyzer(BaseAnalyzer):
         ]
 
         try:
-            client = OpenRouterClient()
+            from llm_lab.credentials.services.resolver import MissingApiKeyError
+            from llm_lab.credentials.services.resolver import get_openrouter_key
+
+            try:
+                api_key = get_openrouter_key(user=None)
+            except MissingApiKeyError as exc:
+                return AnalyzerOutput(error=f"AI review unavailable: {exc}")
+
+            client = OpenRouterClient(api_key=api_key)
             response = client.chat_completion(
                 model=model,
                 messages=messages,
