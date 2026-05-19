@@ -42,7 +42,7 @@
 	<title>Documentation - LLM Lab</title>
 </svelte:head>
 
-<div class="mx-auto w-full max-w-5xl px-6 py-10 md:py-14">
+<div class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 md:py-10">
 	<!-- Hero ----------------------------------------------------------- -->
 	<section class="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-background p-8 md:p-12">
 		<div class="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary/10 blur-3xl" aria-hidden="true"></div>

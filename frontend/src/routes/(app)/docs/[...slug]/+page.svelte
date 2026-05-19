@@ -73,7 +73,7 @@
 	<title>{doc?.title ?? 'Docs'} - LLM Lab</title>
 </svelte:head>
 
-<div class="mx-auto flex w-full max-w-7xl gap-10 px-6 py-8">
+<div class="mx-auto flex w-full max-w-6xl gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:gap-12 lg:px-10">
 	<!-- Article -->
 	<article class="min-w-0 flex-1">
 		{#if loading}
@@ -132,8 +132,8 @@
 
 	<!-- TOC rail -->
 	{#if doc && headings.length > 0}
-		<aside class="hidden w-56 shrink-0 xl:block">
-			<div class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2">
+		<aside class="hidden w-56 shrink-0 xl:block" aria-label="On this page">
+			<div class="sticky top-[calc(3rem+1.5rem)] max-h-[calc(100dvh-3rem-3rem)] overflow-y-auto pr-2">
 				<TocRail {headings} />
 			</div>
 		</aside>
