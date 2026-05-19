@@ -335,20 +335,19 @@
 }
 
 /* Shiki dual-theme variable swap --------------------------------------- */
-.docs-article pre.shiki,
+.docs-article pre.shiki {
+	background-color: var(--shiki-light-bg) !important;
+	color: var(--shiki-light) !important;
+}
 .docs-article pre.shiki span {
 	color: var(--shiki-light) !important;
-	background-color: var(--shiki-light-bg) !important;
 }
-:where([data-theme='dark']) .docs-article pre.shiki,
+:where([data-theme='dark']) .docs-article pre.shiki {
+	background-color: var(--shiki-dark-bg) !important;
+	color: var(--shiki-dark) !important;
+}
 :where([data-theme='dark']) .docs-article pre.shiki span {
 	color: var(--shiki-dark) !important;
-	background-color: var(--shiki-dark-bg) !important;
-}
-/* Lines inherit theme bg only as a fallback — explicit highlight/diff   */
-/* backgrounds override via the `.highlighted` / `.diff` rules above.    */
-.docs-article pre.shiki .line {
-	background-color: transparent !important;
 }
 
 /* Tables ---------------------------------------------------------------- */
