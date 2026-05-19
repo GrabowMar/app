@@ -1,4 +1,8 @@
-"""Documentation service — walks DOCS_ROOT and renders Markdown files."""
+"""Documentation service — walks DOCS_ROOT and returns raw Markdown.
+
+Rendering happens on the client (marked + Shiki + Mermaid), so the backend
+just exposes the file tree, raw source, and a simple keyword search.
+"""
 
 from __future__ import annotations
 
@@ -6,30 +10,40 @@ import os
 import re
 from pathlib import Path
 
-import markdown as md
 from django.conf import settings
 
 DOCS_ROOT: Path = Path(getattr(settings, "DOCS_ROOT", settings.BASE_DIR / "docs"))
 
-_MD = md.Markdown(
-    extensions=[
-        "fenced_code",
-        "tables",
-        "toc",
-        "codehilite",
-        "attr_list",
-    ],
-    extension_configs={
-        "toc": {"permalink": True},
-        "codehilite": {"guess_lang": False, "css_class": "highlight"},
-    },
-)
+# Static map: slug (or slug prefix) -> category. Most specific match wins.
+# Categories are surfaced on the landing page and used to group the sidebar.
+CATEGORY_MAP: dict[str, str] = {
+    "QUICKSTART": "Getting Started",
+    "README": "Getting Started",
+    "development-guide": "Getting Started",
+    "ARCHITECTURE": "Architecture",
+    "ANALYSIS_PIPELINE": "Architecture",
+    "BACKGROUND_SERVICES": "Architecture",
+    "GENERATION_PROCESS": "Architecture",
+    "architecture": "Architecture",
+    "api-reference": "Reference",
+    "api": "Reference",
+    "ANALYZER_GUIDE": "Reference",
+    "MODELS_REFERENCE": "Reference",
+    "TEMPLATE_SPECIFICATION": "Reference",
+    "deployment-guide": "Operations",
+    "TROUBLESHOOTING": "Operations",
+    "TODO": "Other",
+}
+DEFAULT_CATEGORY = "Other"
 
-
-def _reset_md() -> md.Markdown:
-    """Return a fresh Markdown instance (reset converts reuse errors)."""
-    _MD.reset()
-    return _MD
+# Ordered list controls the order categories render in the UI.
+CATEGORY_ORDER: list[str] = [
+    "Getting Started",
+    "Architecture",
+    "Reference",
+    "Operations",
+    "Other",
+]
 
 
 def _slug_from_path(path: Path) -> str:
@@ -37,19 +51,54 @@ def _slug_from_path(path: Path) -> str:
     return str(rel.with_suffix("")).replace(os.sep, "/")
 
 
-def _title_from_file(path: Path) -> str:
+_H1_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+_FIRST_PARA_RE = re.compile(r"^(?!#|>|\s*[-*]|\s*\d+\.|\s*```)(.+?)$", re.MULTILINE)
+
+
+def _title_from_text(text: str, fallback: str) -> str:
+    match = _H1_RE.search(text)
+    if match:
+        return match.group(1).strip()
+    return fallback.replace("-", " ").replace("_", " ").title()
+
+
+def _description_from_text(text: str) -> str:
+    """First non-heading, non-list paragraph, truncated. Used on landing cards."""
+    # Skip the H1 line if present.
+    body = _H1_RE.sub("", text, count=1).lstrip()
+    match = _FIRST_PARA_RE.search(body)
+    if not match:
+        return ""
+    line = match.group(1).strip()
+    # Strip markdown emphasis / links for a cleaner blurb.
+    line = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", line)
+    line = re.sub(r"[*_`]+", "", line)
+    return line[:160].strip()
+
+
+def _category_for_slug(slug: str) -> str:
+    """Most-specific prefix match in CATEGORY_MAP."""
+    # Try whole slug, then progressively shorter prefixes split on '/'.
+    candidates = [slug]
+    parts = slug.split("/")
+    if len(parts) > 1:
+        candidates.append(parts[0])
+    leaf = parts[-1]
+    candidates.append(leaf)
+    for key in candidates:
+        if key in CATEGORY_MAP:
+            return CATEGORY_MAP[key]
+    return DEFAULT_CATEGORY
+
+
+def _read(path: Path) -> str:
     try:
-        content = path.read_text(encoding="utf-8")
-        match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
-        if match:
-            return match.group(1).strip()
+        return path.read_text(encoding="utf-8")
     except OSError:
-        pass
-    return path.stem.replace("-", " ").replace("_", " ").title()
+        return ""
 
 
 def _build_tree(root: Path) -> list[dict]:
-    """Recursively build a tree of {slug, title, path, children}."""
     items: list[dict] = []
     try:
         entries = sorted(root.iterdir(), key=lambda p: (p.is_dir(), p.name.lower()))
@@ -65,16 +114,20 @@ def _build_tree(root: Path) -> list[dict]:
                     {
                         "slug": _slug_from_path(entry),
                         "title": entry.name.replace("-", " ").replace("_", " ").title(),
-                        "path": str(entry),
+                        "category": _category_for_slug(_slug_from_path(entry)),
+                        "description": "",
                         "children": children,
                     },
                 )
         elif entry.suffix.lower() == ".md":
+            text = _read(entry)
+            slug = _slug_from_path(entry)
             items.append(
                 {
-                    "slug": _slug_from_path(entry),
-                    "title": _title_from_file(entry),
-                    "path": str(entry),
+                    "slug": slug,
+                    "title": _title_from_text(text, entry.stem),
+                    "category": _category_for_slug(slug),
+                    "description": _description_from_text(text),
                     "children": [],
                 },
             )
@@ -100,7 +153,7 @@ def sanitize_slug(slug: str) -> str | None:
 
 
 def get_doc(slug: str) -> dict | None:
-    """Render a single doc. Returns None if not found or slug is unsafe."""
+    """Return the raw markdown for a single doc, or None if not found."""
     clean = sanitize_slug(slug)
     if clean is None:
         return None
@@ -108,28 +161,18 @@ def get_doc(slug: str) -> dict | None:
     path = path.with_suffix(".md")
     if not path.exists() or not path.is_file():
         return None
-    # Make sure the resolved path stays inside DOCS_ROOT
     try:
         path.resolve().relative_to(DOCS_ROOT.resolve())
     except ValueError:
         return None
 
     raw = path.read_text(encoding="utf-8")
-    converter = _reset_md()
-    html = converter.convert(raw)
-    toc = getattr(converter, "toc", "")
-    toc_tokens = getattr(converter, "toc_tokens", [])
-
-    last_modified = path.stat().st_mtime
-
     return {
         "slug": clean,
-        "title": _title_from_file(path),
-        "html": html,
-        "toc": toc,
-        "toc_tokens": toc_tokens,
+        "title": _title_from_text(raw, path.stem),
+        "category": _category_for_slug(clean),
         "raw": raw,
-        "last_modified": last_modified,
+        "last_modified": path.stat().st_mtime,
     }
 
 
@@ -137,39 +180,64 @@ def _iter_md_files() -> list[Path]:
     files: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(DOCS_ROOT):
         dirnames[:] = [d for d in dirnames if not d.startswith(".") and not d.startswith("_")]
-        files.extend(Path(dirpath) / fn for fn in filenames if fn.lower().endswith(".md") and not fn.startswith("."))
+        files.extend(
+            Path(dirpath) / fn
+            for fn in filenames
+            if fn.lower().endswith(".md") and not fn.startswith(".")
+        )
     return files
 
 
+def _nearest_heading_above(lines: list[str], idx: int) -> str:
+    for i in range(idx, -1, -1):
+        line = lines[i].lstrip()
+        if line.startswith("#"):
+            return line.lstrip("#").strip()
+    return ""
+
+
 def search_docs(query: str) -> list[dict]:
-    """Naive full-text search across all Markdown files."""
+    """Naive multi-term full-text search across all Markdown files.
+
+    Returns the best matching line as a snippet plus the nearest heading
+    above it (so the user gets a sense of where in the doc the match lives).
+    """
     if not query or not query.strip():
         return []
     terms = [t.lower() for t in query.strip().split() if t]
+    if not terms:
+        return []
+
     results: list[dict] = []
     for path in _iter_md_files():
-        try:
-            content = path.read_text(encoding="utf-8")
-        except OSError:
+        content = _read(path)
+        if not content:
             continue
         lower = content.lower()
         score = sum(lower.count(t) for t in terms)
         if score == 0:
             continue
-        # Build a snippet around the first match
-        first_idx = lower.find(terms[0])
-        start = max(0, first_idx - 60)
-        end = min(len(content), first_idx + 120)
-        snippet = content[start:end].replace("\n", " ").strip()
-        if start > 0:
-            snippet = "…" + snippet
-        if end < len(content):
-            snippet = snippet + "…"
+        # Find best line: line with most term hits.
+        lines = content.splitlines()
+        best_idx = 0
+        best_hits = -1
+        for i, line in enumerate(lines):
+            ll = line.lower()
+            hits = sum(ll.count(t) for t in terms)
+            if hits > best_hits:
+                best_hits = hits
+                best_idx = i
+        snippet = lines[best_idx].strip()
+        if len(snippet) > 180:
+            snippet = snippet[:180].rstrip() + "…"
+        heading = _nearest_heading_above(lines, best_idx)
         slug = _slug_from_path(path)
         results.append(
             {
                 "slug": slug,
-                "title": _title_from_file(path),
+                "title": _title_from_text(content, path.stem),
+                "category": _category_for_slug(slug),
+                "section": heading,
                 "snippet": snippet,
                 "score": score,
             },

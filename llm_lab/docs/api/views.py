@@ -1,4 +1,9 @@
-"""Docs API views."""
+"""Docs API views.
+
+The backend just exposes the file tree, raw markdown, and a simple
+keyword search. Rendering (Markdown -> HTML, syntax highlighting,
+Mermaid diagrams, callouts) is done on the client.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +21,8 @@ _session = SessionAuth()
 class DocNodeOut(Schema):
     slug: str
     title: str
+    category: str = "Other"
+    description: str = ""
     children: list[DocNodeOut] = []
 
 
@@ -25,8 +32,7 @@ DocNodeOut.model_rebuild()
 class DocPageOut(Schema):
     slug: str
     title: str
-    html: str
-    toc: str
+    category: str
     raw: str
     last_modified: float
 
@@ -34,6 +40,8 @@ class DocPageOut(Schema):
 class DocSearchResult(Schema):
     slug: str
     title: str
+    category: str = "Other"
+    section: str = ""
     snippet: str
     score: int
 
@@ -41,6 +49,12 @@ class DocSearchResult(Schema):
 @router.get("/tree", response=list[DocNodeOut], auth=_session)
 def get_tree(request):
     return services.list_docs()
+
+
+@router.get("/categories", response=list[str], auth=_session)
+def get_categories(request):
+    """Ordered list of category labels — drives sidebar grouping order."""
+    return services.CATEGORY_ORDER
 
 
 @router.get("/search", response=list[DocSearchResult], auth=_session)

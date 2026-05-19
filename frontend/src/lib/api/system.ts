@@ -3,14 +3,15 @@ import { apiFetch } from './core';
 export interface DocNode {
 	slug: string;
 	title: string;
+	category?: string;
+	description?: string;
 	children: DocNode[];
 }
 
 export interface DocPage {
 	slug: string;
 	title: string;
-	html: string;
-	toc: string;
+	category: string;
 	raw: string;
 	last_modified: number;
 }
@@ -18,6 +19,8 @@ export interface DocPage {
 export interface DocSearchResult {
 	slug: string;
 	title: string;
+	category?: string;
+	section?: string;
 	snippet: string;
 	score: number;
 }
@@ -60,6 +63,11 @@ export async function getDoc(slug: string): Promise<DocPage | null> {
 
 export async function getDocsTree(): Promise<DocNode[]> {
 	const res = await apiFetch('/docs/tree');
+	return res.json();
+}
+
+export async function getDocsCategories(): Promise<string[]> {
+	const res = await apiFetch('/docs/categories');
 	return res.json();
 }
 
