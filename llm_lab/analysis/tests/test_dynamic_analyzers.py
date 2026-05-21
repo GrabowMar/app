@@ -216,8 +216,17 @@ class TestZAPAnalyzerLive:
         analyzer = ZAPAnalyzer()
         available, msg = analyzer.check_available()
 
-        assert available is False
-        assert "Docker" in msg
+        assert available is True
+        assert "static analysis" in msg.lower()
+        assert "docker" in msg.lower()
+
+    @patch("shutil.which", return_value=None)
+    def test_zap_live_requires_docker(self, mock_which):
+        analyzer = ZAPAnalyzer()
+        output = analyzer.analyze({}, config={"target_url": "https://example.com"})
+
+        assert output.has_error
+        assert "live scans require docker" in output.error.lower()
 
 
 # -- PortScanAnalyzer --------------------------------------------------

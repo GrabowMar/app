@@ -10,6 +10,7 @@
 	import Square from '@lucide/svelte/icons/square';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import Layers from '@lucide/svelte/icons/layers';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
@@ -161,13 +162,16 @@
 					<Card.Header class="pb-3">
 						<div class="flex items-start justify-between gap-2">
 							<Badge class={statusColors[c.status]}>{c.status}</Badge>
-							{#if c.frontend_port}
+							{#if c.app_path && c.status === 'running'}
 								<a
-									href="http://localhost:{c.frontend_port}"
+									href={c.app_path}
 									target="_blank"
 									rel="noopener noreferrer"
 									class="text-xs text-blue-400 hover:underline"
-								>:{c.frontend_port}</a>
+									title="Open generated app"
+								>Open ↗</a>
+							{:else if c.frontend_port}
+								<span class="text-xs text-muted-foreground">:{c.frontend_port}</span>
 							{/if}
 						</div>
 						<Card.Title class="text-base mt-2 font-mono text-sm truncate">{c.container_name}</Card.Title>
@@ -194,6 +198,11 @@
 							</Button>
 						{/if}
 						{#if c.status === 'running'}
+							{#if c.app_path}
+								<Button size="sm" onclick={() => window.open(c.app_path, '_blank', 'noopener,noreferrer')}>
+									<ExternalLink class="h-3 w-3" />
+								</Button>
+							{/if}
 							<Button size="sm" variant="outline" onclick={() => act(c.id, 'stop')} disabled={actionLoading[c.id]}>
 								<Square class="h-3 w-3" />
 							</Button>

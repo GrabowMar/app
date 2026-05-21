@@ -44,6 +44,15 @@ class ContainerInstance(models.Model):
     )
     backend_port = models.IntegerField(_("backend port"), null=True, blank=True)
     frontend_port = models.IntegerField(_("frontend port"), null=True, blank=True)
+    subdomain = models.CharField(
+        _("subdomain"),
+        max_length=12,
+        unique=True,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text=_("Stable URL slug used for /app/<subdomain>/ proxy routing."),
+    )
     health_status = models.CharField(
         _("health status"),
         max_length=100,
@@ -75,6 +84,12 @@ class ContainerInstance(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def app_path(self) -> str | None:
+        """Return the user-facing reverse-proxy path for this app, or None."""
+        if not self.subdomain:
+            return None
+        return f"/app/{self.subdomain}/"
 
 
 class ContainerAction(models.Model):

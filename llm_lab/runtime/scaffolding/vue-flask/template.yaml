@@ -1,0 +1,29 @@
+slug: vue-flask
+display_name: Vue + Flask
+description: Vue 3 (Vite) frontend + Flask backend, single container.
+
+backend:
+  language: python
+  entry: backend/app.py
+  requirements_path: backend/requirements.txt
+  inject: backend_code
+  baseline_requirements:
+    - flask>=3.0
+    - flask-cors
+    - gunicorn
+
+frontend:
+  framework: vue
+  entry: frontend/src/App.vue
+  package_json_path: frontend/package.json
+  inject: frontend_code
+  baseline_dependencies:
+    vue: ^3.4.0
+    vue-router: ^4.4.0
+    axios: ^1.7.0
+  baseline_dev_dependencies:
+    vite: ^5.4.0
+    "@vitejs/plugin-vue": ^5.1.0
+    tailwindcss: ^3.4.13
+    postcss: ^8.4.47
+    autoprefixer: ^10.4.20

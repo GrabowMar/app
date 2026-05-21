@@ -13,6 +13,10 @@ from ._common import SCORE_SEVERITY_THRESHOLDS
 from ._common import _average_score_to_grade
 from ._common import _score_to_severity
 from .lighthouse import LighthouseAnalyzer
+from .load_tests import AiohttpLoadTestAnalyzer
+from .load_tests import ApacheBenchAnalyzer
+from .load_tests import ArtilleryAnalyzer
+from .load_tests import LocustAnalyzer
 from .parsers import map_audit_to_category
 from .parsers import parse_lighthouse_report
 
@@ -20,7 +24,11 @@ __all__ = [
     "GRADE_THRESHOLDS",
     "LIGHTHOUSE_CATEGORY_MAP",
     "SCORE_SEVERITY_THRESHOLDS",
+    "AiohttpLoadTestAnalyzer",
+    "ApacheBenchAnalyzer",
+    "ArtilleryAnalyzer",
     "LighthouseAnalyzer",
+    "LocustAnalyzer",
     "_average_score_to_grade",
     "_score_to_severity",
     "map_audit_to_category",

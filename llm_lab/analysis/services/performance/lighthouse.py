@@ -6,15 +6,19 @@ import json
 import logging
 import re
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
+
+if TYPE_CHECKING:
+    from llm_lab.analysis.services.cancellation import CancellationToken
 
 from llm_lab.analysis.services.base import AnalyzerOutput
 from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
+from llm_lab.analysis.services.base import run_subprocess
 from llm_lab.analysis.services.base import validate_target_url
 
 from ._common import _BACKEND_DIRS
@@ -39,23 +43,32 @@ class LighthouseAnalyzer(BaseAnalyzer):
     )
 
     def check_available(self) -> tuple[bool, str]:
+        live_available, live_message = self._check_live_available()
+        if live_available:
+            return True, f"Available for code analysis and live audits ({live_message})"
+        return True, "Available for code analysis; install npx or Docker for live audits"
+
+    @staticmethod
+    def _check_live_available() -> tuple[bool, str]:
         if shutil.which("npx"):
-            return True, "Available via npx"
+            return True, "via npx"
         if shutil.which("docker"):
-            return True, "Available via Docker"
+            return True, "via Docker"
         return False, "Neither npx nor docker found on PATH"
 
     def analyze(
         self,
         code: dict[str, str],
         config: dict[str, Any] | None = None,
+        *,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         config = config or {}
         target_url: str | None = config.get("target_url")
         is_live_task: bool = bool(config.get("live_target"))
 
         if target_url:
-            return self._analyze_live(target_url, is_live_task=is_live_task)
+            return self._analyze_live(target_url, is_live_task=is_live_task, cancel=cancel)
         return self._analyze_code(code)
 
     # ------------------------------------------------------------------
@@ -67,6 +80,7 @@ class LighthouseAnalyzer(BaseAnalyzer):
         target_url: str,
         *,
         is_live_task: bool = False,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         if is_live_task:
             from llm_lab.analysis.services.live_target import validate_live_target_url
@@ -77,19 +91,17 @@ class LighthouseAnalyzer(BaseAnalyzer):
         if not valid:
             return AnalyzerOutput(error=f"Invalid target URL: {err}")
 
-        has_npx = shutil.which("npx") is not None
-        has_docker = shutil.which("docker") is not None
+        live_available, live_message = self._check_live_available()
+        if not live_available:
+            return AnalyzerOutput(error=f"Lighthouse live audits require npx or Docker: {live_message}")
 
-        if not has_npx and not has_docker:
-            return AnalyzerOutput(
-                error=("Lighthouse is not available: neither npx nor docker found"),
-            )
+        use_npx = shutil.which("npx") is not None
 
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
                 output_path = f"{tmpdir}/report.json"
 
-                if has_npx:
+                if use_npx:
                     cmd = [
                         "npx",
                         "lighthouse",
@@ -112,38 +124,24 @@ class LighthouseAnalyzer(BaseAnalyzer):
                         f"--output-path={output_path}",
                     ]
 
-                result = subprocess.run(  # noqa: S603
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=120,
-                    check=False,
-                )
+                result = run_subprocess(cmd, timeout=self.default_timeout, cancel=cancel)
+                if result is None:
+                    if cancel and cancel.is_cancelled():
+                        return AnalyzerOutput(error="Analysis cancelled")
+                    return AnalyzerOutput(error="Lighthouse timed out")
 
                 if result.returncode != 0:
-                    logger.error(
-                        "Lighthouse failed: %s",
-                        result.stderr,
-                    )
-                    stderr = result.stderr[:500]
+                    logger.error("Lighthouse failed: %s", result.stderr)
                     return AnalyzerOutput(
-                        error=(f"Lighthouse exited with code {result.returncode}: {stderr}"),
+                        error=f"Lighthouse exited with code {result.returncode}: {result.stderr[:500]}",
                     )
 
                 with Path(output_path).open() as f:
                     report = json.load(f)
 
-        except subprocess.TimeoutExpired:
-            return AnalyzerOutput(
-                error="Lighthouse timed out after 120 seconds",
-            )
         except (OSError, json.JSONDecodeError) as exc:
-            logger.exception(
-                "Failed to run or parse Lighthouse output",
-            )
-            return AnalyzerOutput(
-                error=f"Lighthouse error: {exc}",
-            )
+            logger.exception("Failed to run or parse Lighthouse output")
+            return AnalyzerOutput(error=f"Lighthouse error: {exc}")
 
         return parse_lighthouse_report(report)
 

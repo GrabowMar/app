@@ -25,7 +25,7 @@
 
 	onMount(async () => {
 		const [t, c] = await Promise.all([
-			getDocsTree(),
+			getDocsTree().catch(() => [] as DocNode[]),
 			getDocsCategories().catch(() => CATEGORY_ORDER),
 		]);
 		tree = t;

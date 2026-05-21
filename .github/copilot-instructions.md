@@ -106,7 +106,7 @@ Custom `User` model with email as the login field (no username). Single `name` f
 
 ## Recommended MCP Servers
 
-The following MCP servers improve AI-assisted development in this project. Configuration lives in `.vscode/mcp.json`.
+The following MCP servers improve AI-assisted development in this project. Configuration lives in `.mcp.json` at the repository root (used by Copilot CLI; VS Code can also read workspace MCP configs).
 
 | Server | Purpose | When to use |
 |--------|---------|-------------|

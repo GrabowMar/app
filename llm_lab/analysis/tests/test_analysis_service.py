@@ -59,6 +59,7 @@ def _mock_analyzer(name: str, analyzer_type: str, output: AnalyzerOutput):
     analyzer = MagicMock()
     analyzer.name = name
     analyzer.analyzer_type = analyzer_type
+    analyzer.priority = 5
     analyzer.analyze.return_value = output
     return analyzer
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
@@ -15,10 +15,13 @@ from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
 from llm_lab.analysis.services.base import _extract_code
 from llm_lab.analysis.services.base import build_severity_counts
+from llm_lab.analysis.services.base import run_subprocess
 from llm_lab.analysis.services.static._common import JS_TS_EXTENSIONS
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from llm_lab.analysis.services.cancellation import CancellationToken
 
+logger = logging.getLogger(__name__)
 
 ESLINT_SEVERITY_MAP: dict[int, str] = {
     1: "low",
@@ -33,8 +36,11 @@ class ESLintAnalyzer(BaseAnalyzer):
     analyzer_type: ClassVar[str] = "static"
     display_name: ClassVar[str] = "ESLint Code Analyzer"
     description: ClassVar[str] = "Finds problems in JavaScript and TypeScript code."
+    default_timeout: ClassVar[int] = 60
 
     def check_available(self) -> tuple[bool, str]:
+        import subprocess
+
         try:
             result = subprocess.run(
                 ["npx", "eslint", "--version"],  # noqa: S607
@@ -57,26 +63,21 @@ class ESLintAnalyzer(BaseAnalyzer):
         self,
         code: dict[str, str],
         config: dict[str, Any] | None = None,
+        *,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         source = _extract_code(code, "frontend", JS_TS_EXTENSIONS)
         if not source.strip():
-            return AnalyzerOutput(
-                summary={
-                    "message": "No JavaScript/TypeScript code to analyze",
-                },
-            )
+            return AnalyzerOutput(summary={"message": "No JavaScript/TypeScript code to analyze"})
 
-        available, _message = self.check_available()
+        available, _message = self.get_availability()
         if not available:
             return AnalyzerOutput(error="ESLint is not installed")
 
+        timeout = (config or {}).get("timeout", self.default_timeout)
         tmp_path: str | None = None
         try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".js",
-                delete=False,
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as tmp:
                 tmp.write(source)
                 tmp_path = tmp.name
 
@@ -89,7 +90,7 @@ class ESLintAnalyzer(BaseAnalyzer):
                     "no-new-func": "error",
                 },
             )
-            result = subprocess.run(  # noqa: S603
+            result = run_subprocess(
                 [  # noqa: S607
                     "npx",
                     "eslint",
@@ -100,16 +101,15 @@ class ESLintAnalyzer(BaseAnalyzer):
                     "--rule",
                     rules,
                 ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
+                timeout=timeout,
+                cancel=cancel,
             )
+            if result is None:
+                if cancel and cancel.is_cancelled():
+                    return AnalyzerOutput(error="Analysis cancelled")
+                return AnalyzerOutput(error="ESLint analysis timed out")
 
             return self._parse_output(result)
-        except subprocess.TimeoutExpired:
-            logger.exception("ESLint analysis timed out")
-            return AnalyzerOutput(error="ESLint analysis timed out")
         except Exception:
             logger.exception("ESLint analysis failed")
             return AnalyzerOutput(error="ESLint analysis failed unexpectedly")
@@ -117,37 +117,25 @@ class ESLintAnalyzer(BaseAnalyzer):
             if tmp_path:
                 Path(tmp_path).unlink(missing_ok=True)
 
-    def _parse_output(
-        self,
-        result: subprocess.CompletedProcess[str],
-    ) -> AnalyzerOutput:
+    def _parse_output(self, result) -> AnalyzerOutput:  # type: ignore[override]
         try:
             data = json.loads(result.stdout)
         except (json.JSONDecodeError, TypeError):
             logger.exception("Failed to parse ESLint JSON output")
             return AnalyzerOutput(
                 error="Failed to parse ESLint output",
-                raw_output={
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
-                },
+                raw_output={"stdout": result.stdout, "stderr": result.stderr},
             )
 
-        security_rules = {
-            "no-eval",
-            "no-implied-eval",
-            "no-new-func",
-        }
+        security_rules = {"no-eval", "no-implied-eval", "no-new-func"}
         findings: list[FindingData] = []
         for file_result in data:
             file_path = file_result.get("filePath", "")
             for msg in file_result.get("messages", []):
                 raw_severity = msg.get("severity", 1)
                 severity = ESLINT_SEVERITY_MAP.get(raw_severity, "medium")
-
                 rule_id = msg.get("ruleId") or ""
                 category = "security" if rule_id in security_rules else "quality"
-
                 suggestion = f"See ESLint rule: {rule_id}" if rule_id else ""
                 findings.append(
                     FindingData(
@@ -170,12 +158,8 @@ class ESLintAnalyzer(BaseAnalyzer):
                 )
 
         severity_counts = build_severity_counts(findings)
-
         return AnalyzerOutput(
             findings=findings,
-            summary={
-                "total_issues": len(findings),
-                "by_severity": severity_counts,
-            },
+            summary={"total_issues": len(findings), "by_severity": severity_counts},
             raw_output=data,
         )

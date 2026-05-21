@@ -1,0 +1,12 @@
+slug: static-html
+display_name: Static HTML
+description: Single-page static site served by nginx. No backend.
+
+backend: {}
+
+frontend:
+  framework: static
+  entry: site/index.html
+  inject: frontend_code
+  baseline_dependencies: {}
+  baseline_dev_dependencies: {}

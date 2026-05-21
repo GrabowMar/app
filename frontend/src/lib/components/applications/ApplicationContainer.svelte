@@ -8,6 +8,7 @@ import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 import { Button } from '$lib/components/ui/button';
 import { getContainers, inspectContainer, type ContainerInstance, type ContainerInspect } from '$lib/api/runtime';
 import AppRuntimeControls from './AppRuntimeControls.svelte';
+import BuildLog from './BuildLog.svelte';
 
 interface Props { jobId: string; jobStatus?: string }
 let { jobId, jobStatus = '' }: Props = $props();
@@ -84,6 +85,23 @@ const statusColor: Record<string, string> = {
 						<span class="text-xs text-muted-foreground">Image</span>
 						<div class="font-mono text-xs break-all">{inspect?.image || container.image_tag || '—'}</div>
 					</div>
+					{#if container.app_path}
+						<div class="md:col-span-2">
+							<span class="text-xs text-muted-foreground">App URL</span>
+							<div class="flex items-center gap-2 mt-1">
+								<code class="text-xs font-mono">{container.app_path}</code>
+								{#if container.status === 'running'}
+									<Button size="sm" href={container.app_path} target="_blank" rel="noopener noreferrer">
+										<ExternalLink class="mr-1 h-3 w-3" />Open App
+									</Button>
+								{:else}
+									<Button size="sm" disabled title="Container is not running">
+										<ExternalLink class="mr-1 h-3 w-3" />Open App
+									</Button>
+								{/if}
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<div>
@@ -105,7 +123,7 @@ const statusColor: Record<string, string> = {
 										<td class="px-3 py-2 font-mono text-xs">{container.backend_port}</td>
 										<td class="px-3 py-2 font-mono text-xs">8000</td>
 										<td class="px-3 py-2">
-											<a href="http://localhost:{container.backend_port}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline inline-flex items-center gap-1 text-xs">Open <ExternalLink class="h-3 w-3" /></a>
+											<a href={container.subdomain ? `/app/${container.subdomain}/` : `http://localhost:${container.backend_port}`} target="_blank" rel="noopener noreferrer" class="text-primary hover:underline inline-flex items-center gap-1 text-xs">Open <ExternalLink class="h-3 w-3" /></a>
 										</td>
 									</tr>
 								{/if}
@@ -115,7 +133,7 @@ const statusColor: Record<string, string> = {
 										<td class="px-3 py-2 font-mono text-xs">{container.frontend_port}</td>
 										<td class="px-3 py-2 font-mono text-xs">5000</td>
 										<td class="px-3 py-2">
-											<a href="http://localhost:{container.frontend_port}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline inline-flex items-center gap-1 text-xs">Open <ExternalLink class="h-3 w-3" /></a>
+											<a href={container.subdomain ? `/app/${container.subdomain}/` : `http://localhost:${container.frontend_port}`} target="_blank" rel="noopener noreferrer" class="text-primary hover:underline inline-flex items-center gap-1 text-xs">Open <ExternalLink class="h-3 w-3" /></a>
 										</td>
 									</tr>
 								{/if}
@@ -132,6 +150,12 @@ const statusColor: Record<string, string> = {
 						{container.last_error || container.error_message}
 					</div>
 				{/if}
+
+				<BuildLog
+					containerId={container.id}
+					startOpen={container.status === 'failed' || container.status === 'building'}
+					live={container.status === 'building' || container.status === 'pending'}
+				/>
 			{/if}
 		</Card.Content>
 	</Card.Root>

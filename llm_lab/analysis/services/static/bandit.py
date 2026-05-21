@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
@@ -15,10 +15,13 @@ from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
 from llm_lab.analysis.services.base import _extract_code
 from llm_lab.analysis.services.base import build_severity_counts
+from llm_lab.analysis.services.base import run_subprocess
 from llm_lab.analysis.services.static._common import PYTHON_EXTENSIONS
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from llm_lab.analysis.services.cancellation import CancellationToken
 
+logger = logging.getLogger(__name__)
 
 BANDIT_SEVERITY_MAP: dict[str, str] = {
     "HIGH": "high",
@@ -40,8 +43,11 @@ class BanditAnalyzer(BaseAnalyzer):
     analyzer_type: ClassVar[str] = "static"
     display_name: ClassVar[str] = "Bandit Security Scanner"
     description: ClassVar[str] = "Finds common security issues in Python code."
+    default_timeout: ClassVar[int] = 60
 
     def check_available(self) -> tuple[bool, str]:
+        import subprocess
+
         try:
             result = subprocess.run(
                 ["bandit", "--version"],  # noqa: S607
@@ -64,39 +70,35 @@ class BanditAnalyzer(BaseAnalyzer):
         self,
         code: dict[str, str],
         config: dict[str, Any] | None = None,
+        *,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         source = _extract_code(code, "backend", PYTHON_EXTENSIONS)
         if not source.strip():
-            return AnalyzerOutput(
-                summary={"message": "No Python code to analyze"},
-            )
+            return AnalyzerOutput(summary={"message": "No Python code to analyze"})
 
-        available, _message = self.check_available()
+        available, _message = self.get_availability()
         if not available:
             return AnalyzerOutput(error="Bandit is not installed")
 
+        timeout = (config or {}).get("timeout", self.default_timeout)
         tmp_path: str | None = None
         try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".py",
-                delete=False,
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
                 tmp.write(source)
                 tmp_path = tmp.name
 
-            result = subprocess.run(  # noqa: S603
+            result = run_subprocess(
                 ["bandit", "-f", "json", "-r", tmp_path],  # noqa: S607
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
+                timeout=timeout,
+                cancel=cancel,
             )
+            if result is None:
+                if cancel and cancel.is_cancelled():
+                    return AnalyzerOutput(error="Analysis cancelled")
+                return AnalyzerOutput(error="Bandit analysis timed out")
 
             return self._parse_output(result)
-        except subprocess.TimeoutExpired:
-            logger.exception("Bandit analysis timed out")
-            return AnalyzerOutput(error="Bandit analysis timed out")
         except Exception:
             logger.exception("Bandit analysis failed")
             return AnalyzerOutput(error="Bandit analysis failed unexpectedly")
@@ -104,20 +106,14 @@ class BanditAnalyzer(BaseAnalyzer):
             if tmp_path:
                 Path(tmp_path).unlink(missing_ok=True)
 
-    def _parse_output(
-        self,
-        result: subprocess.CompletedProcess[str],
-    ) -> AnalyzerOutput:
+    def _parse_output(self, result) -> AnalyzerOutput:  # type: ignore[override]
         try:
             data = json.loads(result.stdout)
         except (json.JSONDecodeError, TypeError):
             logger.exception("Failed to parse Bandit JSON output")
             return AnalyzerOutput(
                 error="Failed to parse Bandit output",
-                raw_output={
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
-                },
+                raw_output={"stdout": result.stdout, "stderr": result.stderr},
             )
 
         findings: list[FindingData] = []

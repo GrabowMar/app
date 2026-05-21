@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { getDoc, getDocsTree } from '$lib/api/system';
 	import type { DocPage, DocNode } from '$lib/api/system';
@@ -24,7 +24,7 @@
 	let notFound = $state(false);
 	let headings = $state<Heading[]>([]);
 
-	const currentSlug = $derived($page.params.slug as string);
+	const currentSlug = $derived(page.params.slug as string);
 	const meta = $derived(metaFor(doc?.category));
 	const [prev, next] = $derived(prevNext(tree, currentSlug));
 	const minutes = $derived(doc ? readingTime(doc.raw) : 0);
@@ -34,21 +34,25 @@
 		notFound = false;
 		doc = null;
 		headings = [];
-		const result = await getDoc(slug);
-		if (!result) {
+		try {
+			const result = await getDoc(slug);
+			if (!result) {
+				notFound = true;
+			} else {
+				doc = result;
+			}
+		} catch {
 			notFound = true;
-		} else {
-			doc = result;
 		}
 		loading = false;
 	}
 
 	onMount(async () => {
-		tree = await getDocsTree();
+		tree = await getDocsTree().catch(() => []);
 	});
 
 	$effect(() => {
-		loadDoc($page.params.slug);
+		loadDoc(page.params.slug);
 	});
 
 	function formatDate(ts: number) {

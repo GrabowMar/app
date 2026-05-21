@@ -85,8 +85,17 @@ class TestLighthouseStaticMode:
         analyzer = LighthouseAnalyzer()
         available, msg = analyzer.check_available()
 
-        assert available is False
-        assert "npx" in msg.lower() or "docker" in msg.lower()
+        assert available is True
+        assert "code analysis" in msg.lower()
+        assert "live audits" in msg.lower()
+
+    @patch("shutil.which", return_value=None)
+    def test_lighthouse_live_requires_runtime_tooling(self, mock_which):
+        analyzer = LighthouseAnalyzer()
+        output = analyzer.analyze({}, config={"target_url": "https://example.com"})
+
+        assert output.has_error
+        assert "live audits require npx or docker" in output.error.lower()
 
     def test_lighthouse_live_rejects_blocked_url(self):
         analyzer = LighthouseAnalyzer()

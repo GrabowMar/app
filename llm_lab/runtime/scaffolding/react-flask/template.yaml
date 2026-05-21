@@ -1,0 +1,38 @@
+slug: react-flask
+display_name: React + Flask
+description: |
+  React (Vite) frontend served by nginx, Flask backend on :5000.
+  Single container, supervisord. Vite uses base='./' so the SPA is
+  oblivious to its mount path; the reverse-proxy injects <base href>.
+
+backend:
+  language: python
+  entry: backend/app.py
+  requirements_path: backend/requirements.txt
+  inject: backend_code
+  baseline_requirements:
+    - flask>=3.0
+    - flask-cors
+    - gunicorn
+
+frontend:
+  framework: react
+  entry: frontend/src/App.jsx
+  package_json_path: frontend/package.json
+  inject: frontend_code
+  baseline_dependencies:
+    react: ^18.3.1
+    react-dom: ^18.3.1
+    react-router-dom: ^6.26.0
+    axios: ^1.7.0
+    lucide-react: ^0.469.0
+  baseline_dev_dependencies:
+    vite: ^5.4.0
+    "@vitejs/plugin-react": ^4.3.1
+    tailwindcss: ^3.4.13
+    postcss: ^8.4.47
+    autoprefixer: ^10.4.20
+
+hooks:
+  post_render:
+    - write_sanitize_icons_script

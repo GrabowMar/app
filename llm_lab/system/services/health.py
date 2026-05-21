@@ -60,7 +60,7 @@ def redis_status() -> dict[str, Any]:
 
 def celery_status() -> dict[str, Any]:
     try:
-        inspector = celery_app.control.inspect(timeout=2)
+        inspector = celery_app.control.inspect(timeout=1)
         active = inspector.active() or {}
         scheduled = inspector.scheduled() or {}
         reserved = inspector.reserved() or {}

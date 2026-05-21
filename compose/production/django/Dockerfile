@@ -43,6 +43,9 @@ RUN addgroup --system django \
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg dependencies
   libpq-dev \
+  # JavaScript analyzers (eslint, lighthouse)
+  nodejs \
+  npm \
   # Translations dependencies
   gettext \
   # entrypoint

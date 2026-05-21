@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   build-essential \
   # psycopg dependencies
   libpq-dev \
+  # JavaScript analyzers (eslint, lighthouse)
+  nodejs \
+  npm \
   gettext \
   wait-for-it
 

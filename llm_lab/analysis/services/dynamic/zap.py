@@ -7,7 +7,7 @@ import json
 import logging
 import re
 import shutil
-import subprocess
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
@@ -16,8 +16,12 @@ from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
 from llm_lab.analysis.services.base import _safe_int
 from llm_lab.analysis.services.base import build_severity_counts
+from llm_lab.analysis.services.base import run_subprocess
 from llm_lab.analysis.services.base import validate_target_url
 from llm_lab.analysis.services.dynamic._common import _slug
+
+if TYPE_CHECKING:
+    from llm_lab.analysis.services.cancellation import CancellationToken
 
 logger = logging.getLogger(__name__)
 
@@ -123,14 +127,26 @@ _STATIC_VULN_PATTERNS: list[tuple[str, str, str, str, str, str]] = [
 
 
 class ZAPAnalyzer(BaseAnalyzer):
-    """OWASP ZAP security scanner — runs ZAP baseline scan or static code analysis."""
+    """OWASP ZAP security scanner — live baseline scan or static code analysis."""
 
     name: ClassVar[str] = "zap"
     analyzer_type: ClassVar[str] = "dynamic"
     display_name: ClassVar[str] = "OWASP ZAP Security Scanner"
-    description: ClassVar[str] = "Scans web applications for security vulnerabilities using OWASP ZAP baseline scan"
+    description: ClassVar[str] = (
+        "Scans web applications for security vulnerabilities using OWASP ZAP baseline scan"
+    )
+    default_timeout: ClassVar[int] = 120
 
     def check_available(self) -> tuple[bool, str]:
+        live_available, live_message = self._check_live_available()
+        if live_available:
+            return True, f"Available for static analysis and live scans ({live_message})"
+        return True, "Available for static analysis; install Docker for live scans"
+
+    @staticmethod
+    def _check_live_available() -> tuple[bool, str]:
+        import subprocess
+
         if shutil.which("docker") is None:
             return False, "Docker is not installed or not on PATH"
         try:
@@ -151,13 +167,15 @@ class ZAPAnalyzer(BaseAnalyzer):
         self,
         code: dict[str, str],
         config: dict[str, Any] | None = None,
+        *,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         config = config or {}
         target_url: str | None = config.get("target_url")
         is_live_task: bool = bool(config.get("live_target"))
 
         if target_url:
-            return self._analyze_live(target_url, is_live_task=is_live_task)
+            return self._analyze_live(target_url, is_live_task=is_live_task, cancel=cancel)
         return self._analyze_static(code)
 
     def _analyze_live(
@@ -165,10 +183,11 @@ class ZAPAnalyzer(BaseAnalyzer):
         target_url: str,
         *,
         is_live_task: bool = False,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
-        available, msg = self.check_available()
-        if not available:
-            return AnalyzerOutput(error=f"ZAP unavailable: {msg}")
+        live_available, live_message = self._check_live_available()
+        if not live_available:
+            return AnalyzerOutput(error=f"ZAP live scans require Docker: {live_message}")
 
         if is_live_task:
             from llm_lab.analysis.services.live_target import validate_live_target_url
@@ -192,27 +211,15 @@ class ZAPAnalyzer(BaseAnalyzer):
             "report.json",
         ]
 
-        try:
-            result = subprocess.run(  # noqa: S603
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            return AnalyzerOutput(
-                error="ZAP scan timed out after 120 seconds",
-            )
-        except OSError as exc:
-            return AnalyzerOutput(error=f"Failed to start ZAP: {exc}")
+        result = run_subprocess(cmd, timeout=self.default_timeout, cancel=cancel)
+        if result is None:
+            if cancel and cancel.is_cancelled():
+                return AnalyzerOutput(error="Analysis cancelled")
+            return AnalyzerOutput(error="ZAP scan timed out")
 
         return self._parse_zap_output(result)
 
-    def _parse_zap_output(
-        self,
-        result: subprocess.CompletedProcess[str],
-    ) -> AnalyzerOutput:
+    def _parse_zap_output(self, result) -> AnalyzerOutput:  # type: ignore[override]
         findings: list[FindingData] = []
         raw: dict[str, Any] = {
             "stdout": result.stdout,
@@ -236,21 +243,13 @@ class ZAPAnalyzer(BaseAnalyzer):
 
         raw["report"] = report
 
-        alert_counts: dict[str, int] = {
-            "info": 0,
-            "low": 0,
-            "medium": 0,
-            "high": 0,
-        }
+        alert_counts: dict[str, int] = {"info": 0, "low": 0, "medium": 0, "high": 0}
 
         for site in report.get("site", []):
             for alert in site.get("alerts", []):
                 try:
                     risk_code = _safe_int(alert.get("riskcode", 0))
-                    severity = ZAP_RISK_TO_SEVERITY.get(
-                        risk_code,
-                        "info",
-                    )
+                    severity = ZAP_RISK_TO_SEVERITY.get(risk_code, "info")
                     alert_counts[severity] += 1
 
                     instances = alert.get("instances") or []
@@ -264,22 +263,14 @@ class ZAPAnalyzer(BaseAnalyzer):
                             description=alert.get("desc", ""),
                             suggestion=alert.get("solution", ""),
                             rule_id=str(alert.get("pluginid", "")),
-                            confidence=_zap_confidence(
-                                _safe_int(alert.get("confidence", 1), default=1),
-                            ),
+                            confidence=_zap_confidence(_safe_int(alert.get("confidence", 1), default=1)),
                             tool_specific_data={
                                 "risk_code": risk_code,
                                 "cweid": alert.get("cweid", ""),
                                 "wascid": alert.get("wascid", ""),
-                                "reference": alert.get(
-                                    "reference",
-                                    "",
-                                ),
+                                "reference": alert.get("reference", ""),
                                 "urls": urls,
-                                "count": alert.get(
-                                    "count",
-                                    len(instances),
-                                ),
+                                "count": alert.get("count", len(instances)),
                             },
                         ),
                     )
@@ -291,18 +282,13 @@ class ZAPAnalyzer(BaseAnalyzer):
                     )
 
         total_urls = sum(len(site.get("alerts", [])) for site in report.get("site", []))
-
         summary: dict[str, Any] = {
             "alert_counts": alert_counts,
             "total_alerts": len(findings),
             "total_urls_scanned": total_urls,
         }
 
-        return AnalyzerOutput(
-            findings=findings,
-            summary=summary,
-            raw_output=raw,
-        )
+        return AnalyzerOutput(findings=findings, summary=summary, raw_output=raw)
 
     def _analyze_static(self, code: dict[str, str]) -> AnalyzerOutput:
         findings: list[FindingData] = []
@@ -329,19 +315,13 @@ class ZAPAnalyzer(BaseAnalyzer):
                         )
 
         counts = build_severity_counts(findings)
-
         summary: dict[str, Any] = {
             "mode": "static",
             "alert_counts": counts,
             "total_alerts": len(findings),
             "files_scanned": len(code),
         }
-
-        return AnalyzerOutput(
-            findings=findings,
-            summary=summary,
-            raw_output={"mode": "static"},
-        )
+        return AnalyzerOutput(findings=findings, summary=summary, raw_output={"mode": "static"})
 
 
 def _zap_confidence(level: int) -> str:

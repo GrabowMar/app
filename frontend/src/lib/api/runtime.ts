@@ -6,14 +6,17 @@ export type ContainerStatus = 'pending' | 'building' | 'running' | 'stopped' | '
 
 export interface ContainerAction {
 	id: string;
+	action_id: string;
 	container_id: string;
-	action_type: ActionType;
+	action_type: ActionType | 'logs' | 'health';
 	status: ActionStatus;
 	progress_percent: number;
-	log_output: string;
+	output: string;
 	error_message: string;
+	exit_code: number | null;
+	started_at: string | null;
+	completed_at: string | null;
 	created_at: string;
-	updated_at: string;
 }
 
 export interface ContainerHealthResponse {
@@ -30,6 +33,7 @@ export interface ContainerInstance {
 	status: ContainerStatus;
 	backend_port: number | null;
 	frontend_port: number | null;
+	subdomain: string | null;
 	error_message: string;
 	last_error?: string;
 	created_at: string;
@@ -71,9 +75,22 @@ export async function getContainer(id: string): Promise<ContainerInstance> {
 	return res.json();
 }
 
-export async function getContainerActions(id: string): Promise<ContainerAction[]> {
-	const res = await apiFetch(`/runtime/actions/?container_id=${id}`);
-	return res.json();
+export interface ActionsListResponse {
+	actions: ContainerAction[];
+	pagination: { total: number; page: number; per_page: number; total_pages: number };
+}
+
+export async function getContainerActions(
+	id: string,
+	opts: { status?: ActionStatus; per_page?: number } = {},
+): Promise<ContainerAction[]> {
+	const q = new URLSearchParams();
+	q.set('container_id', id);
+	if (opts.status) q.set('status', opts.status);
+	q.set('per_page', String(opts.per_page ?? 10));
+	const res = await apiFetch(`/runtime/actions/?${q.toString()}`);
+	const body = (await res.json()) as ActionsListResponse;
+	return body.actions ?? [];
 }
 
 export async function getContainerHealth(id: string): Promise<ContainerHealthResponse> {

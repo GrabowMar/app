@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import socket
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
@@ -13,6 +14,9 @@ from llm_lab.analysis.services.base import BaseAnalyzer
 from llm_lab.analysis.services.base import FindingData
 from llm_lab.analysis.services.base import build_severity_counts
 from llm_lab.analysis.services.dynamic._common import _slug
+
+if TYPE_CHECKING:
+    from llm_lab.analysis.services.cancellation import CancellationToken
 
 logger = logging.getLogger(__name__)
 
@@ -88,50 +92,44 @@ class PortScanAnalyzer(BaseAnalyzer):
         self,
         code: dict[str, str],
         config: dict[str, Any] | None = None,
+        *,
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         config = config or {}
         target_host: str | None = config.get("target_host")
         ports: list[int] = config.get("ports", DEFAULT_SCAN_PORTS)
 
         if target_host:
-            blocked = (
-                "localhost",
-                "127.0.0.1",
-                "0.0.0.0",  # noqa: S104
-                "::1",
-                "169.254.169.254",
-            )
+            blocked = ("localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254")  # noqa: S104
             if target_host.lower() in blocked:
                 return AnalyzerOutput(error=f"Blocked host: {target_host}")
-            return self._scan_host(target_host, ports)
+            return self._scan_host(target_host, ports, cancel=cancel)
         return self._analyze_static(code)
 
     def _scan_host(
         self,
         host: str,
         ports: list[int],
+        cancel: CancellationToken | None = None,
     ) -> AnalyzerOutput:
         findings: list[FindingData] = []
         open_ports: list[int] = []
         high_risk_ports: list[int] = []
 
         for port in ports:
+            if cancel is not None and cancel.is_cancelled():
+                break
             if self._is_port_open(host, port):
                 open_ports.append(port)
-                severity, port_desc = DANGEROUS_PORT_MAP.get(
-                    port,
-                    ("info", f"Port {port}"),
-                )
-
+                severity, port_desc = DANGEROUS_PORT_MAP.get(port, ("info", f"Port {port}"))
                 if severity in ("high", "critical"):
                     high_risk_ports.append(port)
-
                 findings.append(
                     FindingData(
                         severity=severity,
                         category="security",
                         title=f"Open port {port} — {port_desc}",
-                        description=(f"Port {port} is open on {host}: {port_desc}."),
+                        description=f"Port {port} is open on {host}: {port_desc}.",
                         suggestion=_port_suggestion(port),
                         rule_id=f"port-{port}",
                         confidence="high",
@@ -150,28 +148,16 @@ class PortScanAnalyzer(BaseAnalyzer):
             "open_ports": open_ports,
             "high_risk_ports": high_risk_ports,
         }
-
         return AnalyzerOutput(
             findings=findings,
             summary=summary,
-            raw_output={
-                "host": host,
-                "ports_scanned": ports,
-                "open_ports": open_ports,
-            },
+            raw_output={"host": host, "ports_scanned": ports, "open_ports": open_ports},
         )
 
     @staticmethod
-    def _is_port_open(
-        host: str,
-        port: int,
-        timeout: float = 1.0,
-    ) -> bool:
+    def _is_port_open(host: str, port: int, timeout: float = 1.0) -> bool:
         try:
-            with socket.socket(
-                socket.AF_INET,
-                socket.SOCK_STREAM,
-            ) as sock:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(timeout)
                 return sock.connect_ex((host, port)) == 0
         except OSError:
@@ -179,7 +165,6 @@ class PortScanAnalyzer(BaseAnalyzer):
 
     def _analyze_static(self, code: dict[str, str]) -> AnalyzerOutput:
         findings: list[FindingData] = []
-
         for file_key, content in code.items():
             lines = content.splitlines()
             for line_number, line_text in enumerate(lines, start=1):
@@ -196,44 +181,35 @@ class PortScanAnalyzer(BaseAnalyzer):
                                 file_path=file_key,
                                 line_number=line_number,
                                 code_snippet=line_text.strip(),
-                                rule_id=(f"portscan-static-{_slug(title)}"),
+                                rule_id=f"portscan-static-{_slug(title)}",
                                 confidence="medium",
                             ),
                         )
 
         counts = build_severity_counts(findings)
-
         summary: dict[str, Any] = {
             "mode": "static",
             "alert_counts": counts,
             "total_alerts": len(findings),
             "files_scanned": len(code),
         }
-
-        return AnalyzerOutput(
-            findings=findings,
-            summary=summary,
-            raw_output={"mode": "static"},
-        )
+        return AnalyzerOutput(findings=findings, summary=summary, raw_output={"mode": "static"})
 
 
 def _port_suggestion(port: int) -> str:
     suggestions: dict[int, str] = {
         21: "Disable FTP; use SFTP or SCP instead.",
-        22: ("Restrict SSH access with key-based auth and firewall rules."),
+        22: "Restrict SSH access with key-based auth and firewall rules.",
         23: "Disable Telnet immediately; use SSH.",
-        25: ("Restrict SMTP to trusted networks or use a managed email service."),
+        25: "Restrict SMTP to trusted networks or use a managed email service.",
         53: "Ensure DNS is intentionally exposed and hardened.",
         80: "Consider redirecting HTTP to HTTPS.",
         443: "Ensure TLS certificates are valid and current.",
-        3306: ("Do not expose MySQL publicly; use a firewall or SSH tunnel."),
-        5432: ("Do not expose PostgreSQL publicly; use a firewall or SSH tunnel."),
-        6379: ("Do not expose Redis publicly; enable auth and use a firewall."),
+        3306: "Do not expose MySQL publicly; use a firewall or SSH tunnel.",
+        5432: "Do not expose PostgreSQL publicly; use a firewall or SSH tunnel.",
+        6379: "Do not expose Redis publicly; enable auth and use a firewall.",
         8080: "Ensure this dev server is not in production.",
         8443: "Ensure this dev server is not in production.",
-        27017: ("Do not expose MongoDB publicly; enable auth and use a firewall."),
+        27017: "Do not expose MongoDB publicly; enable auth and use a firewall.",
     }
-    return suggestions.get(
-        port,
-        "Review whether this port needs to be accessible.",
-    )
+    return suggestions.get(port, "Review whether this port needs to be accessible.")

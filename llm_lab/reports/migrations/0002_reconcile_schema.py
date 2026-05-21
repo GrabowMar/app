@@ -11,6 +11,22 @@ from __future__ import annotations
 
 from django.db import migrations
 
+
+class _RunSQLIfPostgreSQL(migrations.RunSQL):
+    """RunSQL variant that is a no-op on non-PostgreSQL backends.
+
+    The reconciliation SQL uses PL/pgSQL DO blocks which are only valid on
+    PostgreSQL.  Running against SQLite (e.g. during tests) must be skipped.
+    """
+
+    def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        if schema_editor.connection.vendor == "postgresql":
+            super().database_forwards(app_label, schema_editor, from_state, to_state)
+
+    def database_backwards(self, app_label, schema_editor, from_state, to_state):
+        if schema_editor.connection.vendor == "postgresql":
+            super().database_backwards(app_label, schema_editor, from_state, to_state)
+
 ADD_EXPIRES_AT = """
 DO $$
 BEGIN
@@ -49,6 +65,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(ADD_EXPIRES_AT, reverse_sql=migrations.RunSQL.noop),
-        migrations.RunSQL(ADD_GENERATION_JOB, reverse_sql=migrations.RunSQL.noop),
+        _RunSQLIfPostgreSQL(ADD_EXPIRES_AT, reverse_sql=migrations.RunSQL.noop),
+        _RunSQLIfPostgreSQL(ADD_GENERATION_JOB, reverse_sql=migrations.RunSQL.noop),
     ]

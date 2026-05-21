@@ -14,6 +14,7 @@
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Layers from '@lucide/svelte/icons/layers';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import { downloadExport } from '$lib/api/export';
 	import Download from '@lucide/svelte/icons/download';
 	import {
@@ -142,7 +143,16 @@
 			</Card.Content>
 		</Card.Root>
 	{:else if error}
-		<Card.Root><Card.Content class="p-6 text-destructive text-sm" style="font-family: var(--font-mono);"><span class="font-semibold">error:</span> {error}</Card.Content></Card.Root>
+		<Card.Root>
+			<Card.Content class="py-16 text-center">
+				<TriangleAlert class="mx-auto h-10 w-10 text-destructive/50 mb-4" />
+				<h3 class="text-lg font-medium mb-1">Failed to load reports</h3>
+				<p class="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">{error}</p>
+				<Button size="sm" variant="outline" onclick={load}>
+					<RefreshCw class="mr-2 h-4 w-4" />Try again
+				</Button>
+			</Card.Content>
+		</Card.Root>
 	{:else if reports.length === 0}
 		<Card.Root>
 			<Card.Content class="py-16 text-center">

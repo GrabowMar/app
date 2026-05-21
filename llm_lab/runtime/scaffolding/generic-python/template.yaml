@@ -1,0 +1,11 @@
+slug: generic-python
+display_name: Generic Python
+description: Single-process Python app exposing :5000. No frontend.
+
+backend:
+  language: python
+  entry: app.py
+  requirements_path: requirements.txt
+  inject: backend_code
+  baseline_requirements:
+    - flask>=3.0

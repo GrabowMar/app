@@ -142,6 +142,10 @@ export default defineConfig({
 				target: apiTarget,
 				changeOrigin: true,
 			},
+			'/app': {
+				target: apiTarget,
+				changeOrigin: true,
+			},
 		},
 	},
 });

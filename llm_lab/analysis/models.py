@@ -99,6 +99,7 @@ class AnalysisResult(models.Model):
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
         SKIPPED = "skipped", "Skipped"
+        CANCELLED = "cancelled", "Cancelled"
 
     class AnalyzerType(models.TextChoices):
         STATIC = "static", "Static Analysis"

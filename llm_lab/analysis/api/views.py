@@ -175,10 +175,14 @@ def get_task(request, task_id: str):
 @router.post("/tasks/{task_id}/cancel/", response=ActionResponseSchema)
 def cancel_task(request, task_id: str):
     """Cancel a pending or running analysis task."""
+    from llm_lab.analysis.services.cancellation import request_cancellation
+
     task = get_object_or_404(AnalysisTask, id=task_id, created_by=request.auth)
     if task.status in ("pending", "running"):
         task.status = AnalysisTask.Status.CANCELLED
         task.save(update_fields=["status", "updated_at"])
+        # Signal any in-flight analyzers to stop immediately.
+        request_cancellation(str(task_id))
         return {"success": True, "status": "cancelled"}
     return {
         "success": False,

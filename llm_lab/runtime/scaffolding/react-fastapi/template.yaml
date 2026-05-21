@@ -1,0 +1,35 @@
+slug: react-fastapi
+display_name: React + FastAPI
+description: React (Vite) frontend + FastAPI/Uvicorn backend.
+
+backend:
+  language: python
+  entry: backend/app.py
+  requirements_path: backend/requirements.txt
+  inject: backend_code
+  baseline_requirements:
+    - fastapi>=0.110
+    - uvicorn[standard]>=0.27
+    - pydantic>=2.0
+
+frontend:
+  framework: react
+  entry: frontend/src/App.jsx
+  package_json_path: frontend/package.json
+  inject: frontend_code
+  baseline_dependencies:
+    react: ^18.3.1
+    react-dom: ^18.3.1
+    react-router-dom: ^6.26.0
+    axios: ^1.7.0
+    lucide-react: ^0.469.0
+  baseline_dev_dependencies:
+    vite: ^5.4.0
+    "@vitejs/plugin-react": ^4.3.1
+    tailwindcss: ^3.4.13
+    postcss: ^8.4.47
+    autoprefixer: ^10.4.20
+
+hooks:
+  post_render:
+    - write_sanitize_icons_script

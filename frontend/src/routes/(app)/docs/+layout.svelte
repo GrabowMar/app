@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '$lib/styles/docs.css';
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { getDocsTree, getDocsCategories } from '$lib/api/system';
 	import type { DocNode } from '$lib/api/system';
 	import { groupByCategory } from '$lib/docs/utils';
@@ -22,11 +22,11 @@
 	let mobileOpen = $state(false);
 
 	const grouped = $derived(groupByCategory(tree, categoryOrder));
-	const currentSlug = $derived(($page.params?.slug as string | undefined) ?? '');
+	const currentSlug = $derived((page.params?.slug as string | undefined) ?? '');
 
 	onMount(async () => {
 		const [t, c] = await Promise.all([
-			getDocsTree(),
+			getDocsTree().catch(() => [] as DocNode[]),
 			getDocsCategories().catch(() => CATEGORY_ORDER),
 		]);
 		tree = t;

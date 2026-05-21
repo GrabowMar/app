@@ -71,6 +71,7 @@ def _mock_analyzer(
     analyzer = MagicMock()
     analyzer.name = name
     analyzer.analyzer_type = "static"
+    analyzer.priority = 5
     analyzer.analyze.return_value = output or AnalyzerOutput(
         findings=[],
         summary={"total_issues": 0},

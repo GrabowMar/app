@@ -17,6 +17,7 @@ class ContainerInstanceSchema(ModelSchema):
     generation_job_id: UUID | None = None
     created_by_id: int | None = None
     last_error: str = ""
+    app_path: str | None = None
 
     class Meta:
         model = ContainerInstance
@@ -27,6 +28,7 @@ class ContainerInstanceSchema(ModelSchema):
             "status",
             "backend_port",
             "frontend_port",
+            "subdomain",
             "health_status",
             "last_health_check",
             "config",
@@ -44,6 +46,10 @@ class ContainerInstanceSchema(ModelSchema):
             .first()
         )
         return last_failed or ""
+
+    @staticmethod
+    def resolve_app_path(obj: ContainerInstance) -> str | None:
+        return obj.app_path()
 
 
 class ContainerActionSchema(ModelSchema):

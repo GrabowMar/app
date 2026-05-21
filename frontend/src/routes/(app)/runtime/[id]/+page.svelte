@@ -10,6 +10,7 @@
 	import Play from '@lucide/svelte/icons/play';
 	import Square from '@lucide/svelte/icons/square';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import {
@@ -171,6 +172,11 @@
 				</span>
 			{/if}
 			{#if container?.status === 'running'}
+				{#if container.app_path}
+					<Button size="sm" href={container.app_path} target="_blank" rel="noopener noreferrer">
+						<ExternalLink class="mr-1 h-3 w-3" />Open App
+					</Button>
+				{/if}
 				<Button size="sm" variant="outline" onclick={() => act('stop')} disabled={actionLoading}>
 					<Square class="mr-1 h-3 w-3" />Stop
 				</Button>
@@ -228,16 +234,20 @@
 							<span>{container.backend_port ?? '—'}</span>
 						</div>
 						<div class="flex justify-between">
-							<span class="text-muted-foreground">Frontend port</span>
+							<span class="text-muted-foreground">App URL</span>
 							<span>
-								{#if container.frontend_port}
-									<a href="http://localhost:{container.frontend_port}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">
-										{container.frontend_port}
+								{#if container.app_path}
+									<a href={container.app_path} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">
+										{container.app_path}
 									</a>
 								{:else}
 									—
 								{/if}
 							</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-muted-foreground">Frontend port</span>
+							<span>{container.frontend_port ?? '—'}</span>
 						</div>
 						<div class="flex justify-between">
 							<span class="text-muted-foreground">Health</span>

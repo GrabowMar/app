@@ -31,7 +31,7 @@ certificatesResolvers:
 http:
   routers:
     web-secure-router:
-      rule: '(Host(`${DJANGO_DOMAIN}`) || Host(`www.${DJANGO_DOMAIN}`)) && (PathPrefix(`/api/`) || PathPrefix(`/_allauth/`) || PathPrefix(`/admin/`))'
+      rule: '(Host(`${DJANGO_DOMAIN}`) || Host(`www.${DJANGO_DOMAIN}`)) && (PathPrefix(`/api/`) || PathPrefix(`/_allauth/`) || PathPrefix(`/admin/`) || PathPrefix(`/app/`))'
       entryPoints:
         - web-secure
       middlewares:

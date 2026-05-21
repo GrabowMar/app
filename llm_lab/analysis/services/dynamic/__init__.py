@@ -1,7 +1,10 @@
-"""Dynamic analyzers package — ZAP and port scanner."""
+"""Dynamic analyzers package."""
 
 from __future__ import annotations
 
+from llm_lab.analysis.services.dynamic.legacy import CurlAnalyzer
+from llm_lab.analysis.services.dynamic.legacy import CurlEndpointTesterAnalyzer
+from llm_lab.analysis.services.dynamic.legacy import NmapAnalyzer
 from llm_lab.analysis.services.dynamic.port_scanner import DANGEROUS_PORT_MAP
 from llm_lab.analysis.services.dynamic.port_scanner import DEFAULT_SCAN_PORTS
 from llm_lab.analysis.services.dynamic.port_scanner import PortScanAnalyzer
@@ -12,6 +15,9 @@ __all__ = [
     "DANGEROUS_PORT_MAP",
     "DEFAULT_SCAN_PORTS",
     "ZAP_RISK_TO_SEVERITY",
+    "CurlAnalyzer",
+    "CurlEndpointTesterAnalyzer",
+    "NmapAnalyzer",
     "PortScanAnalyzer",
     "ZAPAnalyzer",
 ]

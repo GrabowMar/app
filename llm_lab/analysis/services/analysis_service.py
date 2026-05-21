@@ -1,4 +1,4 @@
-"""Thin orchestrator that coordinates analysis execution."""
+"""Thin orchestrator that coordinates analysis task execution."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from llm_lab.analysis.models import AnalysisTask
+from llm_lab.analysis.services import cancellation
 from llm_lab.analysis.services.executor_service import ExecutorService
 from llm_lab.analysis.services.result_service import ResultService
 from llm_lab.realtime import events as realtime
@@ -20,16 +21,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _set_task_failed(
-    task: AnalysisTask,
-    message: str,
-) -> None:
+def _set_task_failed(task: AnalysisTask, message: str) -> None:
     task.status = AnalysisTask.Status.FAILED
     task.error_message = message
     task.completed_at = timezone.now()
     if task.started_at:
-        delta = task.completed_at - task.started_at
-        task.duration_seconds = delta.total_seconds()
+        task.duration_seconds = (task.completed_at - task.started_at).total_seconds()
     task.save(
         update_fields=[
             "status",
@@ -65,12 +62,10 @@ class AnalysisService:
                 "Unexpected error executing analysis task %s",
                 task.id,
             )
-            _set_task_failed(
-                task,
-                "Internal error during analysis execution.",
-            )
+            _set_task_failed(task, "Internal error during analysis execution.")
 
     def _execute_inner(self, task: AnalysisTask) -> None:
+        # ── Atomic state transition ────────────────────────────────────────
         with transaction.atomic():
             task = AnalysisTask.objects.select_for_update().get(id=task.id)
             if task.status != AnalysisTask.Status.PENDING:
@@ -83,67 +78,73 @@ class AnalysisService:
             task.status = AnalysisTask.Status.RUNNING
             task.started_at = timezone.now()
             task.save(update_fields=["status", "started_at"])
-            realtime.publish(
-                f"analysis:{task.id}",
-                {
-                    "type": "status",
-                    "status": task.status,
-                    "updated_at": task.started_at.isoformat(),
-                },
-            )
+
+        # Publish AFTER the transaction commits so listeners that poll the REST
+        # API immediately on receiving this event see the updated status.
+        realtime.publish(
+            f"analysis:{task.id}",
+            {
+                "type": "status",
+                "status": task.status,
+                "updated_at": task.started_at.isoformat(),
+            },
+        )
 
         code = task.get_code_for_analysis()
         if not code:
             _set_task_failed(task, "No code available for analysis.")
             return
 
-        analyzer_names: list[str] = task.configuration.get(
-            "analyzers",
-            [],
-        )
+        analyzer_names: list[str] = task.configuration.get("analyzers", [])
         settings: dict[str, Any] = {
-            k: dict(v) if isinstance(v, dict) else v for k, v in task.configuration.get("settings", {}).items()
+            k: dict(v) if isinstance(v, dict) else v
+            for k, v in task.configuration.get("settings", {}).items()
         }
 
         if not analyzer_names:
-            _set_task_failed(
-                task,
-                "No analyzers specified in configuration.",
-            )
+            _set_task_failed(task, "No analyzers specified in configuration.")
             return
 
-        # ── Live-target container orchestration ─────────────────────────────
+        if task.generation_job_id:
+            app_requirement = getattr(task.generation_job, "app_requirement", None)
+            for name in analyzer_names:
+                analyzer_settings = settings.setdefault(name, {})
+                if not isinstance(analyzer_settings, dict):
+                    analyzer_settings = {}
+                    settings[name] = analyzer_settings
+                analyzer_settings.setdefault("generation_job_id", str(task.generation_job_id))
+                if app_requirement is not None:
+                    analyzer_settings.setdefault("app_requirement_id", app_requirement.id)
+                    analyzer_settings.setdefault("app_requirement_slug", app_requirement.slug)
+
+        # ── Live-target container orchestration ───────────────────────────
         live_target_enabled: bool = bool(task.configuration.get("live_target"))
         job_id: str | None = task.configuration.get("generation_job_id")
         container_instance: ContainerInstance | None = None
+
+        # Register a cancellation token so the cancel API can stop this task.
+        cancel = cancellation.register(str(task.id))
 
         try:
             if live_target_enabled and job_id:
                 from llm_lab.analysis.services.live_target import prepare_live_target
 
                 container_instance, target_url = prepare_live_target(task, job_id)
-                # Inject target_url + live_target flag into every analyzer's settings.
                 for name in analyzer_names:
                     if name not in settings or not isinstance(settings[name], dict):
                         settings[name] = {}
                     settings[name]["target_url"] = target_url
                     settings[name]["live_target"] = True
-                # Persist resolved URL in task config for frontend display.
                 task.configuration["target_url"] = target_url
                 task.save(update_fields=["configuration"])
 
-            runnable = self.result_service.create_results(
-                task,
-                analyzer_names,
-                settings,
-            )
-            self.executor_service.run_all(runnable, code)
+            runnable = self.result_service.create_results(task, analyzer_names, settings)
+            self.executor_service.run_all(runnable, code, cancel=cancel)
             self.result_service.finalize_task(task)
 
         finally:
+            cancellation.release(str(task.id))
             if live_target_enabled and not task.configuration.get("keep_container"):
-                # Resolve instance from config in case prepare_live_target stored
-                # the id but raised before returning the object.
                 if container_instance is None:
                     cid = task.configuration.get("container_instance_id")
                     if cid:

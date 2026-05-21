@@ -138,11 +138,9 @@
 	const iconCls = $derived(compact ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5');
 	const showLabels = $derived(!compact);
 	const previewUrl = $derived(
-		container && container.frontend_port
-			? `http://localhost:${container.frontend_port}`
-			: container && container.backend_port
-				? `http://localhost:${container.backend_port}`
-				: null,
+		container && container.subdomain
+			? `/app/${container.subdomain}/`
+			: null,
 	);
 </script>
 

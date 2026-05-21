@@ -30,7 +30,7 @@ def _bytes_human(b: int) -> str:
 
 
 def host_metrics() -> dict[str, Any]:
-    cpu_percent = psutil.cpu_percent(interval=0.2)
+    cpu_percent = psutil.cpu_percent(interval=None)
     mem = psutil.virtual_memory()
     load = psutil.getloadavg()
     boot_time = psutil.boot_time()

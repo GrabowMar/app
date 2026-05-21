@@ -4,9 +4,12 @@ from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include
 from django.urls import path
+from django.urls import re_path
 from django.views import defaults as default_views
 
 from llm_lab.realtime.api.views import sse_stream
+from llm_lab.runtime.proxy import app_proxy_view
+from llm_lab.runtime.proxy import app_redirect_to_root
 
 from .api import api
 
@@ -17,8 +20,18 @@ urlpatterns = [
     path("users/", include("llm_lab.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
     path("_allauth/", include("allauth.headless.urls")),
-    # Your stuff: custom urls includes go here
-    # ...
+    # Reverse-proxy for scaffolded apps. Subdomain is a job hex prefix
+    # (8–12 chars). The redirect ensures relative asset URLs resolve.
+    re_path(
+        r"^app/(?P<subdomain>[0-9a-f]{8,12})$",
+        app_redirect_to_root,
+        name="app-proxy-redirect",
+    ),
+    re_path(
+        r"^app/(?P<subdomain>[0-9a-f]{8,12})/(?P<rest>.*)$",
+        app_proxy_view,
+        name="app-proxy",
+    ),
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]

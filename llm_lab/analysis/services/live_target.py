@@ -6,6 +6,8 @@ import logging
 import socket
 import time
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from llm_lab.analysis.models import AnalysisTask
@@ -31,8 +33,6 @@ def validate_live_target_url(url: str) -> tuple[bool, str]:
     (LIVE_TARGET_PORT_MIN - LIVE_TARGET_PORT_MAX).  All other addresses
     fall back to the standard SSRF guard.
     """
-    from urllib.parse import urlparse
-
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         return False, f"Invalid URL scheme: {parsed.scheme!r}. Only http/https allowed."
@@ -52,6 +52,36 @@ def validate_live_target_url(url: str) -> tuple[bool, str]:
     return validate_target_url(url)
 
 
+def resolve_target_url(config: dict[str, object] | None) -> tuple[str | None, str | None]:
+    """Resolve and validate the effective target URL from analyzer config."""
+    from llm_lab.analysis.services.base import validate_target_url
+
+    config = config or {}
+    raw_target = str(config.get("target_url") or "").strip()
+    if not raw_target:
+        return None, "No target URL provided"
+
+    if config.get("live_target"):
+        valid, err = validate_live_target_url(raw_target)
+    else:
+        valid, err = validate_target_url(raw_target)
+    if not valid:
+        return None, f"Invalid target URL: {err}"
+    return raw_target, None
+
+
+def join_target_url(base_url: str, path: str) -> tuple[str | None, str | None]:
+    """Join a relative endpoint path to a validated base URL."""
+    if not path:
+        return None, "Endpoint path is empty"
+    parsed = urlparse(path)
+    if parsed.scheme or parsed.netloc:
+        return None, "Endpoint paths must be relative"
+    if not path.startswith("/"):
+        path = f"/{path}"
+    return urljoin(f"{base_url.rstrip('/')}/", path.lstrip("/")), None
+
+
 def _tcp_probe(host: str, port: int, timeout: float = 3.0) -> bool:
     """Return True if a TCP connection to *host*:*port* succeeds."""
     try:
@@ -64,6 +94,7 @@ def _tcp_probe(host: str, port: int, timeout: float = 3.0) -> bool:
 def _http_probe(url: str, timeout: float = 5.0) -> bool:
     """Return True if an HTTP GET to *url* receives any response (including 4xx/5xx)."""
     import urllib.error
+    import urllib.request
 
     try:
         req = urllib.request.Request(url, method="GET")  # noqa: S310
