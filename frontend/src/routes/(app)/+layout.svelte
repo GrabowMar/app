@@ -8,7 +8,7 @@
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { onMount } from 'svelte';
 
-	let { children } = $props();
+	let { children, data } = $props();
 	const auth = getAuth();
 	const prefs = getPreferences();
 	let loadingTooLong = $state(false);
@@ -16,6 +16,10 @@
 	// Desktop sidebar widths — kept in sync with AppSidebar widths.
 	// Returns "0px" on mobile via media query (handled by responsive padding below).
 	let sidebarOffset = $derived(prefs.sidebarCollapsed ? '3.5rem' : '15rem');
+
+	$effect(() => {
+		auth.setSession(data.authUser);
+	});
 
 	onMount(() => {
 		const timer = setTimeout(() => {

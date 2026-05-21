@@ -10,7 +10,9 @@
 	const auth = getAuth();
 
 	onMount(() => {
-		auth.checkSession();
+		if (auth.isLoading) {
+			auth.checkSession();
+		}
 		// Signal to the hydration watchdog that JS loaded successfully
 		(window as any).__sveltekit_hydrated = true;
 	});

@@ -13,6 +13,8 @@ interface AuthUser {
 	name?: string;
 }
 
+export type { AuthUser };
+
 interface LoginResult {
 	ok: boolean;
 	error?: string;
@@ -129,6 +131,12 @@ function createAuth() {
 		}
 	}
 
+	function setSession(nextUser: AuthUser | null): void {
+		isAuthenticated = !!nextUser;
+		user = nextUser;
+		isLoading = false;
+	}
+
 	return {
 		get isAuthenticated() {
 			return isAuthenticated;
@@ -143,6 +151,7 @@ function createAuth() {
 		login,
 		signup,
 		logout,
+		setSession,
 	};
 }
 
